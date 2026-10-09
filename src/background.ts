@@ -1,7 +1,7 @@
 import { FIREFOX_UNSUPPORTED_TYPES } from './core/dnr.ts';
 import { createEngine, REFRESH_ALARM } from './core/engine.ts';
 import { systemSource } from './core/variables.ts';
-import { loadState, saveState, STATE_KEY } from './core/storage.ts';
+import { loadMeta, loadState, saveMeta, saveState, STATE_KEY } from './core/storage.ts';
 
 // Wires the engine (src/core/engine.ts) to the browser. Headerwise makes no
 // network requests of its own; everything here talks to local browser APIs.
@@ -48,9 +48,7 @@ chrome.commands.onCommand.addListener(command => { engine.command(command); });
 chrome.runtime.onInstalled.addListener(details => {
   engine.queueSync();
   // When Headerwise came into use, for the "Rate Headerwise" link two weeks later.
-  chrome.storage.local.get('meta').then(({ meta }) => {
-    if (!meta?.installedAt) chrome.storage.local.set({ meta: { ...meta, installedAt: Date.now() } });
-  });
+  loadMeta().then(meta => { if (!meta.installedAt) saveMeta({ installedAt: Date.now() }); });
   // First install only (not updates): first steps and the ModHeader move.
   if (details.reason === 'install') chrome.tabs.create({ url: chrome.runtime.getURL('src/migrate/index.html?welcome=1') });
 });

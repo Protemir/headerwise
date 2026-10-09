@@ -3,7 +3,7 @@ import { computed, onMounted, ref, toRaw, watch } from 'vue';
 import { defaultState, duplicateProfile, emptyHeader, emptyProfile, isSecret, moveProfile, maskValue, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type State } from '../core/model.ts';
 import { exportFileName, exportProfiles, importProfiles } from '../core/export.ts';
 import { VARIABLES } from '../core/variables.ts';
-import { loadState, saveState } from '../core/storage.ts';
+import { loadMeta, loadState, saveMeta, saveState } from '../core/storage.ts';
 import type { RuleInfo } from '../core/dnr.ts';
 import { scopeSummary, tabReport, type MatchedRule, type TabLine } from '../core/explain.ts';
 import { parsePasted } from '../core/paste.ts';
@@ -154,14 +154,13 @@ const RATE_URL = 'https://chromewebstore.google.com/detail/jedoaeaapdofoldmkacjb
 const ISSUES_URL = 'https://github.com/Protemir/headerwise/issues/new';
 const showRate = ref(false);
 onMounted(async () => {
-  const { meta } = await chrome.storage.local.get('meta');
-  showRate.value = !!meta?.installedAt && Date.now() - meta.installedAt > 14 * 24 * 3600 * 1000 && !meta.rateDone;
+  const meta = await loadMeta();
+  showRate.value = !!meta.installedAt && Date.now() - meta.installedAt > 14 * 24 * 3600 * 1000 && !meta.rateDone;
 });
 async function rateDone(open: boolean) {
   if (open) chrome.tabs.create({ url: RATE_URL });
   showRate.value = false;
-  const { meta } = await chrome.storage.local.get('meta');
-  await chrome.storage.local.set({ meta: { ...meta, rateDone: true } });
+  await saveMeta({ rateDone: true });
 }
 
 // Copy a summary for a bug report. There is no telemetry, so this is how
