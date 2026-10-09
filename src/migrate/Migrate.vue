@@ -44,6 +44,16 @@ const error = ref('');
 const found = ref<Found | null>(null);
 const added = ref(0);
 
+// Opened right after install as ?welcome=1: first steps, then the ModHeader move.
+const welcome = new URLSearchParams(location.search).has('welcome');
+if (welcome) document.title = 'Welcome to Headerwise';
+const ALL_SITES = { origins: ['<all_urls>'] };
+const hasAccess = ref(false);
+chrome.permissions.contains(ALL_SITES).then(v => (hasAccess.value = v));
+async function grantAccess() {
+  hasAccess.value = await chrome.permissions.request(ALL_SITES);
+}
+
 // Files from the picker or a drop, grouped by the folder they are in: people may
 // pick "Local Extension Settings" itself instead of the ModHeader folder inside.
 async function readFiles(list: { path: string; file: File }[]) {
@@ -137,7 +147,22 @@ function headerCount(p: Profile): number {
 
 <template>
   <main @dragover.prevent="dragging = true" @dragleave="dragging = false" @drop.prevent="onDrop" :class="{ dragging }">
-    <h1>Move your profiles from ModHeader</h1>
+    <template v-if="welcome">
+      <h1>Headerwise is installed</h1>
+      <section class="steps">
+        <h2>Two quick steps</h2>
+        <ol>
+          <li>
+            Let Headerwise change headers on sites. Chrome applies the changes itself; Headerwise never reads your pages.
+            <span v-if="hasAccess" class="ok-text">Done.</span>
+            <button v-else class="primary" @click="grantAccess">Allow on all sites</button>
+          </li>
+          <li>Pin the icon: click the puzzle piece in the toolbar, then the pin next to Headerwise. Click the icon to add headers.</li>
+        </ol>
+      </section>
+      <h2 class="from">Coming from ModHeader?</h2>
+    </template>
+    <h1 v-else>Move your profiles from ModHeader</h1>
     <p>
       Chrome and Edge turned ModHeader off in July 2026, so its Export button is gone.
       Your profiles are still in its folder on your disk. Headerwise reads them right here,

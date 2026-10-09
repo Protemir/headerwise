@@ -135,11 +135,10 @@ describe('importModHeader', () => {
       ['Cookie', 'seen=1', 'append'],
     ]);
     expect(profiles[0].enabled).toBe(false);
-    expect(warnings).toHaveLength(3);
+    expect(warnings).toHaveLength(2); // {{uuid}} is a Headerwise variable too, so no warning about it
     expect(warnings[0]).toBe('"Cookies": skipped request cookie rules, response cookie rules, tab filters. Headerwise can\'t do these yet.');
     expect(profiles[0].resourceTypes).toEqual(['main_frame']);
     expect(warnings[1]).toMatch(/switched off/);
-    expect(warnings[2]).toMatch(/\{\{\.\.\.\}\} are imported as plain text/);
   });
 
   it('maps excludeRequestDomainFilters to "never on" domains', () => {

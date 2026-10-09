@@ -25,12 +25,33 @@
   "permissions": [
     "declarativeNetRequest",
     "storage",
-    "activeTab"
+    "activeTab",
+    "alarms"
   ],
   "optional_host_permissions": [
     "<all_urls>"
   ],
   "content_security_policy": {
     "extension_pages": "default-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+H"
+      },
+      "description": "Open Headerwise"
+    },
+    "toggle-pause": {
+      "suggested_key": {
+        "default": "Alt+Shift+O"
+      },
+      "description": "Pause or resume all profiles"
+    },
+    "next-profile": {
+      "suggested_key": {
+        "default": "Alt+Shift+Period"
+      },
+      "description": "Switch to the next profile (turns the others off)"
+    }
   }
 }

@@ -1,3 +1,4 @@
+import { unknownVariables } from './variables.ts';
 import { REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type State } from './model.ts';
 
 /**
@@ -88,6 +89,8 @@ function convertHeaders(
       warnings.push(`${where}: value contains a line break, skipped.`);
       continue;
     }
+    const unknown = h.op === 'remove' ? [] : unknownVariables(h.value);
+    if (unknown.length) warnings.push(`${where}: ${unknown.map(n => `{{${n}}}`).join(', ')} is not a Headerwise variable, sent as plain text.`);
     if (h.op === 'append' && direction === 'request' && !APPENDABLE_REQUEST_HEADERS.has(name.toLowerCase())) {
       warnings.push(`${where}: Chrome can't append to this request header, use "set" instead. Skipped.`);
       continue;

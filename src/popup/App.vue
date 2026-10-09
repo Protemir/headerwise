@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, toRaw, watch } from 'vue';
-import { defaultState, emptyHeader, emptyProfile, isSecret, maskValue, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type State } from '../core/model.ts';
+import { defaultState, duplicateProfile, emptyHeader, emptyProfile, isSecret, moveProfile, maskValue, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type State } from '../core/model.ts';
 import { exportFileName, exportProfiles, importProfiles } from '../core/export.ts';
+import { VARIABLES } from '../core/variables.ts';
 import { loadState, saveState } from '../core/storage.ts';
 import type { RuleInfo } from '../core/dnr.ts';
 import { tabReport, type MatchedRule, type TabLine } from '../core/explain.ts';
@@ -106,6 +107,10 @@ async function grantAccess() {
   await refreshTab();
 }
 
+// Shown once a value uses {{...}}. Built here: braces in the template would be Vue syntax.
+const usesVariables = computed(() => [...(profile.value?.requestHeaders ?? []), ...(profile.value?.responseHeaders ?? [])].some(h => h.value.includes('{{')));
+const variablesHint = `Variables: ${VARIABLES.map(v => `{{${v.name}}}`).join(', ')}. Chrome sends fixed values, so Headerwise fills them in on every edit and once a minute: requests within that minute share one value.`;
+
 // Quick input: a request copied from DevTools, or a preset.
 const showPaste = ref(false);
 const pasteText = ref('');
@@ -168,6 +173,29 @@ function addProfile() {
   state.value.profiles.push(emptyProfile(`Profile ${state.value.profiles.length + 1}`));
   selected.value = state.value.profiles.length - 1;
 }
+
+function duplicate() {
+  state.value.profiles.splice(selected.value + 1, 0, duplicateProfile(profile.value));
+  selected.value += 1;
+}
+
+// Drag a profile tab to reorder: the leftmost profile wins a shared header.
+const dragFrom = ref(-1);
+function dropOn(i: number) {
+  if (dragFrom.value < 0) return;
+  const current = state.value.profiles[selected.value];
+  moveProfile(state.value, dragFrom.value, i);
+  selected.value = state.value.profiles.indexOf(current);
+  dragFrom.value = -1;
+}
+
+// The shortcuts as actually assigned (people can change them in the browser).
+const shortcuts = ref<{ key: string; what: string }[]>([]);
+onMounted(async () => {
+  const all = await chrome.commands.getAll();
+  const label: Record<string, string> = { _execute_action: 'open', 'toggle-pause': 'pause', 'next-profile': 'next profile' };
+  shortcuts.value = all.filter(c => c.shortcut && c.name && label[c.name]).map(c => ({ key: c.shortcut!.replace('Period', '.').replace('Comma', ','), what: label[c.name!] }));
+});
 
 function deleteProfile() {
   if (state.value.profiles.length === 1) return;
@@ -279,7 +307,12 @@ async function importFile(e: Event) {
         v-for="(p, i) in state.profiles"
         :key="p.id"
         :class="{ on: i === selected, off: !p.enabled }"
+        draggable="true"
+        title="Drag to reorder: the leftmost profile wins when two set the same header"
         @click="selected = i"
+        @dragstart="dragFrom = i"
+        @dragover.prevent
+        @drop.prevent="dropOn(i)"
       >
         {{ p.title || 'Untitled' }}
       </button>
@@ -295,6 +328,7 @@ async function importFile(e: Event) {
           <button class="x" title="Apply in all tabs again" @click="unbindTab">×</button>
         </span>
         <button v-else-if="tab" title="Apply this profile only in the current tab, until it closes" @click="bindToTab">Only this tab</button>
+        <button title="Copy this profile (the copy starts switched off)" @click="duplicate">Duplicate</button>
         <button :disabled="state.profiles.length === 1" title="Delete profile" @click="deleteProfile">Delete</button>
       </div>
 
@@ -321,6 +355,7 @@ async function importFile(e: Event) {
           <option v-for="x in PRESETS" :key="x.id" :value="x.id">{{ x.label }}</option>
         </select>
       </div>
+      <p v-if="usesVariables" class="dim small-hint">{{ variablesHint }}</p>
       <div v-if="showPaste" class="import">
         <textarea v-model="pasteText" rows="4" placeholder="In DevTools → Network, right-click a request → Copy as cURL, fetch or PowerShell, and paste it here. Plain &quot;Name: value&quot; lines work too."></textarea>
         <template v-if="pasted">
@@ -426,6 +461,9 @@ async function importFile(e: Event) {
     <datalist id="request-names"><option v-for="n in REQUEST_HEADER_NAMES" :key="n" :value="n" /></datalist>
     <datalist id="response-names"><option v-for="n in RESPONSE_HEADER_NAMES" :key="n" :value="n" /></datalist>
 
-    <footer>Runs locally. No account, no analytics, nothing is sent anywhere.</footer>
+    <footer>
+      Runs locally. No account, no analytics, nothing is sent anywhere.
+      <span v-if="shortcuts.length" class="keys"><br />Shortcuts: <template v-for="(k, i) in shortcuts" :key="k.what">{{ i ? ', ' : '' }}<kbd>{{ k.key }}</kbd> {{ k.what }}</template></span>
+    </footer>
   </main>
 </template>

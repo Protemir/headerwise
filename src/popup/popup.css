@@ -49,3 +49,6 @@ button.icon, .icon-space { flex: 0 0 26px; box-sizing: border-box; text-align: c
 .export .row button { flex: 0 0 auto; }
 .notes li:first-child { color: inherit; }
 .notes li.ok { list-style: none; color: inherit; }
+.small-hint { font-size: 11px; }
+kbd { font: 10px ui-monospace, Consolas, monospace; border: 1px solid var(--line); border-radius: 3px; padding: 0 3px; }
+.tabs button[draggable] { cursor: grab; }

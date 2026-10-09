@@ -100,6 +100,49 @@ export function releaseTabs(state: State, tabId?: number): boolean {
   return changed;
 }
 
+/** A copy with fresh ids, switched off and not bound to a tab, so it changes nothing until you say so. */
+export function duplicateProfile(p: Profile): Profile {
+  const copy: Profile = JSON.parse(JSON.stringify(p));
+  delete copy.tab;
+  return {
+    ...copy,
+    id: newId(),
+    title: `${p.title || 'Untitled'} copy`,
+    enabled: false,
+    requestHeaders: copy.requestHeaders.map(h => ({ ...h, id: newId() })),
+    responseHeaders: copy.responseHeaders.map(h => ({ ...h, id: newId() })),
+    filters: copy.filters.map(f => ({ ...f, id: newId() })),
+  };
+}
+
+/** Order matters: the first profile wins when two set the same header. */
+export function moveProfile(state: State, from: number, to: number): void {
+  if (from === to || from < 0 || to < 0 || from >= state.profiles.length || to >= state.profiles.length) return;
+  const [p] = state.profiles.splice(from, 1);
+  state.profiles.splice(to, 0, p);
+}
+
+/**
+ * Hotkey "next profile": turns on the profile after the first one that is on
+ * (wrapping around) and turns all others off. Also un-pauses. Returns its title.
+ */
+export function nextProfile(state: State): string | undefined {
+  const n = state.profiles.length;
+  if (n === 0) return undefined;
+  const current = state.profiles.findIndex(p => p.enabled);
+  const next = (current + 1) % n;
+  state.profiles.forEach((p, i) => { p.enabled = i === next; });
+  state.paused = false;
+  return state.profiles[next].title;
+}
+
+/** For the toolbar button's tooltip. */
+export function statusTitle(state: State): string {
+  if (state.paused) return 'Headerwise: paused';
+  const on = state.profiles.filter(p => p.enabled).map(p => p.title || 'Untitled');
+  return on.length ? `Headerwise: ${on.join(', ')}` : 'Headerwise: all profiles off';
+}
+
 export function newId(): string {
   return globalThis.crypto.randomUUID();
 }

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import { expect } from './expect.ts';
-import { isSecret, maskValue, releaseTabs, type Profile, type State } from '../src/core/model.ts';
+import { duplicateProfile, isSecret, maskValue, moveProfile, nextProfile, releaseTabs, statusTitle, type Profile, type State } from '../src/core/model.ts';
 import { toDnrRules } from '../src/core/dnr.ts';
 import { tabReport } from '../src/core/explain.ts';
 
@@ -54,5 +54,45 @@ describe('only this tab', () => {
     const { info } = toDnrRules(s);
     expect(tabReport(s, 'https://x.io/', [], info, 0, 7)[1].line).toEqual({ kind: 'other-tab', host: 'app.io' });
     expect(tabReport(s, 'https://app.io/', [], info, 0, 42)[1].line).toEqual({ kind: 'waiting' });
+  });
+});
+
+describe('profile list helpers', () => {
+  const state = (): State => ({ version: 1, paused: true, profiles: [p('A'), { ...p('B'), enabled: false }, { ...p('C'), enabled: false }] });
+
+  it('duplicates with fresh ids, switched off, without a tab binding', () => {
+    const src = p('Src', { tab: { id: 1, host: 'h' } });
+    const copy = duplicateProfile(src);
+    expect([copy.title, copy.enabled, copy.tab, copy.id === src.id, copy.requestHeaders[0].id === src.requestHeaders[0].id])
+      .toEqual(['Src copy', false, undefined, false, false]);
+    expect(copy.requestHeaders[0].name).toBe('X-A');
+    expect(src.tab).toEqual({ id: 1, host: 'h' });
+  });
+
+  it('moves profiles and ignores out-of-range moves', () => {
+    const s = state();
+    moveProfile(s, 2, 0);
+    expect(s.profiles.map(x => x.title)).toEqual(['C', 'A', 'B']);
+    moveProfile(s, 0, 9);
+    expect(s.profiles.map(x => x.title)).toEqual(['C', 'A', 'B']);
+  });
+
+  it('"next profile" turns on the next one only, wraps around and un-pauses', () => {
+    const s = state();
+    expect(nextProfile(s)).toBe('B');
+    expect([s.paused, s.profiles.map(x => x.enabled)]).toEqual([false, [false, true, false]]);
+    nextProfile(s);
+    expect(nextProfile(s)).toBe('A');
+    s.profiles.forEach(x => { x.enabled = false; });
+    expect(nextProfile(s)).toBe('A');
+  });
+
+  it('describes the state for the toolbar tooltip', () => {
+    const s = state();
+    expect(statusTitle(s)).toBe('Headerwise: paused');
+    s.paused = false;
+    expect(statusTitle(s)).toBe('Headerwise: A');
+    s.profiles[0].enabled = false;
+    expect(statusTitle(s)).toBe('Headerwise: all profiles off');
   });
 });

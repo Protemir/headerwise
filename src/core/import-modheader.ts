@@ -1,3 +1,4 @@
+import { unknownVariables } from './variables.ts';
 import { newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type UrlFilter } from './model.ts';
 
 /*
@@ -181,8 +182,9 @@ export function importModHeader(text: string, { active = 0 }: { active?: number 
 
     const requestHeaders = [...headers(p.headers, p), ...cookieAppends(p.reqCookieAppend)];
     const responseHeaders = headers(p.respHeaders, p);
-    if ([...requestHeaders, ...responseHeaders].some(h => /\{\{.*\}\}/.test(h.value))) {
-      warnings.push(`"${title}": values with {{...}} are imported as plain text, Headerwise doesn't fill them in yet.`);
+    const unknown = [...new Set([...requestHeaders, ...responseHeaders].flatMap(h => unknownVariables(h.value)))];
+    if (unknown.length) {
+      warnings.push(`"${title}": ${unknown.map(n => `{{${n}}}`).join(', ')} is not a Headerwise variable and will be sent as plain text.`);
     }
 
     return {
