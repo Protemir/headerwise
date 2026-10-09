@@ -1,5 +1,7 @@
 import { describe, it } from 'node:test';
+import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
+import { generateKeyPairSync } from 'node:crypto';
 import { expect } from './expect.ts';
 import { applyQuery, AUTOMATION_ID } from '../src/core/automation.ts';
 import { toDnrRules } from '../src/core/dnr.ts';
@@ -7,6 +9,10 @@ import { exportProfiles } from '../src/core/export.ts';
 import { defaultState, emptyProfile, type State } from '../src/core/model.ts';
 // @ts-expect-error plain .mjs build script, no type declarations
 import { automationManifest, AUTOMATION_EXTENSION_ID, extensionId, MODHEADER_RULESET, modheaderRules } from '../scripts/automation.mjs';
+// @ts-expect-error plain .mjs build script, no type declarations
+import { packCrx, readCrx } from '../scripts/crx.mjs';
+// @ts-expect-error plain .mjs build script, no type declarations
+import { zip } from '../scripts/firefox.mjs';
 
 const headers = (s: State | undefined) => s!.profiles.find(p => p.id === AUTOMATION_ID);
 
@@ -90,7 +96,7 @@ describe('automation build', () => {
 
   it('has a key that gives the documented id', () => {
     expect(extensionId(m.key)).toBe(AUTOMATION_EXTENSION_ID);
-    expect(AUTOMATION_EXTENSION_ID).toBe('mhlgmcieamjogdlnfjaoeophmdajkkek');
+    expect(AUTOMATION_EXTENSION_ID).toBe('ogjbgamdhnjnagcdgboifgmhlgddcdce');
   });
 
   it("sends ModHeader's webdriver URLs to the automation page", () => {
@@ -103,10 +109,10 @@ describe('automation build', () => {
       return null;
     };
     const page = `chrome-extension://${AUTOMATION_EXTENSION_ID}/automation.html?`;
-    expect(to('https://webdriver.modheader.com/add?X-A=1&X-B=two')).toBe(`${page}@add&X-A=1&X-B=two`);
-    expect(to('https://webdriver.modheader.com/clear')).toBe(`${page}@clear`);
-    expect(to('http://webdriver.modheader.com/clear?x=1')).toBe(`${page}@clear`);
-    expect(to('https://webdriver.modheader.com/load?profile=%5B%7B%7D%5D')).toBe(`${page}@import=%5B%7B%7D%5D`);
+    expect(to('https://webdriver.modheader.com/add?X-A=1&X-B=two')).toBe(`${page}@modheader&@add&X-A=1&X-B=two`);
+    expect(to('https://webdriver.modheader.com/clear')).toBe(`${page}@modheader&@clear`);
+    expect(to('http://webdriver.modheader.com/clear?x=1')).toBe(`${page}@modheader&@clear`);
+    expect(to('https://webdriver.modheader.com/load?profile=%5B%7B%7D%5D')).toBe(`${page}@modheader&@import=%5B%7B%7D%5D`);
     expect(to('https://example.com/add?X-A=1')).toBe(null);
     expect(to('https://webdriver.modheader.com.evil.com/add?X-A=1')).toBe(null);
     expect(m.declarative_net_request.rule_resources[0].path).toBe(MODHEADER_RULESET);
@@ -119,5 +125,19 @@ describe('automation build', () => {
     expect(m.version_name).toBe(`${chrome.version} automation`);
     expect([m.version, m.permissions, m.content_security_policy]).toEqual([chrome.version, chrome.permissions, chrome.content_security_policy]);
     expect(chrome.key).toBe(undefined); // the store build has no key
+  });
+});
+
+describe('crx', () => {
+  it('signs a CRX3 that checks out, with the id of the key, and refuses tampering', () => {
+    const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+    const der = publicKey.export({ type: 'spki', format: 'der' }).toString('base64');
+    const zipBytes = zip([{ name: 'manifest.json', data: Buffer.from('{"manifest_version":3}') }]);
+    const crx: Buffer = packCrx(zipBytes, privateKey);
+    const read = readCrx(crx);
+    expect([read.id, read.publicKey, Buffer.compare(read.zip, zipBytes)]).toEqual([extensionId(der), der, 0]);
+    const tampered = Buffer.from(crx);
+    tampered[tampered.length - 30] ^= 1;
+    assert.throws(() => readCrx(tampered), /bad signature/);
   });
 });

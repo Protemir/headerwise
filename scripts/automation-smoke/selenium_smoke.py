@@ -3,7 +3,7 @@ import os, subprocess, sys, time
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 
-ID = 'mhlgmcieamjogdlnfjaoeophmdajkkek'
+ID = 'ogjbgamdhnjnagcdgboifgmhlgddcdce'
 ext = os.path.abspath('dist-automation')
 base = 'http://127.0.0.1:8788'
 

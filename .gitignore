@@ -5,3 +5,5 @@ dist/
 store/raw/
 dist-firefox/
 dist-automation/
+*.crx
+*.pem

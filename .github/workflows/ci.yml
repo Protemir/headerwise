@@ -45,8 +45,11 @@ jobs:
         with:
           node-version: 24
       - run: npm ci --no-audit --no-fund
+      # Signs headerwise-automation.crx with the key behind the fixed id (a repo secret).
       - run: npm run build && npm run build:automation
-      - run: npm i --no-save --no-audit --no-fund playwright puppeteer selenium-webdriver
+        env:
+          HW_AUTOMATION_KEY: ${{ secrets.AUTOMATION_KEY }}
+      - run: npm i --no-save --no-audit --no-fund playwright puppeteer selenium-webdriver chrome-modheader
       - run: npx playwright install --with-deps chromium
       - run: pip install selenium
       # Ubuntu 24.04 blocks the user namespaces Chrome's sandbox needs; Playwright
@@ -60,8 +63,12 @@ jobs:
         if: success() || failure()
       - run: python scripts/automation-smoke/selenium_smoke.py
         if: success() || failure()
+      - run: node scripts/automation-smoke/modheader-compat.mjs
+        if: success() || failure()
       - uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
           name: headerwise-automation
-          path: headerwise-automation.zip
+          path: |
+            headerwise-automation.zip
+            headerwise-automation.crx

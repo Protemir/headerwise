@@ -3,9 +3,11 @@ import { loadState, saveState } from '../core/storage.ts';
 import './automation.css';
 
 // Tests wait for the title to become "Headerwise: ready" (or "Headerwise: error"),
-// by then the browser has the new rules.
+// by then the browser has the new rules. Tests written for ModHeader wait for
+// "Done", so that is the title when they came through ModHeader's URLs.
 
 const $ = (id: string) => document.getElementById(id)!;
+const fromModHeader = new URLSearchParams(location.search).has('@modheader');
 
 function list(id: string, lines: string[]) {
   $(id).replaceChildren(...lines.map(line => Object.assign(document.createElement('li'), { textContent: line })));
@@ -15,7 +17,7 @@ function done(ok: boolean, text: string) {
   $('status').textContent = text;
   $('status').className = ok ? '' : 'error';
   document.documentElement.dataset.status = ok ? 'ready' : 'error';
-  document.title = ok ? 'Headerwise: ready' : 'Headerwise: error';
+  document.title = ok ? (fromModHeader ? 'Done' : 'Headerwise: ready') : 'Headerwise: error';
 }
 
 async function run() {

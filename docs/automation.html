@@ -59,12 +59,13 @@
     <h2>Get it</h2>
     <pre><code>curl -L -o headerwise-automation.zip https://github.com/Protemir/headerwise/releases/latest/download/headerwise-automation.zip
 unzip headerwise-automation.zip -d headerwise-automation</code></pre>
-    <p>The automation build is the regular extension with three differences: a fixed id, <code>mhlgmcieamjogdlnfjaoeophmdajkkek</code>, so your tests know its URL; access to all sites from the start, since nobody is there to click "Allow"; and no welcome tab. Free and MIT licensed, <a href="https://github.com/Protemir/headerwise">source on GitHub</a>.</p>
+    <p>For Selenium's <code>addExtensions</code> and cloud grids there is a signed <code>.crx</code> with the same id: <code>…/releases/latest/download/headerwise-automation.crx</code>.</p>
+    <p>The automation build is the regular extension with three differences: a fixed id, <code>ogjbgamdhnjnagcdgboifgmhlgddcdce</code>, so your tests know its URL; access to all sites from the start, since nobody is there to click "Allow"; and no welcome tab. Free and MIT licensed, <a href="https://github.com/Protemir/headerwise">source on GitHub</a>.</p>
 
     <div class="warn"><b>Chrome 137 and newer ignore <code>--load-extension</code>.</b> Google Chrome dropped the flag; Chrome for Testing and Chromium still have it. Playwright's Chromium and Puppeteer's Chrome for Testing work as they are; Selenium needs <code>browser_version</code> set so it downloads Chrome for Testing (below).</div>
 
     <h2>Set headers with a URL</h2>
-    <pre><code>chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation.html?X-Env=staging&amp;Authorization=Bearer%20abc</code></pre>
+    <pre><code>chrome-extension://ogjbgamdhnjnagcdgboifgmhlgddcdce/automation.html?X-Env=staging&amp;Authorization=Bearer%20abc</code></pre>
     <div class="table"><table>
       <tr><th>In the query</th><th>What it does</th></tr>
       <tr><td><code>Name=Value</code></td><td>Set a request header. An empty value removes the header.</td></tr>
@@ -86,7 +87,7 @@ const context = await chromium.launchPersistentContext('', {
   args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`],
 });
 const page = await context.newPage();
-await page.goto('chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation.html?X-Env=staging');
+await page.goto('chrome-extension://ogjbgamdhnjnagcdgboifgmhlgddcdce/automation.html?X-Env=staging');
 await page.waitForFunction(() =&gt; document.documentElement.dataset.status === 'ready');
 await page.goto('https://example.com'); // sent with X-Env: staging</code></pre>
     <h3>Python</h3>
@@ -96,7 +97,7 @@ with sync_playwright() as p:
     context = p.chromium.launch_persistent_context('', channel='chromium',
         args=[f'--disable-extensions-except={ext}', f'--load-extension={ext}'])
     page = context.new_page()
-    page.goto('chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation.html?X-Env=staging')
+    page.goto('chrome-extension://ogjbgamdhnjnagcdgboifgmhlgddcdce/automation.html?X-Env=staging')
     page.wait_for_function("document.documentElement.dataset.status === 'ready'")
     page.goto('https://example.com')</code></pre>
     <p>Playwright's own <code>extraHTTPHeaders</code> is simpler when all you need is request headers on every request. Use Headerwise for response headers, removing headers, headers on some URLs only, or a setup shared with people who use the extension by hand.</p>
@@ -105,7 +106,7 @@ with sync_playwright() as p:
     <pre><code>import puppeteer from 'puppeteer';
 const browser = await puppeteer.launch({ pipe: true, enableExtensions: ['/path/to/headerwise-automation'] });
 const page = await browser.newPage();
-await page.goto('chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation.html?X-Env=staging');
+await page.goto('chrome-extension://ogjbgamdhnjnagcdgboifgmhlgddcdce/automation.html?X-Env=staging');
 await page.waitForFunction(() =&gt; document.documentElement.dataset.status === 'ready');
 await page.goto('https://example.com');</code></pre>
 
@@ -119,7 +120,7 @@ options.browser_version = 'stable'  # Chrome for Testing, which still loads exte
 options.add_argument('--load-extension=/path/to/headerwise-automation')
 driver = webdriver.Chrome(options=options)
 
-driver.get('chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation.html?X-Env=staging')
+driver.get('chrome-extension://ogjbgamdhnjnagcdgboifgmhlgddcdce/automation.html?X-Env=staging')
 WebDriverWait(driver, 10).until(lambda d: d.execute_script(
     "return document.documentElement.dataset.status === 'ready'"))
 driver.get('https://example.com')</code></pre>
@@ -129,9 +130,12 @@ import chrome from 'selenium-webdriver/chrome.js';
 const options = new chrome.Options().addArguments('--load-extension=/path/to/headerwise-automation');
 options.setBrowserVersion('stable');
 const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
-await driver.get('chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation.html?X-Env=staging');
+await driver.get('chrome-extension://ogjbgamdhnjnagcdgboifgmhlgddcdce/automation.html?X-Env=staging');
 await driver.wait(() =&gt; driver.executeScript("return document.documentElement.dataset.status === 'ready'"), 10000);</code></pre>
     <p>Java and C# take the same two settings (<code>setBrowserVersion("stable")</code> and the <code>--load-extension</code> argument). Headless works with <code>--headless=new</code>.</p>
+
+    <h3>Selenium Grid and cloud grids</h3>
+    <p>When the browser runs on another machine, send the extension inside the capabilities: <code>options.add_extension('headerwise-automation.crx')</code> (Python), <code>addExtensions(...)</code> (JavaScript, Java), or the base64 of the file in <code>goog:chromeOptions.extensions</code>. ChromeDriver checks the signature and installs it with the fixed id. It does that with the flag Google Chrome 137+ ignores, so ask the grid for Chrome for Testing; BrowserStack calls it <code>browserName: 'chromefortesting'</code>.</p>
 
     <h2 id="modheader">Coming from ModHeader</h2>
     <p><b>Your test code can stay as it is.</b> The automation build catches ModHeader's webdriver addresses and handles them itself, so <code>getAddHeaderUrl()</code>, <code>getClearHeadersUrl()</code> and <code>getLoadProfileUrl()</code> from <code>chrome-modheader</code> keep working. Nothing goes to modheader.com: the browser redirects these addresses to the extension's page before any request leaves.</p>
@@ -141,10 +145,17 @@ await driver.wait(() =&gt; driver.executeScript("return document.documentElement
       <tr><td><code>webdriver.modheader.com/clear</code></td><td><code>automation.html?@clear</code></td></tr>
       <tr><td><code>webdriver.modheader.com/load?profile=…</code></td><td><code>automation.html?@import=…</code>, same JSON</td></tr>
     </table></div>
-    <p>What you change is how the extension gets into the browser: instead of <code>getExtension()</code> and the bundled .crx, point <code>--load-extension</code> at the unzipped folder (see the snippets above). Only these three addresses are handled, and only top-level navigations by the test: a web page can't open them in a frame or link to the extension's page.</p>
+    <p>What you change is the extension: pass <code>headerwise-automation.crx</code> where you passed <code>getExtension()</code>, and ask for Chrome for Testing (<code>setBrowserVersion('stable')</code>), since Google Chrome no longer loads extensions from ChromeDriver. Waits for the title "Done" keep working: that is the page's title when it was opened through ModHeader's addresses. One difference: <code>/add</code> with a header name that's already set replaces the value instead of sending the header twice.</p>
+    <pre><code>// before: new chrome.Options().addExtensions(getExtension())
+const options = new chrome.Options().addExtensions('headerwise-automation.crx');
+options.setBrowserVersion('stable');
+// unchanged:
+await driver.get(getAddHeaderUrl('X-Env', 'staging'));
+await driver.wait(until.titleIs('Done'), 10000);</code></pre>
+    <p>Only these three addresses are handled, and only when the test itself opens them: a web page can't open them in a frame or link to the extension's page.</p>
 
     <h2>Checked on every change</h2>
-    <p>CI loads this build into Playwright, Puppeteer and Selenium (JavaScript and Python) and checks what a server really receives: headers set, replaced, limited to URLs and cleared, response headers, ModHeader's URLs, and that a mistake in the URL is reported instead of guessed at. The scripts are in <a href="https://github.com/Protemir/headerwise/tree/main/scripts/automation-smoke">scripts/automation-smoke</a>. Something missing for your setup? <a href="https://github.com/Protemir/headerwise/issues">Open an issue</a>.</p>
+    <p>CI loads this build into Playwright, Puppeteer and Selenium (JavaScript and Python) and checks what a server really receives: headers set, replaced, limited to URLs and cleared, response headers, ModHeader's URLs, and that a mistake in the URL is reported instead of guessed at. One more run is a test written for ModHeader, unchanged except for the .crx: <code>chrome-modheader</code>'s own helpers, <code>addExtensions</code> and waiting for "Done". The scripts are in <a href="https://github.com/Protemir/headerwise/tree/main/scripts/automation-smoke">scripts/automation-smoke</a>. Something missing for your setup? <a href="https://github.com/Protemir/headerwise/issues">Open an issue</a>.</p>
 
     <footer>
       <a href="./">Headerwise</a> &nbsp; <a href="modheader-export.html">Get your ModHeader profiles back</a> &nbsp; <a href="privacy.html">Privacy</a>

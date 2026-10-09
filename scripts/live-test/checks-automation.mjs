@@ -2,7 +2,7 @@
 // and the automation page that tests drive through URLs.
 import { sleep } from './cdp.mjs';
 
-const ID = 'mhlgmcieamjogdlnfjaoeophmdajkkek';
+const ID = 'ogjbgamdhnjnagcdgboifgmhlgddcdce';
 
 export async function automationChecks({ page, port }, { extId, base, saw }, check) {
   check('automation: fixed extension id', extId === ID, extId);
@@ -45,9 +45,11 @@ export async function automationChecks({ page, port }, { extId, base, saw }, che
   // Tests written for chrome-modheader keep their URLs.
   r = await go('https://webdriver.modheader.com/add?X-Mh=1');
   const url = await page.evaluate('location.href');
+  const title = await page.evaluate('document.title');
+  check('modheader: title "Done", which ModHeader tests wait for', title === 'Done', title);
   r = await go('https://webdriver.modheader.com/add?X-Mh2=2&X-Mh=one');
   got = await visit('/mh-1');
-  check('modheader: /add lands on the page and adds to earlier calls', r.status === 'ready' && url.startsWith(`chrome-extension://${ID}/automation.html?@add&X-Mh=1`) && got['x-mh'] === 'one' && got['x-mh2'] === '2', JSON.stringify({ url, got }));
+  check('modheader: /add lands on the page and adds to earlier calls', r.status === 'ready' && url.startsWith(`chrome-extension://${ID}/automation.html?@modheader&@add&X-Mh=1`) && got['x-mh'] === 'one' && got['x-mh2'] === '2', JSON.stringify({ url, got }));
   const profile = [{ title: 'Loaded', headers: [{ enabled: true, name: 'X-Loaded', value: 'yes' }], respHeaders: [] }];
   r = await go(`https://webdriver.modheader.com/load?profile=${encodeURIComponent(JSON.stringify(profile))}`);
   got = await visit('/mh-2');

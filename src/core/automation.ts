@@ -61,7 +61,7 @@ export function applyQuery(state: State, query: string): AutomationResult {
   const urls: string[] = [];
   let clear = false;
   for (const [key, value] of params) {
-    if (key === '@import' || key === '@add') continue;
+    if (key === '@import' || key === '@add' || key === '@modheader') continue;
     if (key === '@clear') { clear = true; continue; }
     if (key === '@url') {
       if (!value.trim()) return fail('@url is empty.');

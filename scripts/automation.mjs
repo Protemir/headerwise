@@ -1,9 +1,11 @@
 // Automation build, for Selenium, Playwright and Puppeteer: takes dist/ (npm run
 // build) and writes dist-automation/ and headerwise-automation-<version>.zip.
 // The code is the same; the manifest differs:
-// - "key" (scripts/automation-key.pub, a public key; nobody keeps the private one)
-//   gives the unpacked extension a fixed id, so tests can open
-//   chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation.html;
+// - "key" (scripts/automation-key.pub) gives the unpacked extension a fixed id, so
+//   tests can open chrome-extension://ogjbgamdhnjnagcdgboifgmhlgddcdce/automation.html;
+//   with the private key (HW_AUTOMATION_KEY: the PEM itself, a GitHub Actions
+//   secret; or HW_AUTOMATION_KEY_FILE) it also writes a signed
+//   headerwise-automation.crx with the same id;
 // - site access is granted at install time: nobody is there to click "Allow";
 // - no welcome tab (background.ts checks version_name);
 // - ModHeader's webdriver URLs land on the automation page, so tests written for
@@ -12,10 +14,11 @@
 import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, relative, resolve } from 'node:path';
+import { packCrx, readCrx } from './crx.mjs';
 import { listFiles, zip } from './firefox.mjs';
 
 const KEY = readFileSync(new URL('./automation-key.pub', import.meta.url), 'utf8').trim();
-export const AUTOMATION_EXTENSION_ID = 'mhlgmcieamjogdlnfjaoeophmdajkkek';
+export const AUTOMATION_EXTENSION_ID = 'ogjbgamdhnjnagcdgboifgmhlgddcdce';
 
 /** Chrome's id for an unpacked extension with this key: sha256 of the key, first 32 hex digits as a-p. */
 export function extensionId(key) {
@@ -36,9 +39,10 @@ export function modheaderRules() {
     condition: { regexFilter: MODHEADER + path, resourceTypes: ['main_frame'] },
   });
   return [
-    rule(1, 'add\\?(.*)$', '@add&\\1'),
-    rule(2, 'clear(?:[?#].*)?$', '@clear'),
-    rule(3, 'load\\?(?:.*&)?profile=([^&#]*).*$', '@import=\\1'),
+    // @modheader: the page titles itself "Done" like ModHeader's did, which those tests wait for.
+    rule(1, 'add\\?(.*)$', '@modheader&@add&\\1'),
+    rule(2, 'clear(?:[?#].*)?$', '@modheader&@clear'),
+    rule(3, 'load\\?(?:.*&)?profile=([^&#]*).*$', '@modheader&@import=\\1'),
   ];
 }
 
@@ -71,4 +75,15 @@ if (process.argv[1]?.endsWith('automation.mjs')) {
   writeFileSync(`headerwise-automation-${manifest.version}.zip`, zip(files));
   writeFileSync('headerwise-automation.zip', zip(files));
   console.log(`headerwise-automation-${manifest.version}.zip: ${files.length} files, id ${AUTOMATION_EXTENSION_ID}`);
+
+  const pem = process.env.HW_AUTOMATION_KEY || (process.env.HW_AUTOMATION_KEY_FILE && readFileSync(process.env.HW_AUTOMATION_KEY_FILE, 'utf8'));
+  if (pem) {
+    const crx = packCrx(zip(files), pem);
+    if (readCrx(crx).publicKey !== KEY) throw new Error('the private key does not belong to automation-key.pub');
+    writeFileSync(`headerwise-automation-${manifest.version}.crx`, crx);
+    writeFileSync('headerwise-automation.crx', crx);
+    console.log(`headerwise-automation-${manifest.version}.crx: signed`);
+  } else {
+    console.log('no HW_AUTOMATION_KEY: no .crx');
+  }
 }
