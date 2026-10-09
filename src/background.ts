@@ -1,6 +1,6 @@
 import { dropUnsupportedRegexes, toDnrRules } from './core/dnr.ts';
-import { activeHeaderCount } from './core/model.ts';
-import { loadState, STATE_KEY } from './core/storage.ts';
+import { activeHeaderCount, releaseTabs } from './core/model.ts';
+import { loadState, saveState, STATE_KEY } from './core/storage.ts';
 
 // Headerwise makes no network requests of its own. Everything below only talks
 // to the browser's local APIs.
@@ -33,18 +33,29 @@ async function apply(): Promise<void> {
   const { rulesKey } = await chrome.storage.session.get('rulesKey');
   let rejected = false;
   if (rulesKey !== key) {
-    const existing = await chrome.declarativeNetRequest.getDynamicRules();
+    // "Only this tab" rules need tabIds, which Chrome allows in session rules only.
+    const dnr = chrome.declarativeNetRequest;
+    const session = rules.filter(r => r.condition.tabIds);
+    const dynamic = rules.filter(r => !r.condition.tabIds);
+    const existing = await dnr.getDynamicRules();
+    const existingSession = await dnr.getSessionRules();
+    const clear = () => Promise.all([
+      dnr.updateDynamicRules({ removeRuleIds: existing.map(r => r.id) }),
+      dnr.updateSessionRules({ removeRuleIds: existingSession.map(r => r.id) }),
+    ]);
     try {
-      await chrome.declarativeNetRequest.updateDynamicRules({
-        removeRuleIds: existing.map(r => r.id),
-        addRules: rules as unknown as chrome.declarativeNetRequest.Rule[],
-      });
+      await clear();
+      await dnr.updateDynamicRules({ addRules: dynamic as unknown as chrome.declarativeNetRequest.Rule[] });
+      await dnr.updateSessionRules({ addRules: session as unknown as chrome.declarativeNetRequest.Rule[] });
       await chrome.storage.session.set({ rulesKey: key, ruleInfo: converted.info, rulesUpdatedAt: Date.now() });
     } catch (e) {
       // Regexes are checked above, so this should be rare. Chrome rejects the whole
       // batch, so clear our rules instead of leaving stale ones in place.
       rejected = true;
-      await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: existing.map(r => r.id) });
+      await Promise.all([
+        dnr.updateDynamicRules({ removeRuleIds: (await dnr.getDynamicRules()).map(r => r.id) }),
+        dnr.updateSessionRules({ removeRuleIds: (await dnr.getSessionRules()).map(r => r.id) }),
+      ]);
       // An empty key makes the next sync try again.
       await chrome.storage.session.set({ rulesKey: '', ruleInfo: {}, rulesUpdatedAt: Date.now() });
       warnings.push(`Chrome rejected the rules: ${e instanceof Error ? e.message : String(e)}`);
@@ -70,8 +81,16 @@ function queueSync(): void {
   syncing = syncing.then(sync, sync);
 }
 
+// Tab ids are per browser session: "only this tab" bindings end with the tab.
+async function release(tabId?: number): Promise<void> {
+  const state = await loadState();
+  if (releaseTabs(state, tabId)) await saveState(state); // the storage change triggers a sync
+  else if (tabId === undefined) queueSync(); // browser start: session rules are gone, rebuild
+}
+
 chrome.runtime.onInstalled.addListener(queueSync);
-chrome.runtime.onStartup.addListener(queueSync);
+chrome.runtime.onStartup.addListener(() => release());
+chrome.tabs.onRemoved.addListener(tabId => release(tabId));
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes[STATE_KEY]) queueSync();
 });

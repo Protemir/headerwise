@@ -15,6 +15,7 @@ import { gunzipSync } from 'node:zlib';
 import { join, resolve } from 'node:path';
 import { openTab, sleep } from './cdp.mjs';
 import { accessChecks, cspChecks, migrateChecks, noAccessChecks, quickInputChecks, tabChecks } from './checks.mjs';
+import { secretChecks, tabOnlyChecks } from './checks-tabs.mjs';
 
 const args = process.argv.slice(2);
 const browser = args.includes('--browser') ? args[args.indexOf('--browser') + 1] : 'chrome';
@@ -119,6 +120,8 @@ const both = async (tabs, ctx, check) => {
   await accessChecks(tabs, ctx, check);
   await tabChecks(tabs, ctx, check);
   await quickInputChecks(tabs, ctx, check);
+  await tabOnlyChecks(tabs, ctx, check);
+  await secretChecks(tabs, ctx, check);
   await cspChecks(tabs, ctx, check);
   await migrateChecks(tabs, ctx, check);
 };

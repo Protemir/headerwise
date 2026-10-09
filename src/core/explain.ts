@@ -37,7 +37,8 @@ const DOMAIN = /^(?:[a-z0-9-]+\.)*[a-z0-9-]+$/i;
 export type PageVerdict =
   | { kind: 'applies' }
   | { kind: 'excluded'; pattern: string }
-  | { kind: 'not-included'; patterns: string[] };
+  | { kind: 'not-included'; patterns: string[] }
+  | { kind: 'other-tab'; host: string } // "only this tab", bound to a different tab;
 
 /** Would the profile's filters let it touch the page itself (the main document)? */
 export function pageVerdict(p: Profile, url: string): PageVerdict {
@@ -89,7 +90,7 @@ export function hasHeaders(p: Profile): boolean {
  * rules, so exclusions are judged from the page URL; allow matches are still
  * used if a browser does report them.
  */
-export function tabReport(state: State, url: string, matched: MatchedRule[], info: Record<number, RuleInfo>, since: number): TabReportLine[] {
+export function tabReport(state: State, url: string, matched: MatchedRule[], info: Record<number, RuleInfo>, since: number, tabId?: number): TabReportLine[] {
   const requests = new Map<string, number>();
   const allowed = new Map<string, string>();
   for (const m of matched) {
@@ -104,6 +105,7 @@ export function tabReport(state: State, url: string, matched: MatchedRule[], inf
     const base = { profileId: p.id, title: p.title || 'Untitled' };
     if (!p.enabled) return { ...base, line: { kind: 'off' } };
     if (!hasHeaders(p)) return { ...base, line: { kind: 'empty' } };
+    if (p.tab && p.tab.id !== tabId) return { ...base, line: { kind: 'other-tab', host: p.tab.host } };
     const verdict = pageVerdict(p, url);
     const excludedBy = allowed.get(p.id) ?? (verdict.kind === 'excluded' ? verdict.pattern : undefined);
     const n = requests.get(p.id) ?? 0;

@@ -268,8 +268,8 @@ export async function quickInputChecks(tabs, { base, extId }, check) {
   })()`);
   await sleep(300);
   const offered = await page.evaluate(`[...document.querySelectorAll('label.pasted')].map(l => (l.querySelector('input').checked ? '[x] ' : '[ ] ') + l.innerText.trim().split(String.fromCharCode(10)).join(' '))`);
-  check('paste: curl parsed, auth and custom headers pre-ticked, cookie/UA not',
-    offered.join(' | ') === '[ ] accept application/json | [x] authorization Bearer live-test | [ ] Cookie session=abc | [x] x-note it\'s ok | [ ] user-agent Mozilla/5.0 | [x] only on localhost',
+  check('paste: curl parsed, auth and custom headers pre-ticked, cookie/UA not, secrets masked',
+    offered.join(' | ') === '[ ] accept application/json | [x] authorization Bear•••••••••••• | [ ] Cookie sess••••••• | [x] x-note it\'s ok | [ ] user-agent Mozilla/5.0 | [x] only on localhost',
     JSON.stringify(offered));
   await page.evaluate(`[...document.querySelectorAll('button')].find(b => /^Add [0-9]+ header/.test(b.textContent.trim())).click()`);
   await sleep(800);

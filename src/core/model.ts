@@ -7,6 +7,8 @@ export interface HeaderMod {
   value: string;
   op: HeaderOp;
   comment?: string;
+  /** Hide the value in the UI. Unset: decided by the name (see isSecret). */
+  secret?: boolean;
 }
 
 /**
@@ -32,12 +34,47 @@ export interface Profile {
   requestHeaders: HeaderMod[];
   responseHeaders: HeaderMod[];
   filters: UrlFilter[];
+  /**
+   * "Only this tab": the profile applies to one tab only. Tab ids live as long as
+   * the browser session, so the binding is dropped (and the profile turned off)
+   * when the tab closes or the browser restarts.
+   */
+  tab?: { id: number; host: string };
 }
 
 export interface State {
   version: 1;
   paused: boolean;
   profiles: Profile[];
+}
+
+// Names whose values are usually credentials.
+const SECRET_NAME = /^(authorization|proxy-authorization|cookie|set-cookie)$|token|secret|api[-_]?key|password|passwd|session|credential|signature/i;
+
+/** Should the value be hidden in the UI? */
+export function isSecret(h: Pick<HeaderMod, 'name' | 'secret'>): boolean {
+  return h.secret ?? SECRET_NAME.test(h.name.trim());
+}
+
+/** "Bearer eyJh…" -> "Bear•••••", for places that show values read-only. */
+export function maskValue(value: string): string {
+  return value.length <= 4 ? '•'.repeat(value.length) : value.slice(0, 4) + '•'.repeat(Math.min(12, value.length - 4));
+}
+
+/**
+ * Drops "only this tab" bindings, for a closed tab or (no id) for all after a
+ * browser restart. Such profiles are turned off: without the binding they would
+ * suddenly apply everywhere. Returns whether anything changed.
+ */
+export function releaseTabs(state: State, tabId?: number): boolean {
+  let changed = false;
+  for (const p of state.profiles) {
+    if (!p.tab || (tabId !== undefined && p.tab.id !== tabId)) continue;
+    delete p.tab;
+    p.enabled = false;
+    changed = true;
+  }
+  return changed;
 }
 
 export function newId(): string {

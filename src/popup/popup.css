@@ -33,3 +33,9 @@ footer { margin-top: 12px; font-size: 11px; opacity: .6; }
 .pasted code { font: 12px ui-monospace, Consolas, monospace; white-space: nowrap; }
 .pasted .val { opacity: .75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 select.preset { border-color: transparent; color: var(--accent); flex: 0 0 auto; width: auto; }
+.masked { -webkit-text-security: disc; }
+button.icon { padding: 2px 4px; opacity: .35; }
+button.icon.on, button.icon:hover { opacity: 1; }
+.chip { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 11px; border: 1px solid var(--accent); border-radius: 10px; padding: 1px 2px 1px 8px; }
+.chip button.x { border: 0; padding: 0 4px; }
+button.icon, .icon-space { flex: 0 0 26px; box-sizing: border-box; text-align: center; }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, toRaw, watch } from 'vue';
-import { defaultState, emptyHeader, emptyProfile, newId, type HeaderMod, type State } from '../core/model.ts';
+import { defaultState, emptyHeader, emptyProfile, isSecret, maskValue, newId, type HeaderMod, type State } from '../core/model.ts';
 import { importModHeader } from '../core/import-modheader.ts';
 import { loadState, saveState } from '../core/storage.ts';
 import type { RuleInfo } from '../core/dnr.ts';
@@ -61,7 +61,7 @@ async function refreshTab() {
   try {
     const { rulesMatchedInfo } = await chrome.declarativeNetRequest.getMatchedRules({ tabId: t.id });
     matched.value = rulesMatchedInfo
-      .filter(m => m.rule.rulesetId === chrome.declarativeNetRequest.DYNAMIC_RULESET_ID)
+      .filter(m => m.rule.rulesetId === chrome.declarativeNetRequest.DYNAMIC_RULESET_ID || m.rule.rulesetId === chrome.declarativeNetRequest.SESSION_RULESET_ID)
       .map(m => ({ ruleId: m.rule.ruleId, timeStamp: m.timeStamp }));
     tabNote.value = '';
   } catch (e) {
@@ -71,7 +71,7 @@ async function refreshTab() {
 }
 
 const tabLines = computed(() => tab.value
-  ? tabReport(state.value, tab.value.url, matched.value, ruleInfo.value, rulesUpdatedAt.value)
+  ? tabReport(state.value, tab.value.url, matched.value, ruleInfo.value, rulesUpdatedAt.value, tab.value.id)
   : []);
 const needsReload = computed(() => tabLines.value.some(l => l.line.kind === 'waiting'));
 
@@ -83,6 +83,7 @@ function describe(line: TabLine): string {
     case 'waiting': return 'nothing changed here since your last edit: reload the tab';
     case 'off': return 'turned off';
     case 'empty': return 'no headers yet';
+    case 'other-tab': return `only in another tab (${line.host})`;
   }
 }
 
@@ -137,6 +138,26 @@ function onPreset() {
 function addHeader(list: HeaderMod[]) {
   list.push(emptyHeader());
 }
+
+// "Only this tab": bind the profile to the tab the popup was opened on.
+function bindToTab() {
+  if (tab.value) profile.value.tab = { id: tab.value.id, host: tab.value.host };
+}
+function unbindTab() {
+  delete profile.value.tab;
+}
+
+// Secret values are shown as dots until revealed (not saved: back to dots next time).
+const revealed = ref(new Set<string>());
+function toggleReveal(h: HeaderMod) {
+  if (revealed.value.has(h.id)) revealed.value.delete(h.id);
+  else revealed.value.add(h.id);
+}
+function toggleSecret(h: HeaderMod) {
+  h.secret = !isSecret(h);
+  revealed.value.delete(h.id);
+}
+const masked = (h: HeaderMod) => isSecret(h) && !revealed.value.has(h.id) && h.op !== 'remove';
 
 function removeAt<T>(list: T[], i: number) {
   list.splice(i, 1);
@@ -227,6 +248,11 @@ async function importFile(e: Event) {
       <div class="row">
         <input type="checkbox" v-model="profile.enabled" title="Profile on/off" />
         <input class="grow" v-model="profile.title" placeholder="Profile name" />
+        <span v-if="profile.tab" class="chip" :title="profile.tab.id === tab?.id ? 'Applies only in this tab' : 'Applies only in another tab'">
+          only in {{ profile.tab.id === tab?.id ? 'this tab' : 'another tab' }} · {{ profile.tab.host }}
+          <button class="x" title="Apply in all tabs again" @click="unbindTab">×</button>
+        </span>
+        <button v-else-if="tab" title="Apply this profile only in the current tab, until it closes" @click="bindToTab">Only this tab</button>
         <button :disabled="state.profiles.length === 1" title="Delete profile" @click="deleteProfile">Delete</button>
       </div>
 
@@ -239,7 +265,10 @@ async function importFile(e: Event) {
           <option>remove</option>
         </select>
         <input v-model="h.name" placeholder="Name" list="request-names" />
-        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" placeholder="Value" />
+        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" placeholder="Value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
+        <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? 'Hide value' : 'Show value'" @click="toggleReveal(h)">👁</button>
+        <span v-else class="icon-space"></span>
+        <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? 'Secret: value hidden. Click to show it always' : 'Mark as secret: hide the value'" @click="toggleSecret(h)">🔒</button>
         <button title="Remove" @click="removeAt(profile.requestHeaders, i)">×</button>
       </div>
       <div class="row">
@@ -257,7 +286,7 @@ async function importFile(e: Event) {
           <label v-for="(h, i) in pasted.headers" :key="h.name" class="pasted">
             <input type="checkbox" v-model="pastePicked[i]" />
             <code>{{ h.name }}</code>
-            <span class="val" :title="h.value">{{ h.value }}</span>
+            <span class="val">{{ isSecret(h) ? maskValue(h.value) : h.value }}</span>
           </label>
           <label v-if="canLimitToHost" class="pasted"><input type="checkbox" v-model="pasteOnlyHost" /> only on {{ pasteHost }}</label>
           <button :disabled="!pastePicked.some(Boolean)" @click="addPasted">Add {{ pastePicked.filter(Boolean).length }} header{{ pastePicked.filter(Boolean).length === 1 ? '' : 's' }}</button>
@@ -273,7 +302,10 @@ async function importFile(e: Event) {
           <option>remove</option>
         </select>
         <input v-model="h.name" placeholder="Name" list="response-names" />
-        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" placeholder="Value" />
+        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" placeholder="Value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
+        <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? 'Hide value' : 'Show value'" @click="toggleReveal(h)">👁</button>
+        <span v-else class="icon-space"></span>
+        <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? 'Secret: value hidden. Click to show it always' : 'Mark as secret: hide the value'" @click="toggleSecret(h)">🔒</button>
         <button title="Remove" @click="removeAt(profile.responseHeaders, i)">×</button>
       </div>
       <button class="link" @click="addHeader(profile.responseHeaders)">+ response header</button>

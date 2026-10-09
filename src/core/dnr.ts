@@ -20,6 +20,8 @@ export interface DnrRule {
     urlFilter?: string;
     regexFilter?: string;
     excludedRequestDomains?: string[];
+    /** Session rules only: "only this tab" profiles. */
+    tabIds?: number[];
     resourceTypes: string[];
   };
 }
@@ -108,14 +110,17 @@ interface ProfileParts {
 function profileConditions(p: Profile): Pick<ProfileParts, 'conditions' | 'allowConditions'> {
   const excludedDomains: string[] = [];
   const allowConditions: DnrRule['condition'][] = [];
+  // Both the headers and the "never on" allow rules of a tab-bound profile stay in that tab.
+  const tab = p.tab ? { tabIds: [p.tab.id] } : {};
   for (const f of p.filters) {
     const pattern = f.pattern.trim();
     if (!f.enabled || f.kind !== 'exclude' || pattern === '') continue;
-    if (f.isRegex) allowConditions.push({ regexFilter: pattern, resourceTypes: ALL_RESOURCE_TYPES });
+    if (f.isRegex) allowConditions.push({ regexFilter: pattern, ...tab, resourceTypes: ALL_RESOURCE_TYPES });
     else if (DOMAIN.test(pattern)) excludedDomains.push(pattern.toLowerCase());
-    else allowConditions.push({ urlFilter: pattern, resourceTypes: ALL_RESOURCE_TYPES });
+    else allowConditions.push({ urlFilter: pattern, ...tab, resourceTypes: ALL_RESOURCE_TYPES });
   }
   const base = {
+    ...tab,
     resourceTypes: ALL_RESOURCE_TYPES,
     ...(excludedDomains.length ? { excludedRequestDomains: excludedDomains } : {}),
   };
