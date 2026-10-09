@@ -13,9 +13,12 @@ You don't have to take "no network requests" on trust: the manifest sets
 browser itself blocks any request Headerwise might try to make. `npm run test:live`
 checks this (fetch, image, beacon, worker) in a real browser.
 
+Site: https://protemir.github.io/headerwise/ · Privacy: https://protemir.github.io/headerwise/privacy.html
+
 ## Status
 
-Early work in progress, not in the stores yet.
+Free, and staying free. Being submitted to the Chrome Web Store and Edge Add-ons;
+until then, build it yourself (below). Bugs and requests: GitHub Issues.
 
 ## Develop
 
@@ -44,3 +47,7 @@ placed below the rest, and Headerwise warns if that changes which profile wins a
 header.
 Chrome only allows `append` for a short list of request headers; Headerwise tells
 you when it skips one.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
