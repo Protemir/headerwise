@@ -3,6 +3,8 @@ import { computed, onMounted, ref, toRaw, watch } from 'vue';
 import { defaultState, emptyHeader, emptyProfile, newId, type HeaderMod, type State } from '../core/model.ts';
 import { importModHeader } from '../core/import-modheader.ts';
 import { loadState, saveState } from '../core/storage.ts';
+import type { RuleInfo } from '../core/dnr.ts';
+import { tabReport, type MatchedRule, type TabLine } from '../core/explain.ts';
 
 const ALL_SITES = { origins: ['<all_urls>'] };
 
@@ -20,13 +22,72 @@ onMounted(async () => {
   state.value = await loadState();
   hasAccess.value = await chrome.permissions.contains(ALL_SITES);
   await refreshWarnings();
+  await refreshTab();
   loaded.value = true;
   chrome.storage.session.onChanged.addListener(refreshWarnings);
 });
 
+// What the background script left for us: warnings, and which profile each rule belongs to.
+const ruleInfo = ref<Record<number, RuleInfo>>({});
+const rulesUpdatedAt = ref(0);
+
 async function refreshWarnings() {
-  const got = await chrome.storage.session.get('warnings');
+  const got = await chrome.storage.session.get(['warnings', 'ruleInfo', 'rulesUpdatedAt']);
   warnings.value = (got.warnings as string[] | undefined) ?? [];
+  ruleInfo.value = (got.ruleInfo as Record<number, RuleInfo> | undefined) ?? {};
+  rulesUpdatedAt.value = (got.rulesUpdatedAt as number | undefined) ?? 0;
+}
+
+// "On this tab". Opening the popup grants activeTab, which lets us ask Chrome
+// which of our rules matched requests in the current tab. (?tab=<id> is for tests.)
+const tab = ref<{ id: number; url: string; host: string } | null>(null);
+const tabNote = ref('');
+const tabAccess = ref(true);
+const matched = ref<MatchedRule[]>([]);
+
+async function refreshTab() {
+  const forced = Number(new URLSearchParams(location.search).get('tab'));
+  const t = forced ? await chrome.tabs.get(forced) : (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+  if (!t?.id || !t.url) return;
+  if (!/^https?:/.test(t.url)) {
+    tab.value = null;
+    tabNote.value = "Browsers don't let extensions change headers on this page.";
+    return;
+  }
+  tab.value = { id: t.id, url: t.url, host: new URL(t.url).host };
+  tabAccess.value = await chrome.permissions.contains({ origins: [`${new URL(t.url).origin}/*`] });
+  try {
+    const { rulesMatchedInfo } = await chrome.declarativeNetRequest.getMatchedRules({ tabId: t.id });
+    matched.value = rulesMatchedInfo
+      .filter(m => m.rule.rulesetId === chrome.declarativeNetRequest.DYNAMIC_RULESET_ID)
+      .map(m => ({ ruleId: m.rule.ruleId, timeStamp: m.timeStamp }));
+    tabNote.value = '';
+  } catch (e) {
+    // e.g. Chrome's limit on how often this can be asked
+    tabNote.value = `Chrome can't say right now which rules matched here (${e instanceof Error ? e.message : String(e)}).`;
+  }
+}
+
+const tabLines = computed(() => tab.value
+  ? tabReport(state.value, tab.value.url, matched.value, ruleInfo.value, rulesUpdatedAt.value)
+  : []);
+const needsReload = computed(() => tabLines.value.some(l => l.line.kind === 'waiting'));
+
+function describe(line: TabLine): string {
+  switch (line.kind) {
+    case 'applied': return `changed ${line.requests} request${line.requests === 1 ? '' : 's'}${line.skippedBy ? `; skipped where never on ${line.skippedBy} matches` : ''}`;
+    case 'excluded': return `skipped here: never on ${line.pattern} matches this page`;
+    case 'not-included': return `only on ${line.patterns.join(', ')}: this page doesn't match (its requests to other sites still can)`;
+    case 'waiting': return 'nothing changed here since your last edit: reload the tab';
+    case 'off': return 'turned off';
+    case 'empty': return 'no headers yet';
+  }
+}
+
+async function reloadTab() {
+  if (!tab.value) return;
+  await chrome.tabs.reload(tab.value.id);
+  setTimeout(refreshTab, 1500);
 }
 
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -38,6 +99,7 @@ watch(state, () => {
 
 async function grantAccess() {
   hasAccess.value = await chrome.permissions.request(ALL_SITES);
+  await refreshTab();
 }
 
 function addHeader(list: HeaderMod[]) {
@@ -101,6 +163,21 @@ async function importFile(e: Event) {
       Headerwise needs access to sites to change their headers.
       <button @click="grantAccess">Allow on all sites</button>
     </p>
+
+    <section v-if="tab || tabNote" class="here">
+      <h3>On this tab<template v-if="tab"> · <span class="host">{{ tab.host }}</span></template></h3>
+      <p v-if="state.paused" class="dim">Paused: nothing is changed anywhere.</p>
+      <template v-else-if="tab">
+        <p v-if="hasAccess && !tabAccess" class="dim">Headerwise has no access to this site, so nothing is changed here.</p>
+        <ul class="lines">
+          <li v-for="l in tabLines" :key="l.profileId" :class="l.line.kind">
+            <strong>{{ l.title }}</strong> {{ describe(l.line) }}
+          </li>
+        </ul>
+        <button v-if="needsReload" @click="reloadTab">Reload tab</button>
+      </template>
+      <p v-if="tabNote" class="dim">{{ tabNote }}</p>
+    </section>
 
     <nav class="tabs">
       <button

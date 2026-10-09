@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os';
 import { gunzipSync } from 'node:zlib';
 import { join, resolve } from 'node:path';
 import { openTab, sleep } from './cdp.mjs';
-import { accessChecks, migrateChecks, noAccessChecks } from './checks.mjs';
+import { accessChecks, migrateChecks, noAccessChecks, tabChecks } from './checks.mjs';
 
 const args = process.argv.slice(2);
 const browser = args.includes('--browser') ? args[args.indexOf('--browser') + 1] : 'chrome';
@@ -60,6 +60,8 @@ async function launch(name, grantAccess) {
     // the browser's permission dialog, so this copy gets it at install time.
     const manifest = JSON.parse(readFileSync(join(ext, 'manifest.json'), 'utf8'));
     manifest.host_permissions = ['<all_urls>'];
+    // and getMatchedRules for any tab, which the real popup gets from activeTab on click.
+    manifest.permissions.push('declarativeNetRequestFeedback');
     writeFileSync(join(ext, 'manifest.json'), JSON.stringify(manifest, null, 2));
   }
   mkdirSync(join(dir, 'profile'), { recursive: true });
@@ -95,7 +97,7 @@ async function launch(name, grantAccess) {
   const page = await openTab(CDP_PORT, 'about:blank');
   const version = (await (await fetch(`http://127.0.0.1:${CDP_PORT}/json/version`)).json()).Browser;
   return {
-    extId, version, tabs: { ctl, page },
+    extId, version, tabs: { ctl, page, port: CDP_PORT },
     async close() {
       ctl.close();
       page.close();
@@ -111,7 +113,11 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok ? '' : `  -> ${detail}`}`);
 };
 
-const both = async (tabs, ctx, check) => { await accessChecks(tabs, ctx, check); await migrateChecks(tabs, ctx, check); };
+const both = async (tabs, ctx, check) => {
+  await accessChecks(tabs, ctx, check);
+  await tabChecks(tabs, ctx, check);
+  await migrateChecks(tabs, ctx, check);
+};
 for (const [name, grant, checks] of [['no-access', false, noAccessChecks], ['access', true, both]]) {
   const b = await launch(name, grant);
   console.log(`\n${b.version}, ${name === 'access' ? 'site access granted' : 'real manifest, no site access'}`);

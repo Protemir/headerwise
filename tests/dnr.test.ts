@@ -144,7 +144,7 @@ describe('dropUnsupportedRegexes', () => {
     ? { isSupported: false, reason: 'syntaxError' }
     : { isSupported: true });
 
-  it('skips an only-on rule with a lookahead and renumbers the rest', async () => {
+  it('skips an only-on rule with a lookahead and keeps the other ids', async () => {
     const converted = toDnrRules(s([p({
       title: 'Api',
       requestHeaders: [h('X-A')],
@@ -152,7 +152,7 @@ describe('dropUnsupportedRegexes', () => {
     })]));
     const kept = await dropUnsupportedRegexes(converted, re2);
     const { warnings } = converted;
-    expect(kept.map(r => [r.id, r.condition.urlFilter])).toEqual([[1, '||example.com^']]);
+    expect(kept.map(r => [r.id, r.condition.urlFilter])).toEqual([[2, '||example.com^']]);
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toMatch(/^"Api": "only on" regex .*\(syntaxError\)/);
   });

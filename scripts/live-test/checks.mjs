@@ -191,3 +191,53 @@ export async function migrateChecks(tabs, { base, extId, fixtureDir }, check) {
   check('migrate: selected profile works (X-Note sent)', seen['x-note'] !== undefined, JSON.stringify(seen['x-note']) + ' rules: ' + JSON.stringify(await tabs.ctl.evaluate('chrome.declarativeNetRequest.getDynamicRules()')) + ' warnings: ' + JSON.stringify(await tabs.ctl.evaluate(`chrome.storage.session.get('warnings')`)));
   check('migrate: its "never on" works too', !('x-note' in await navigate(`${base}/login`)));
 }
+
+/** The popup's "On this tab" report, for the tab that visits the echo server. */
+export async function tabChecks(tabs, { base, extId }, check) {
+  const { apply, navigate, xhr } = harness(tabs);
+  const { ctl } = tabs;
+  const profiles = [
+    p('Works', { requestHeaders: [h('X-W', '1')] }),
+    p('Never login', { requestHeaders: [h('X-N', '1')], filters: [f('exclude', '/login', true)] }),
+    p('Other site', { requestHeaders: [h('X-O', '1')], filters: [f('include', '||api.invalid^', false)] }),
+    { ...p('Off', { requestHeaders: [h('X-Off', '1')] }), enabled: false },
+  ];
+  await apply(st(profiles));
+  await navigate(`${base}/login`);
+  await xhr(`${base}/login/data`);
+  const tabId = await ctl.evaluate(`chrome.tabs.query({ url: '${base}/*' }).then(t => t[0].id)`);
+
+  const report = async () => {
+    const t = await openPopup(tabs.port, extId, tabId);
+    const lines = await t.evaluate(`[...document.querySelectorAll('.here .lines li')].map(li => li.innerText.trim())`);
+    const reload = await t.evaluate(`[...document.querySelectorAll('.here button')].some(b => b.textContent.includes('Reload tab'))`);
+    return { t, lines, reload };
+  };
+
+  let r = await report();
+  check('this tab: applied profile with a request count', /^Works changed [2-9]\d* requests$/.test(r.lines[0] ?? ''), JSON.stringify(r.lines));
+  // The page itself is excluded; its favicon request is not, so either line is right.
+  check('this tab: "never on" reported as the reason', /^Never login (skipped here: never on \/login matches this page|changed 1 request; skipped where never on \/login matches)$/.test(r.lines[1] ?? ''), r.lines[1]);
+  check('this tab: "only on" explained', /^Other site only on \|\|api\.invalid\^: this page doesn't match/.test(r.lines[2] ?? ''), r.lines[2]);
+  check('this tab: turned-off profile', r.lines[3] === 'Off turned off', r.lines[3]);
+  check('this tab: no reload button when all is applied', !r.reload);
+  await r.t.send('Page.close');
+
+  // Change a header: the open page hasn't had a request since, so the popup asks for a reload.
+  profiles[0].requestHeaders[0].value = '2';
+  await apply(st(profiles));
+  r = await report();
+  check('this tab: after an edit asks to reload', /^Works nothing changed here since your last edit/.test(r.lines[0] ?? '') && r.reload, JSON.stringify(r));
+  await r.t.evaluate(`[...document.querySelectorAll('.here button')].find(b => b.textContent.includes('Reload tab')).click()`);
+  await sleep(2500);
+  const after = await r.t.evaluate(`[...document.querySelectorAll('.here .lines li')].map(li => li.innerText.trim())`);
+  check('this tab: "Reload tab" reloads and the report updates', /^Works changed \d+ request/.test(after[0] ?? ''), JSON.stringify(after));
+  await r.t.send('Page.close');
+}
+
+async function openPopup(port, extId, tabId) {
+  const { openTab } = await import('./cdp.mjs');
+  const t = await openTab(port, `chrome-extension://${extId}/src/popup/index.html?tab=${tabId}`);
+  await sleep(1200);
+  return t;
+}

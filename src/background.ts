@@ -27,19 +27,28 @@ async function apply(): Promise<void> {
     regex => chrome.declarativeNetRequest.isRegexSupported({ regex }),
   );
 
-  const existing = await chrome.declarativeNetRequest.getDynamicRules();
+  // Rebuild only when the rules really changed (not on a profile rename, say):
+  // a rebuild resets what the popup can report for the open tabs.
+  const key = JSON.stringify([rules, converted.info]);
+  const { rulesKey } = await chrome.storage.session.get('rulesKey');
   let rejected = false;
-  try {
-    await chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: existing.map(r => r.id),
-      addRules: rules as unknown as chrome.declarativeNetRequest.Rule[],
-    });
-  } catch (e) {
-    // Regexes are checked above, so this should be rare. Chrome rejects the whole
-    // batch, so clear our rules instead of leaving stale ones in place.
-    rejected = true;
-    await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: existing.map(r => r.id) });
-    warnings.push(`Chrome rejected the rules: ${e instanceof Error ? e.message : String(e)}`);
+  if (rulesKey !== key) {
+    const existing = await chrome.declarativeNetRequest.getDynamicRules();
+    try {
+      await chrome.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: existing.map(r => r.id),
+        addRules: rules as unknown as chrome.declarativeNetRequest.Rule[],
+      });
+      await chrome.storage.session.set({ rulesKey: key, ruleInfo: converted.info, rulesUpdatedAt: Date.now() });
+    } catch (e) {
+      // Regexes are checked above, so this should be rare. Chrome rejects the whole
+      // batch, so clear our rules instead of leaving stale ones in place.
+      rejected = true;
+      await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: existing.map(r => r.id) });
+      // An empty key makes the next sync try again.
+      await chrome.storage.session.set({ rulesKey: '', ruleInfo: {}, rulesUpdatedAt: Date.now() });
+      warnings.push(`Chrome rejected the rules: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
 
   // Without host access Chrome keeps the rules but changes nothing.

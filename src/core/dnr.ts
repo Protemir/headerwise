@@ -24,11 +24,21 @@ export interface DnrRule {
   };
 }
 
+/** Where a rule came from, so matches Chrome reports can be explained per profile. */
+export interface RuleInfo {
+  profileId: string;
+  /** modify: the profile's headers; allow: one of its "never on" patterns. */
+  kind: 'modify' | 'allow';
+  pattern?: string;
+}
+
 export interface ConversionResult {
   rules: DnrRule[];
   warnings: string[];
   /** Profile title by rule priority (each enabled profile has its own priority). */
   titles: Record<number, string>;
+  /** By rule id. */
+  info: Record<number, RuleInfo>;
 }
 
 // Without an explicit list Chrome skips main_frame, which surprises users.
@@ -85,6 +95,7 @@ function convertHeaders(
 }
 
 interface ProfileParts {
+  id: string;
   title: string;
   index: number;
   requestHeaders: DnrHeaderInfo[];
@@ -141,7 +152,8 @@ export function toDnrRules(state: State): ConversionResult {
   const warnings: string[] = [];
   const rules: DnrRule[] = [];
   const titles: Record<number, string> = {};
-  if (state.paused) return { rules, warnings, titles };
+  const info: Record<number, RuleInfo> = {};
+  if (state.paused) return { rules, warnings, titles, info };
 
   const parts: ProfileParts[] = [];
   state.profiles.forEach((p, index) => {
@@ -149,7 +161,7 @@ export function toDnrRules(state: State): ConversionResult {
     const requestHeaders = convertHeaders(p.requestHeaders, 'request', p.title, warnings);
     const responseHeaders = convertHeaders(p.responseHeaders, 'response', p.title, warnings);
     if (requestHeaders.length === 0 && responseHeaders.length === 0) return;
-    parts.push({ title: p.title, index, requestHeaders, responseHeaders, ...profileConditions(p) });
+    parts.push({ id: p.id, title: p.title, index, requestHeaders, responseHeaders, ...profileConditions(p) });
   });
 
   const plain = parts.filter(x => x.allowConditions.length === 0);
@@ -171,6 +183,7 @@ export function toDnrRules(state: State): ConversionResult {
     const priority = ordered.length - pos;
     titles[priority] = x.title;
     for (const condition of x.conditions) {
+      info[rules.length + 1] = { profileId: x.id, kind: 'modify', ...(condition.urlFilter ?? condition.regexFilter ? { pattern: condition.urlFilter ?? condition.regexFilter } : {}) };
       rules.push({
         id: rules.length + 1,
         priority,
@@ -183,12 +196,13 @@ export function toDnrRules(state: State): ConversionResult {
       });
     }
     for (const condition of x.allowConditions) {
+      info[rules.length + 1] = { profileId: x.id, kind: 'allow', pattern: condition.urlFilter ?? condition.regexFilter };
       rules.push({ id: rules.length + 1, priority, action: { type: 'allow' }, condition });
     }
   });
 
   limitRules(rules, warnings);
-  return { rules, warnings, titles };
+  return { rules, warnings, titles, info };
 }
 
 /**
@@ -218,9 +232,8 @@ export async function dropUnsupportedRegexes(
       warnings.push(`"${titles[r.priority]}": "only on" regex "${regex}" is not supported by Chrome${why}, skipped.`);
     }
   }
-  return rules
-    .filter(r => !badRules.has(r) && !badPriorities.has(r.priority))
-    .map((r, i) => ({ ...r, id: i + 1 }));
+  // Ids stay as they are (gaps are fine for Chrome), so `info` still matches.
+  return rules.filter(r => !badRules.has(r) && !badPriorities.has(r.priority));
 }
 
 function limitRules(rules: DnrRule[], warnings: string[]): void {
