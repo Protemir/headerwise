@@ -1,5 +1,5 @@
 import { importModHeader, type ImportResult } from './import-modheader.ts';
-import { isSecret, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type HeaderOp, type Profile, type UrlFilter } from './model.ts';
+import { isSecret, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type HeaderOp, type Profile, type Redirect, type UrlFilter } from './model.ts';
 
 /*
  * Headerwise's own export file:
@@ -45,6 +45,13 @@ function header(raw: unknown): HeaderMod | null {
   };
 }
 
+function redirect(raw: unknown): Redirect | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  if (str(r.from).trim() === '') return null;
+  return { id: newId(), enabled: r.enabled !== false, from: str(r.from), to: str(r.to), isRegex: r.isRegex === true };
+}
+
 function filter(raw: unknown): UrlFilter | null {
   if (!raw || typeof raw !== 'object') return null;
   const f = raw as Record<string, unknown>;
@@ -67,6 +74,7 @@ function profile(raw: unknown, i: number): Profile | null {
     requestHeaders: list(p.requestHeaders, header),
     responseHeaders: list(p.responseHeaders, header),
     filters: list(p.filters, filter),
+    ...(Array.isArray(p.redirects) && p.redirects.length ? { redirects: list(p.redirects, redirect) } : {}),
     ...(initiators.length ? { initiatorDomains: initiators } : {}),
     ...(notInitiators.length ? { excludedInitiatorDomains: notInitiators } : {}),
     ...(types.length ? { resourceTypes: types } : {}),

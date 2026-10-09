@@ -1,5 +1,5 @@
 import type { RuleInfo } from './dnr.ts';
-import { RESOURCE_TYPES, type Profile, type State } from './model.ts';
+import { activeRedirects, RESOURCE_TYPES, type Profile, type State } from './model.ts';
 
 /*
  * "Is it working on this tab?" Chrome tells us which of our rules matched
@@ -93,7 +93,7 @@ export function scopeSummary(p: Profile): string {
 }
 
 export function hasHeaders(p: Profile): boolean {
-  return [...p.requestHeaders, ...p.responseHeaders].some(h => h.enabled && h.name.trim() !== '');
+  return [...p.requestHeaders, ...p.responseHeaders].some(h => h.enabled && h.name.trim() !== '') || activeRedirects(p).length > 0;
 }
 
 /**
@@ -112,7 +112,7 @@ export function tabReport(state: State, url: string, matched: MatchedRule[], inf
     if (m.timeStamp < since) continue;
     const i = info[m.ruleId];
     if (!i) continue;
-    if (i.kind === 'modify') requests.set(i.profileId, (requests.get(i.profileId) ?? 0) + 1);
+    if (i.kind === 'modify' || i.kind === 'redirect') requests.set(i.profileId, (requests.get(i.profileId) ?? 0) + 1);
     else if (i.pattern !== undefined && !allowed.has(i.profileId)) allowed.set(i.profileId, i.pattern);
   }
 

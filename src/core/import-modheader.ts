@@ -1,5 +1,5 @@
 import { unknownVariables } from './variables.ts';
-import { newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type UrlFilter } from './model.ts';
+import { newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type Redirect, type UrlFilter } from './model.ts';
 
 /*
  * ModHeader export format, checked against the 7.0.18 export code (as ported in
@@ -26,6 +26,10 @@ type AppendMode = boolean | string | undefined;
 interface MhHeader { enabled?: boolean; name?: string; value?: string; comment?: string; appendMode?: AppendMode; sendEmptyHeader?: boolean }
 interface MhUrlFilter { enabled?: boolean; type?: string; urlRegex?: string; urlPattern?: string; resourceType?: string[] }
 interface MhDomainFilter { enabled?: boolean; domain?: string }
+interface MhCookie {
+  enabled?: boolean; name?: string; value?: string; regexEnabled?: boolean;
+  domain?: string; path?: string; secure?: boolean; httpOnly?: boolean; sameSite?: string; maxAge?: number; priority?: string;
+}
 interface MhProfile {
   version?: number;
   title?: string;
@@ -35,6 +39,9 @@ interface MhProfile {
   headers?: MhHeader[];
   respHeaders?: MhHeader[];
   reqCookieAppend?: MhHeader[];
+  urlReplacements?: MhHeader[];
+  cookieHeaders?: MhCookie[];
+  setCookieHeaders?: MhCookie[];
   filters?: MhUrlFilter[];
   urlFilters?: MhUrlFilter[];
   excludeUrlFilters?: MhUrlFilter[];
@@ -52,9 +59,6 @@ export interface ImportResult {
 
 // Things Headerwise can't do yet, in the words the user knows them by in ModHeader.
 const UNSUPPORTED: Record<string, string> = {
-  urlReplacements: 'redirects',
-  cookieHeaders: 'request cookie rules',
-  setCookieHeaders: 'response cookie rules',
   cspHeaders: 'CSP rules',
   tabFilters: 'tab filters',
   tabGroupFilters: 'tab group filters',
@@ -67,6 +71,46 @@ const UNSUPPORTED: Record<string, string> = {
 const NARROWING = new Set([
   'tabFilters', 'tabGroupFilters', 'windowFilters', 'timeFilters',
 ]);
+
+// ModHeader's "URL replacements" are redirects: the regex in name, the replacement in value.
+function redirectsOf(list: MhHeader[] | undefined): Redirect[] {
+  return (list ?? [])
+    .filter(r => typeof r?.name === 'string' && r.name.trim() !== '')
+    .map(r => ({ id: newId(), enabled: r.enabled !== false, from: r.name!.trim(), to: r.value ?? '', isRegex: true }));
+}
+
+/**
+ * ModHeader's cookie rules, as far as headers can express them: a request cookie
+ * becomes name=value added to the Cookie header, a response cookie a Set-Cookie
+ * header with its attributes. Rules matching cookie names by regex, and removing
+ * a single cookie, have no header equivalent.
+ */
+function cookieRules(p: MhProfile, title: string, warnings: string[]): { request: HeaderMod[]; response: HeaderMod[] } {
+  const request: HeaderMod[] = [];
+  const response: HeaderMod[] = [];
+  let skipped = 0;
+  for (const c of p.cookieHeaders ?? []) {
+    if (typeof c?.name !== 'string' || c.name.trim() === '') continue;
+    if (c.regexEnabled || !c.value) { skipped++; continue; }
+    request.push({ id: newId(), enabled: c.enabled !== false, name: 'Cookie', value: `${c.name.trim()}=${c.value}`, op: 'append' });
+  }
+  for (const c of p.setCookieHeaders ?? []) {
+    if (typeof c?.name !== 'string' || c.name.trim() === '') continue;
+    if (c.regexEnabled) { skipped++; continue; }
+    const parts = [`${c.name.trim()}=${c.value ?? ''}`];
+    if (typeof c.maxAge === 'number') parts.push(`Max-Age=${c.maxAge}`);
+    if (c.domain) parts.push(`Domain=${c.domain}`);
+    if (c.path) parts.push(`Path=${c.path}`);
+    if (c.secure) parts.push('Secure');
+    if (c.httpOnly) parts.push('HttpOnly');
+    if (c.sameSite) parts.push(`SameSite=${c.sameSite[0].toUpperCase()}${c.sameSite.slice(1).toLowerCase()}`);
+    if (c.priority) parts.push(`Priority=${c.priority[0].toUpperCase()}${c.priority.slice(1).toLowerCase()}`);
+    response.push({ id: newId(), enabled: c.enabled !== false, name: 'Set-Cookie', value: parts.join('; '), op: 'append' });
+  }
+  if (request.length) warnings.push(`"${title}": request cookies are added to the Cookie header, so a cookie the site set with the same name is still sent too.`);
+  if (skipped) warnings.push(`"${title}": ${skipped} cookie rule${skipped === 1 ? '' : 's'} matching names by regex or removing a cookie skipped: headers can't express that.`);
+  return { request, response };
+}
 
 function isAppend(mode: AppendMode): boolean {
   return mode === true || mode === 'true' || mode === 'append' || mode === 'comma';
@@ -180,8 +224,10 @@ export function importModHeader(text: string, { active = 0 }: { active?: number 
     if (skipped.length) warnings.push(`"${title}": skipped ${skipped.join(', ')}. Headerwise can't do these yet.`);
     if (narrowingSkipped) warnings.push(`"${title}" is imported switched off: without those filters it would apply to more requests than in ModHeader.`);
 
-    const requestHeaders = [...headers(p.headers, p), ...cookieAppends(p.reqCookieAppend)];
-    const responseHeaders = headers(p.respHeaders, p);
+    const cookies = cookieRules(p, title, warnings);
+    const requestHeaders = [...headers(p.headers, p), ...cookieAppends(p.reqCookieAppend), ...cookies.request];
+    const responseHeaders = [...headers(p.respHeaders, p), ...cookies.response];
+    const redirects = redirectsOf(p.urlReplacements);
     const unknown = [...new Set([...requestHeaders, ...responseHeaders].flatMap(h => unknownVariables(h.value)))];
     if (unknown.length) {
       warnings.push(`"${title}": ${unknown.map(n => `{{${n}}}`).join(', ')} is not a Headerwise variable and will be sent as plain text.`);
@@ -194,6 +240,7 @@ export function importModHeader(text: string, { active = 0 }: { active?: number 
       requestHeaders,
       responseHeaders,
       filters,
+      ...(redirects.length ? { redirects } : {}),
       ...(initiators.length ? { initiatorDomains: [...new Set(initiators)] } : {}),
       ...(resourceTypes.length ? { resourceTypes } : {}),
       ...(requestMethods.length ? { requestMethods } : {}),

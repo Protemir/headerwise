@@ -28,6 +28,7 @@ WHAT YOU CAN DO
 • Filters: only on or never on URL patterns and regular expressions, only for requests made by some sites, only for some request types (page, fetch/XHR, scripts…) or methods, or only in one tab.
 • On this tab: open the popup to see which profile changed how many requests on the current page, and why another one didn't.
 • Paste from DevTools: copy a request as cURL, fetch or PowerShell, paste it, and pick the headers you want.
+• Redirects: replace part of the address, for example send api.example.com requests to your staging server. ModHeader's URL replacements import as redirects, and its cookie rules as Cookie and Set-Cookie headers.
 • Presets: CORS, remove Content-Security-Policy, allow a site in an iframe, Bearer token, no cache, iPhone or Googlebot User-Agent, and more.
 • Variables: {{uuid}}, {{timestamp}}, {{date}} and others, filled in on every edit and refreshed every minute.
 • Secrets stay hidden: tokens and cookies show as dots until you click the eye, handy when you share your screen.

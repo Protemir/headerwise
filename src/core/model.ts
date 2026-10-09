@@ -48,6 +48,24 @@ export interface Profile {
   resourceTypes?: string[];
   /** Only these methods, lowercase ('get', 'post', ...). Empty or unset: all. */
   requestMethods?: string[];
+  /** Rewrite part of the URL (ModHeader's "URL replacements"). */
+  redirects?: Redirect[];
+}
+
+/**
+ * Replace the first match of `from` in a request URL with `to` and redirect there.
+ * isRegex: `from` is a regular expression and `to` may use $1..$9 for its groups.
+ */
+export interface Redirect {
+  id: string;
+  enabled: boolean;
+  from: string;
+  to: string;
+  isRegex: boolean;
+}
+
+export function activeRedirects(p: Profile): Redirect[] {
+  return (p.redirects ?? []).filter(r => r.enabled && r.from.trim() !== '');
 }
 
 export const RESOURCE_TYPES: { id: string; label: string }[] = [
@@ -175,6 +193,7 @@ export function activeHeaderCount(state: State): number {
     for (const h of [...p.requestHeaders, ...p.responseHeaders]) {
       if (h.enabled && h.name.trim() !== '') n++;
     }
+    n += activeRedirects(p).length;
   }
   return n;
 }

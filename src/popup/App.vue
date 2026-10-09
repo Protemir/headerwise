@@ -149,6 +149,10 @@ function onPreset() {
   presetChoice.value = '';
 }
 
+function addRedirect() {
+  (profile.value.redirects ??= []).push({ id: newId(), enabled: true, from: '', to: '', isRegex: false });
+}
+
 function addHeader(list: HeaderMod[]) {
   list.push(emptyHeader());
 }
@@ -394,6 +398,18 @@ async function importFile(e: Event) {
         <button title="Remove" @click="removeAt(profile.responseHeaders, i)">×</button>
       </div>
       <button class="link" @click="addHeader(profile.responseHeaders)">+ response header</button>
+
+      <h3>Redirects</h3>
+      <div v-for="(r, i) in profile.redirects ?? []" :key="r.id" class="row">
+        <input type="checkbox" v-model="r.enabled" />
+        <input class="grow" v-model="r.from" :placeholder="r.isRegex ? 'regex, e.g. /v(\\d+)/' : 'part of the URL, e.g. api.example.com'" spellcheck="false" />
+        <span class="arrow" aria-hidden="true">→</span>
+        <input class="grow" v-model="r.to" :placeholder="r.isRegex ? 'e.g. /v$1-beta/' : 'e.g. api.staging.example.com'" spellcheck="false" />
+        <label class="small"><input type="checkbox" v-model="r.isRegex" /> regex</label>
+        <button title="Remove" @click="removeAt(profile.redirects!, i)">×</button>
+      </div>
+      <button class="link" @click="addRedirect">+ redirect</button>
+      <p v-if="profile.redirects?.length" class="dim small-hint">Replaces the first match in the address of a request and sends it there. "Only on" filters don't apply to redirects; "never on" and the other limits do.</p>
 
       <h3>Only on / never on</h3>
       <div v-for="(f, i) in profile.filters" :key="f.id" class="row">

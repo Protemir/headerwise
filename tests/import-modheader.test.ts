@@ -135,10 +135,13 @@ describe('importModHeader', () => {
       ['Cookie', 'seen=1', 'append'],
     ]);
     expect(profiles[0].enabled).toBe(false);
-    expect(warnings).toHaveLength(2); // {{uuid}} is a Headerwise variable too, so no warning about it
-    expect(warnings[0]).toBe('"Cookies": skipped request cookie rules, response cookie rules, tab filters. Headerwise can\'t do these yet.');
+    // the response cookie becomes a Set-Cookie header; the regex request cookie can't be expressed
+    expect(profiles[0].responseHeaders.map(h => [h.name, h.value, h.op])).toEqual([['Set-Cookie', 'ip_check_time=; Max-Age=7200', 'append']]);
+    expect(warnings).toHaveLength(3); // {{uuid}} is a Headerwise variable too, so no warning about it
+    expect(warnings[0]).toBe('"Cookies": skipped tab filters. Headerwise can\'t do these yet.');
     expect(profiles[0].resourceTypes).toEqual(['main_frame']);
     expect(warnings[1]).toMatch(/switched off/);
+    expect(warnings[2]).toMatch(/1 cookie rule matching names by regex or removing a cookie skipped/);
   });
 
   it('maps excludeRequestDomainFilters to "never on" domains', () => {

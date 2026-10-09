@@ -56,3 +56,4 @@ button.icon, .icon-space { flex: 0 0 26px; box-sizing: border-box; text-align: c
 kbd { font: 10px ui-monospace, Consolas, monospace; border: 1px solid var(--line); border-radius: 3px; padding: 0 3px; }
 .tabs button[draggable] { cursor: grab; }
 .row input[list] { flex: 0 1 220px; } /* header names: room for Access-Control-Allow-Origin */
+.arrow { opacity: .6; flex: 0 0 auto; }

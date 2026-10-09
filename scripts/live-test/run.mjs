@@ -19,6 +19,7 @@ import { accessChecks, cspChecks, migrateChecks, noAccessChecks, quickInputCheck
 import { secretChecks, tabOnlyChecks } from './checks-tabs.mjs';
 import { exportChecks, filterChecks } from './checks-filters.mjs';
 import { listChecks, variableChecks, welcomeChecks } from './checks-ux.mjs';
+import { redirectChecks } from './checks-redirects.mjs';
 
 const args = process.argv.slice(2);
 const browser = args.includes('--browser') ? args[args.indexOf('--browser') + 1] : 'chrome';
@@ -177,6 +178,7 @@ const both = async (tabs, ctx, check) => {
   await exportChecks(tabs, ctx, check);
   await variableChecks(tabs, ctx, check);
   await listChecks(tabs, ctx, check);
+  await redirectChecks(tabs, ctx, check);
   await cspChecks(tabs, ctx, check);
   await migrateChecks(tabs, ctx, check);
 };
