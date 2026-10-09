@@ -145,25 +145,25 @@ describe('dropUnsupportedRegexes', () => {
     : { isSupported: true });
 
   it('skips an only-on rule with a lookahead and renumbers the rest', async () => {
-    const { rules } = toDnrRules(s([p({
+    const converted = toDnrRules(s([p({
+      title: 'Api',
       requestHeaders: [h('X-A')],
       filters: [f('include', '^https://(?!www)', true), f('include', '||example.com^', false)],
     })]));
-    const warnings: string[] = [];
-    const kept = await dropUnsupportedRegexes(rules, re2, warnings);
+    const kept = await dropUnsupportedRegexes(converted, re2);
+    const { warnings } = converted;
     expect(kept.map(r => [r.id, r.condition.urlFilter])).toEqual([[1, '||example.com^']]);
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toMatch(/"Only on" regex .*\(syntaxError\)/);
+    expect(warnings[0]).toMatch(/^"Api": "only on" regex .*\(syntaxError\)/);
   });
 
   it('turns off the whole profile when its never-on regex is unsupported, other profiles stay', async () => {
-    const { rules } = toDnrRules(s([
+    const converted = toDnrRules(s([
       p({ title: 'ok', requestHeaders: [h('X-Ok')] }),
-      p({ title: 'bad', requestHeaders: [h('X-Bad')], filters: [f('exclude', 'login(?=\?)', true)] }),
+      p({ title: 'bad', requestHeaders: [h('X-Bad')], filters: [f('exclude', 'login(?=\\?)', true)] }),
     ]));
-    const warnings: string[] = [];
-    const kept = await dropUnsupportedRegexes(rules, re2, warnings);
+    const kept = await dropUnsupportedRegexes(converted, re2);
     expect(kept.map(r => mod(r).requestHeaders![0].header)).toEqual(['X-Ok']);
-    expect(warnings[0]).toMatch(/profile is off/);
+    expect(converted.warnings[0]).toMatch(/^"bad": .*so this profile is off/);
   });
 });

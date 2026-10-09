@@ -18,6 +18,8 @@ Early work in progress, not in the stores yet.
 npm install
 npm test          # unit tests, plain node --test
 npm run build     # builds the extension into dist/
+npm run test:live # loads dist/ into a throwaway Chrome profile and checks real requests
+                  # (add -- --browser edge for Edge)
 ```
 
 Then open `chrome://extensions`, turn on Developer mode, click "Load unpacked" and

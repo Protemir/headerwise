@@ -12,12 +12,12 @@ async function sync(): Promise<void> {
   const converted = toDnrRules(state);
   const warnings = converted.warnings;
   const rules = await dropUnsupportedRegexes(
-    converted.rules,
+    converted,
     regex => chrome.declarativeNetRequest.isRegexSupported({ regex }),
-    warnings,
   );
 
   const existing = await chrome.declarativeNetRequest.getDynamicRules();
+  let rejected = false;
   try {
     await chrome.declarativeNetRequest.updateDynamicRules({
       removeRuleIds: existing.map(r => r.id),
@@ -26,14 +26,23 @@ async function sync(): Promise<void> {
   } catch (e) {
     // Regexes are checked above, so this should be rare. Chrome rejects the whole
     // batch, so clear our rules instead of leaving stale ones in place.
+    rejected = true;
     await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: existing.map(r => r.id) });
     warnings.push(`Chrome rejected the rules: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  // Without host access Chrome keeps the rules but changes nothing.
+  const { origins = [] } = await chrome.permissions.getAll();
+  const noAccess = origins.length === 0;
+  if (noAccess && rules.length) {
+    warnings.unshift('Headerwise has no access to sites yet, so no headers are changed. Click "Allow on all sites" above.');
   }
 
   await chrome.storage.session.set({ warnings });
 
   const count = activeHeaderCount(state);
-  await chrome.action.setBadgeText({ text: state.paused ? 'off' : count > 0 ? String(count) : '' });
+  const broken = count > 0 && (rejected || noAccess);
+  await chrome.action.setBadgeText({ text: state.paused ? 'off' : broken ? '!' : count > 0 ? String(count) : '' });
   await chrome.action.setBadgeBackgroundColor({ color: state.paused ? '#888888' : warnings.length ? '#c2410c' : '#2563eb' });
 }
 
@@ -47,3 +56,4 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes[STATE_KEY]) queueSync();
 });
 chrome.permissions.onAdded.addListener(queueSync);
+chrome.permissions.onRemoved.addListener(queueSync);

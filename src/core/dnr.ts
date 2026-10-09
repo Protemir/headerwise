@@ -27,6 +27,8 @@ export interface DnrRule {
 export interface ConversionResult {
   rules: DnrRule[];
   warnings: string[];
+  /** Profile title by rule priority (each enabled profile has its own priority). */
+  titles: Record<number, string>;
 }
 
 // Without an explicit list Chrome skips main_frame, which surprises users.
@@ -138,7 +140,8 @@ function sharedHeader(a: ProfileParts, b: ProfileParts): string | undefined {
 export function toDnrRules(state: State): ConversionResult {
   const warnings: string[] = [];
   const rules: DnrRule[] = [];
-  if (state.paused) return { rules, warnings };
+  const titles: Record<number, string> = {};
+  if (state.paused) return { rules, warnings, titles };
 
   const parts: ProfileParts[] = [];
   state.profiles.forEach((p, index) => {
@@ -166,6 +169,7 @@ export function toDnrRules(state: State): ConversionResult {
   const ordered = [...plain, ...withAllow];
   ordered.forEach((x, pos) => {
     const priority = ordered.length - pos;
+    titles[priority] = x.title;
     for (const condition of x.conditions) {
       rules.push({
         id: rules.length + 1,
@@ -183,7 +187,8 @@ export function toDnrRules(state: State): ConversionResult {
     }
   });
 
-  return limitRules(rules, warnings);
+  limitRules(rules, warnings);
+  return { rules, warnings, titles };
 }
 
 /**
@@ -194,9 +199,8 @@ export function toDnrRules(state: State): ConversionResult {
  * said "never" is worse than not applying them.
  */
 export async function dropUnsupportedRegexes(
-  rules: DnrRule[],
+  { rules, warnings, titles }: ConversionResult,
   isSupported: (regex: string) => Promise<{ isSupported: boolean; reason?: string }>,
-  warnings: string[],
 ): Promise<DnrRule[]> {
   const badRules = new Set<DnrRule>();
   const badPriorities = new Set<number>();
@@ -208,10 +212,10 @@ export async function dropUnsupportedRegexes(
     const why = res.reason ? ` (${res.reason})` : '';
     if (r.action.type === 'allow') {
       badPriorities.add(r.priority);
-      warnings.push(`"Never on" regex "${regex}" is not supported by Chrome${why}, so its profile is off.`);
+      warnings.push(`"${titles[r.priority]}": "never on" regex "${regex}" is not supported by Chrome${why}, so this profile is off.`);
     } else {
       badRules.add(r);
-      warnings.push(`"Only on" regex "${regex}" is not supported by Chrome${why}, skipped.`);
+      warnings.push(`"${titles[r.priority]}": "only on" regex "${regex}" is not supported by Chrome${why}, skipped.`);
     }
   }
   return rules
@@ -219,7 +223,7 @@ export async function dropUnsupportedRegexes(
     .map((r, i) => ({ ...r, id: i + 1 }));
 }
 
-function limitRules(rules: DnrRule[], warnings: string[]): ConversionResult {
+function limitRules(rules: DnrRule[], warnings: string[]): void {
   if (rules.length > MAX_DYNAMIC_RULES) {
     warnings.push(`Too many rules (${rules.length}), Chrome allows ${MAX_DYNAMIC_RULES}. Only the first ${MAX_DYNAMIC_RULES} are applied.`);
     rules.length = MAX_DYNAMIC_RULES;
@@ -228,5 +232,4 @@ function limitRules(rules: DnrRule[], warnings: string[]): ConversionResult {
   if (regexCount > MAX_REGEX_RULES) {
     warnings.push(`Too many regex filters (${regexCount}), Chrome allows ${MAX_REGEX_RULES}.`);
   }
-  return { rules, warnings };
 }
