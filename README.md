@@ -26,7 +26,7 @@ there too). Until it's live, take the zip from the
 ## Develop
 
 ```
-npm install
+npm ci            # exact versions from package-lock.json
 npm test          # unit tests, plain node --test
 npm run build     # builds the extension into dist/
 npm run test:live # loads dist/ into a throwaway Chrome profile and checks real requests
