@@ -41,6 +41,23 @@ async function refreshWarnings() {
   rulesUpdatedAt.value = (got.rulesUpdatedAt as number | undefined) ?? 0;
 }
 
+// Regexes Chrome won't take (it uses RE2: no lookarounds or backreferences, size
+// limits), marked on their row; the warning at the top says what happens.
+const badRegex = ref<Record<string, string>>({});
+let regexRun = 0;
+watch(() => (profile.value ? [
+  ...profile.value.filters.filter(f => f.isRegex && f.pattern.trim()).map(f => [f.id, f.pattern.trim()]),
+  ...(profile.value.redirects ?? []).filter(r => r.isRegex && r.from.trim()).map(r => [r.id, r.from.trim()]),
+] : []), async patterns => {
+  const run = ++regexRun;
+  const bad: Record<string, string> = {};
+  for (const [id, regex] of patterns) {
+    const r = await chrome.declarativeNetRequest.isRegexSupported({ regex }).catch(() => ({ isSupported: true, reason: undefined }));
+    if (!r.isSupported) bad[id] = `Chrome can't use this regex (${r.reason ?? 'not supported'})`;
+  }
+  if (run === regexRun) badRegex.value = bad; // a newer edit may have started a newer check
+}, { deep: true, immediate: true });
+
 // "On this tab". Opening the popup grants activeTab, which lets us ask Chrome
 // which of our rules matched requests in the current tab. (?tab=<id> is for tests.)
 const tab = ref<{ id: number; url: string; host: string } | null>(null);
@@ -365,13 +382,18 @@ async function importFile(e: Event) {
       <p v-if="tabNote" class="dim">{{ tabNote }}</p>
     </section>
 
+    <!-- Up here, not under the editor: the popup is cut at 600px and these explain a red badge. -->
+    <ul v-if="warnings.length" class="warnings">
+      <li v-for="(w, i) in warnings" :key="i">{{ w }}</li>
+    </ul>
+
     <nav class="tabs">
       <button
         v-for="(p, i) in state.profiles"
         :key="p.id"
         :class="{ on: i === selected, off: !p.enabled }"
         draggable="true"
-        title="Drag to reorder: the leftmost profile wins when two set the same header"
+        :title="`${p.title || 'Untitled'}. Drag to reorder: the leftmost profile wins when two set the same header`"
         @click="selected = i"
         @dragstart="dragFrom = i"
         @dragover.prevent
@@ -382,7 +404,7 @@ async function importFile(e: Event) {
       <button title="Add profile" @click="addProfile">+</button>
     </nav>
 
-    <section v-if="profile">
+    <section v-if="profile" :class="{ paused: state.paused }">
       <div class="row">
         <input type="checkbox" v-model="profile.enabled" title="Profile on/off" aria-label="Profile on or off" />
         <input class="grow" v-model="profile.title" placeholder="Profile name" aria-label="Profile name" />
@@ -404,7 +426,7 @@ async function importFile(e: Event) {
           <option>remove</option>
         </select>
         <input v-model="h.name" placeholder="Name" list="request-names" aria-label="Request header name" />
-        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" placeholder="Value" aria-label="Header value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
+        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" :placeholder="h.op === 'remove' ? '(removed)' : 'Value'" aria-label="Header value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
         <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? 'Hide value' : 'Show value'" @click="toggleReveal(h)">👁</button>
         <span v-else class="icon-space"></span>
         <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? 'Secret: value hidden. Click to show it always' : 'Mark as secret: hide the value'" @click="toggleSecret(h)">🔒</button>
@@ -443,7 +465,7 @@ async function importFile(e: Event) {
           <option>remove</option>
         </select>
         <input v-model="h.name" placeholder="Name" list="response-names" aria-label="Response header name" />
-        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" placeholder="Value" aria-label="Header value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
+        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" :placeholder="h.op === 'remove' ? '(removed)' : 'Value'" aria-label="Header value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
         <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? 'Hide value' : 'Show value'" @click="toggleReveal(h)">👁</button>
         <span v-else class="icon-space"></span>
         <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? 'Secret: value hidden. Click to show it always' : 'Mark as secret: hide the value'" @click="toggleSecret(h)">🔒</button>
@@ -454,7 +476,7 @@ async function importFile(e: Event) {
       <h3>Redirects</h3>
       <div v-for="(r, i) in profile.redirects ?? []" :key="r.id" class="row">
         <input type="checkbox" v-model="r.enabled" aria-label="Redirect on or off" />
-        <input class="grow" v-model="r.from" aria-label="Replace this part of the address" :placeholder="r.isRegex ? 'regex, e.g. /v(\\d+)/' : 'part of the URL, e.g. api.example.com'" spellcheck="false" />
+        <input class="grow" v-model="r.from" aria-label="Replace this part of the address" :class="{ bad: badRegex[r.id] }" :title="badRegex[r.id] ?? ''" :placeholder="r.isRegex ? 'regex, e.g. /v(\\d+)/' : 'part of the URL, e.g. api.example.com'" spellcheck="false" />
         <span class="arrow" aria-hidden="true">→</span>
         <input class="grow" v-model="r.to" aria-label="With this" :placeholder="r.isRegex ? 'e.g. /v$1-beta/' : 'e.g. api.staging.example.com'" spellcheck="false" />
         <label class="small"><input type="checkbox" v-model="r.isRegex" /> regex</label>
@@ -470,7 +492,7 @@ async function importFile(e: Event) {
           <option value="include">only on</option>
           <option value="exclude">never on</option>
         </select>
-        <input class="grow" v-model="f.pattern" :placeholder="filterPlaceholder(f.kind, f.isRegex)" aria-label="URL pattern" />
+        <input class="grow" v-model="f.pattern" :placeholder="filterPlaceholder(f.kind, f.isRegex)" aria-label="URL pattern" :class="{ bad: badRegex[f.id] }" :title="badRegex[f.id] ?? ''" />
         <label class="small"><input type="checkbox" v-model="f.isRegex" /> regex</label>
         <button title="Remove" aria-label="Remove" @click="removeAt(profile.filters, i)">×</button>
       </div>
@@ -529,10 +551,6 @@ async function importFile(e: Event) {
         </div>
       </div>
     </section>
-
-    <ul v-if="warnings.length" class="warnings">
-      <li v-for="(w, i) in warnings" :key="i">{{ w }}</li>
-    </ul>
 
     <datalist id="request-names"><option v-for="n in REQUEST_HEADER_NAMES" :key="n" :value="n" /></datalist>
     <datalist id="response-names"><option v-for="n in RESPONSE_HEADER_NAMES" :key="n" :value="n" /></datalist>

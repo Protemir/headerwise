@@ -60,3 +60,9 @@ kbd { font: 10px ui-monospace, Consolas, monospace; border: 1px solid var(--line
 .rate { margin: 12px 0 0; font-size: 12px; }
 .rate .x { padding: 0 4px; opacity: .6; }
 .note-done { color: var(--ok); }
+/* Long profile names don't push the other tabs around; the full name is in the tooltip. */
+.tabs button { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A regex Chrome won't take, on its own row (the reason is in the tooltip and the warnings). */
+.row input.bad { border-color: var(--warn); outline: 1px solid var(--warn); }
+/* Paused: still editable, but plainly not in effect. */
+section.paused { opacity: .6; }

@@ -57,6 +57,26 @@ export async function supportChecks({ ctl, port }, { extId }, check) {
   check('diagnostics: no header values, profile names or URL patterns',
     !/very-secret-token|staging|Client Acme|internal\.acme/.test(text ?? ''), text);
 
+  // A regex Chrome won't take: marked on its row, and the warning sits above the
+  // editor (the popup is cut at 600px, a warning at the bottom goes unseen).
+  await save(ctl, [prof('A profile name long enough to need cutting short in its tab', {
+    requestHeaders: [hdr('X-A', '1')],
+    filters: [{ id: 'bad', enabled: true, kind: 'exclude', pattern: 'a(?=b)', isRegex: true }, { id: 'good', enabled: true, kind: 'exclude', pattern: '^https://x', isRegex: true }],
+  })]);
+  await popup.send('Page.reload');
+  await sleep(1500);
+  const ui = await popup.evaluate(`(() => {
+    const bad = [...document.querySelectorAll('input.bad')];
+    const warn = document.querySelector('.warnings'), tabs = document.querySelector('.tabs');
+    const tabButton = tabs.querySelector('button');
+    return {
+      bad: bad.map(i => i.value), title: bad[0]?.title ?? '',
+      warningOnTop: !!warn && !!(warn.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING),
+      cut: tabButton.scrollWidth > tabButton.clientWidth && tabButton.title.startsWith('A profile name long'),
+    };
+  })()`);
+  check('popup: bad regex marked on its row, warning above the editor, long tab name cut', ui.bad.join() === 'a(?=b)' && /Chrome can't use this regex/.test(ui.title) && ui.warningOnTop && ui.cut, JSON.stringify(ui));
+
   // An empty profile says where to start.
   await save(ctl, [prof('Profile 1', { requestHeaders: [hdr('', '')] })]);
   await popup.send('Page.reload');

@@ -1,6 +1,6 @@
 {
   "name": "headerwise",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "Modify HTTP request and response headers. Runs locally, sends nothing anywhere.",
   "license": "MIT",
