@@ -101,6 +101,16 @@
     .row span:nth-child(2) { color: var(--muted); }
     .row span:nth-child(3) { font-weight: 600; }
 
+    /* Postman */
+    .api-client { margin-top: 56px; max-width: 900px; }
+    .api-client > p { margin: 12px 0 24px; max-width: 62ch; font-size: 18px; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .two > div { border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 24px; background: var(--surface); }
+    .two > div:last-child { border-color: var(--accent); }
+    .two ul { margin: 10px 0 0; padding-left: 20px; color: var(--muted); }
+    .two li { margin: 6px 0; }
+    @media (max-width: 700px) { .two { grid-template-columns: 1fr; } }
+
     /* FAQ */
     .faq { max-width: 760px; }
     details { border-top: 1px solid var(--line); padding: 18px 0; }
@@ -269,6 +279,29 @@
           <div class="row" role="row"><span role="cell">Profiles to switch between</span><span role="cell">No</span><span role="cell">Yes</span></div>
         </div>
         <p class="muted" style="margin-top: 18px">They work well together: copy a request from the Network panel and paste it into Headerwise.</p>
+
+        <div class="api-client">
+          <h3>And Postman?</h3>
+          <p class="muted">Postman is an API client: it sends its own requests, outside the browser. Headerwise changes the requests your site sends, inside the browser. Most people use both.</p>
+          <div class="two">
+            <div>
+              <b>Use Postman to</b>
+              <ul>
+                <li>test an endpoint on its own</li>
+                <li>write checks on responses and run them in CI</li>
+                <li>share collections and API docs with a team</li>
+              </ul>
+            </div>
+            <div>
+              <b>Use Headerwise to</b>
+              <ul>
+                <li>click through your real app as user 42, or against staging</li>
+                <li>check CORS, CSP, iframes and redirects, which only exist in a browser</li>
+                <li>switch in one click, with no account and nothing synced</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
