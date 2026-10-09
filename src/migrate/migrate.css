@@ -1,0 +1,24 @@
+:root { color-scheme: light dark; --line: #8884; --accent: #2563eb; --warn: #c2410c; --ok: #15803d; }
+body { margin: 0; font: 14px/1.5 system-ui, sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; min-height: 80vh; box-sizing: border-box; }
+main.dragging { outline: 2px dashed var(--accent); outline-offset: -8px; }
+h1 { font-size: 22px; margin: 0 0 8px; }
+h2 { font-size: 16px; margin: 0 0 8px; }
+section { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 16px 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 6px 0; }
+.grow { flex: 1; min-width: 0; }
+code { font: 12px/1.4 ui-monospace, Consolas, monospace; background: #8881; border-radius: 4px; padding: 2px 4px; overflow-wrap: anywhere; }
+.row code { padding: 6px 8px; }
+.hint { opacity: .75; font-size: 13px; }
+.error { color: var(--warn); }
+.warnings { color: var(--warn); padding-left: 18px; }
+.profiles { list-style: none; padding: 0; margin: 8px 0; }
+.profiles li { padding: 3px 0; }
+.profiles label { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.done { border-color: var(--ok); }
+.done h2 { color: var(--ok); }
+button, .pick span { font: inherit; padding: 4px 12px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
+button.primary, .pick span { background: var(--accent); border-color: var(--accent); color: #fff; }
+button:disabled { opacity: .4; cursor: default; }
+.pick { display: inline-block; margin-right: 8px; }
+.pick input { display: none; }

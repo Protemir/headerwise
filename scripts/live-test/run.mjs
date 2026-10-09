@@ -8,12 +8,13 @@
 // CDP Extensions.loadUnpacked, which needs --remote-debugging-pipe.
 // Set HW_BROWSER to the browser binary if it isn't in the usual Windows place.
 import { spawn } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
+import { gunzipSync } from 'node:zlib';
 import { join, resolve } from 'node:path';
 import { openTab, sleep } from './cdp.mjs';
-import { accessChecks, noAccessChecks } from './checks.mjs';
+import { accessChecks, migrateChecks, noAccessChecks } from './checks.mjs';
 
 const args = process.argv.slice(2);
 const browser = args.includes('--browser') ? args[args.indexOf('--browser') + 1] : 'chrome';
@@ -40,6 +41,14 @@ await new Promise(ok => echo.listen(ECHO_PORT, '127.0.0.1', ok));
 // Keep the profile path short: with a long one Chrome fails to write the rules file
 // ("Internal error while updating dynamic rules").
 const root = join(tmpdir(), 'hw-live');
+
+// The LevelDB folder the "Move from ModHeader" page is fed with, unpacked.
+const fixtureDir = join(root, 'leveldb-bulk');
+rmSync(fixtureDir, { recursive: true, force: true });
+mkdirSync(fixtureDir, { recursive: true });
+for (const f of readdirSync('tests/fixtures/leveldb-bulk')) {
+  writeFileSync(join(fixtureDir, f.replace(/\.gz$/, '')), gunzipSync(readFileSync(join('tests/fixtures/leveldb-bulk', f))));
+}
 
 async function launch(name, grantAccess) {
   const dir = join(root, `${browser}-${name}`);
@@ -102,11 +111,12 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok ? '' : `  -> ${detail}`}`);
 };
 
-for (const [name, grant, checks] of [['no-access', false, noAccessChecks], ['access', true, accessChecks]]) {
+const both = async (tabs, ctx, check) => { await accessChecks(tabs, ctx, check); await migrateChecks(tabs, ctx, check); };
+for (const [name, grant, checks] of [['no-access', false, noAccessChecks], ['access', true, both]]) {
   const b = await launch(name, grant);
   console.log(`\n${b.version}, ${name === 'access' ? 'site access granted' : 'real manifest, no site access'}`);
   try {
-    await checks(b.tabs, { ...urls, extId: b.extId }, check);
+    await checks(b.tabs, { ...urls, extId: b.extId, fixtureDir }, check);
   } catch (e) {
     check(`${name}: finished without errors`, false, e.stack);
   } finally {

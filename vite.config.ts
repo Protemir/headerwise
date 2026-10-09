@@ -10,6 +10,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         popup: 'src/popup/index.html',
+        migrate: 'src/migrate/index.html',
         background: 'src/background.ts',
       },
       output: {

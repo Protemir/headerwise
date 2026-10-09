@@ -9,7 +9,8 @@ export async function loadState(): Promise<State> {
 }
 
 export async function saveState(state: State): Promise<void> {
-  await chrome.storage.local.set({ [KEY]: state });
+  // Plain copy: Chrome stores arrays inside Vue's reactive proxies as {"0": ...} objects.
+  await chrome.storage.local.set({ [KEY]: JSON.parse(JSON.stringify(state)) });
 }
 
 export const STATE_KEY = KEY;

@@ -8,6 +8,17 @@ import { loadState, STATE_KEY } from './core/storage.ts';
 let syncing: Promise<void> = Promise.resolve();
 
 async function sync(): Promise<void> {
+  try {
+    await apply();
+  } catch (e) {
+    // Never fail silently: the user would see a working badge and no headers.
+    await chrome.storage.session.set({ warnings: [`Headerwise could not apply your profiles: ${e instanceof Error ? e.message : String(e)}`] });
+    await chrome.action.setBadgeText({ text: '!' });
+    await chrome.action.setBadgeBackgroundColor({ color: '#c2410c' });
+  }
+}
+
+async function apply(): Promise<void> {
   const state = await loadState();
   const converted = toDnrRules(state);
   const warnings = converted.warnings;

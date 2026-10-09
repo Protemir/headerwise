@@ -134,7 +134,8 @@ function parse(text: string): { list?: MhProfile[]; error?: string } {
   return { error: 'Unexpected format: expected a ModHeader profile export.' };
 }
 
-export function importModHeader(text: string): ImportResult {
+/** `active`: index of the profile to switch on (the one selected in ModHeader). */
+export function importModHeader(text: string, { active = 0 }: { active?: number } = {}): ImportResult {
   const warnings: string[] = [];
   const { list, error } = parse(text);
   if (!list) return { profiles: [], warnings: [error!] };
@@ -180,7 +181,7 @@ export function importModHeader(text: string): ImportResult {
     return {
       id: newId(),
       title,
-      enabled: i === 0 && !narrowingSkipped,
+      enabled: i === active && !narrowingSkipped,
       requestHeaders,
       responseHeaders,
       filters,

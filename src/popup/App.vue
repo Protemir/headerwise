@@ -79,6 +79,11 @@ function doImport() {
   warnings.value = res.warnings;
 }
 
+function openMigrate() {
+  chrome.tabs.create({ url: chrome.runtime.getURL('src/migrate/index.html') });
+  window.close();
+}
+
 async function importFile(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (file) importText.value = await file.text();
@@ -160,7 +165,8 @@ async function importFile(e: Event) {
     </section>
 
     <section>
-      <button class="link" @click="showImport = !showImport">Import from ModHeader</button>
+      <button class="link" @click="openMigrate">Move from ModHeader (turned off in Chrome)</button>
+      <button class="link" @click="showImport = !showImport">Import ModHeader JSON</button>
       <div v-if="showImport" class="import">
         <input type="file" accept=".json,application/json" @change="importFile" />
         <textarea v-model="importText" rows="5" placeholder="…or paste the exported JSON here"></textarea>

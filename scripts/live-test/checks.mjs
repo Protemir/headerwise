@@ -127,6 +127,12 @@ export async function accessChecks(tabs, { base, ip, extId }, check) {
   }
 
   {
+    // Broken stored state (an array saved as {"0": ...}) must not fail silently.
+    const r = await apply({ version: 1, paused: false, profiles: [{ ...p('Broken'), requestHeaders: { 0: h('X-Broken') } }] });
+    check('broken state: badge "!" and a warning', r.badge === '!' && /could not apply/.test(r.warnings[0] ?? ''), JSON.stringify({ b: r.badge, w: r.warnings }));
+  }
+
+  {
     const r = await apply(st([p('Paused', { requestHeaders: [h('X-P', '1')] })], true));
     check('pause: no rules, badge "off"', r.rules.length === 0 && r.badge === 'off', JSON.stringify({ n: r.rules.length, b: r.badge }));
     check('pause: header not sent', !('x-p' in (await xhr(`${base}/p`)).seen));
@@ -139,7 +145,7 @@ export async function accessChecks(tabs, { base, ip, extId }, check) {
     await page.send('Page.navigate', { url: `chrome-extension://${extId}/src/popup/index.html` });
     await sleep(1200);
     await page.evaluate(`(async () => {
-      [...document.querySelectorAll('button')].find(b => b.textContent.includes('Import from ModHeader')).click();
+      [...document.querySelectorAll('button')].find(b => b.textContent.includes('Import ModHeader JSON')).click();
       await new Promise(r => setTimeout(r, 200));
       const ta = document.querySelector('textarea');
       ta.value = ${JSON.stringify(modheader)};
@@ -153,4 +159,35 @@ export async function accessChecks(tabs, { base, ip, extId }, check) {
     check('imported profile: User-Agent set', (await navigate(`${base}/ua`))['user-agent'] === 'HeaderwiseTest/1.0');
     check('imported profile: "never on" /login works', (await navigate(`${base}/login`))['user-agent'] !== 'HeaderwiseTest/1.0');
   }
+}
+
+/**
+ * "Move from ModHeader" page: gets a real LevelDB folder written by Chrome
+ * (tests/fixtures/leveldb-bulk) through its file input and imports it.
+ */
+export async function migrateChecks(tabs, { base, extId, fixtureDir }, check) {
+  const { apply, navigate } = harness(tabs);
+  const { page } = tabs;
+  await apply(st([p('Profile 1', { requestHeaders: [h('', '')] })])); // fresh install: one empty profile
+
+  await page.send('Page.navigate', { url: `chrome-extension://${extId}/src/migrate/index.html` });
+  await sleep(1000);
+  const { result } = await page.send('Runtime.evaluate', { expression: `document.querySelector('input[type=file]')` });
+  await page.send('DOM.setFileInputFiles', { objectId: result.objectId, files: [fixtureDir] });
+  await sleep(1500);
+  const listed = await page.evaluate(`[...document.querySelectorAll('.profiles li')].map(li => li.innerText.split('\\n').join(' ').trim())`);
+  check('migrate: lists the 3 ModHeader profiles', listed.length === 3 && /Staging/.test(listed[0]) && /Юникод ✓.*on/.test(listed[1]), JSON.stringify(listed) + ' page: ' + await page.evaluate(`document.body.innerText.slice(0, 600)`));
+  if (listed.length === 0) return;
+
+  await page.evaluate(`document.querySelector('button.primary').click()`);
+  await sleep(1000);
+  const done = await page.evaluate(`document.querySelector('.done h2')?.innerText ?? ''`);
+  check('migrate: import done', /3 profiles added/.test(done), done);
+  const saved = await tabs.ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state.profiles.map(p => [p.title, p.enabled]))`);
+  check('migrate: replaces the empty starter profile, keeps ModHeader\'s selection', JSON.stringify(saved) === JSON.stringify([['Staging', false], ['Юникод ✓', true], ['Legacy', false]]), JSON.stringify(saved));
+
+  await sleep(700);
+  const seen = await navigate(`${base}/migrated`);
+  check('migrate: selected profile works (X-Note sent)', seen['x-note'] !== undefined, JSON.stringify(seen['x-note']) + ' rules: ' + JSON.stringify(await tabs.ctl.evaluate('chrome.declarativeNetRequest.getDynamicRules()')) + ' warnings: ' + JSON.stringify(await tabs.ctl.evaluate(`chrome.storage.session.get('warnings')`)));
+  check('migrate: its "never on" works too', !('x-note' in await navigate(`${base}/login`)));
 }
