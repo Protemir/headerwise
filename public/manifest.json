@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Headerwise: Modify HTTP Headers",
   "short_name": "Headerwise",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Modify request and response headers per profile. Import your ModHeader profiles. Runs locally, sends nothing anywhere.",
   "minimum_chrome_version": "121",
   "icons": {
