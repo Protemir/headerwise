@@ -3,26 +3,322 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Headerwise</title>
-  <meta name="description" content="Modify HTTP request and response headers in Chrome and Edge. Import your ModHeader profiles. Runs locally, sends nothing anywhere." />
+  <title>Headerwise: modify HTTP headers in Chrome and Edge</title>
+  <meta name="description" content="Change request and response headers in Chrome and Edge with profiles and filters. Import your ModHeader profiles. Free, and it can't send your data anywhere." />
+  <meta property="og:title" content="Headerwise: modify HTTP headers in Chrome and Edge" />
+  <meta property="og:description" content="Profiles for request and response headers. Import your ModHeader profiles. Free, and it can't send your data anywhere." />
+  <meta property="og:image" content="https://protemir.github.io/headerwise/img/og.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" href="icon-128.png" />
+  <!-- No fonts, scripts or analytics from anywhere else: the page follows the product's own rule. -->
   <style>
-    :root { color-scheme: light dark; --bg: #ffffff; --fg: #1f2328; --muted: #57606a; --accent: #2563eb; }
-    @media (prefers-color-scheme: dark) { :root { --bg: #1f2023; --fg: #e8e8ea; --muted: #a8adb5; --accent: #7aa7ff; } }
-    body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; }
-    main { max-width: 680px; margin: 0 auto; padding: 56px 16px; }
-    img { width: 64px; height: 64px; }
-    h1 { font-size: 34px; margin: 12px 0 8px; }
-    p { color: var(--muted); }
+    :root {
+      color-scheme: light dark;
+      --bg: #fbfbfc; --surface: #ffffff; --tint: #eef2fb; --fg: #17181c; --muted: #5a6170; --line: #e3e6ec;
+      --accent: #2557d6; --accent-ink: #ffffff; --shadow: 0 18px 48px rgb(30 50 110 / .14), 0 2px 6px rgb(30 50 110 / .08);
+      --code-bg: #15171c; --code-fg: #e6e8ee;
+      --radius: 12px; /* one radius for cards, images and buttons */
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #131417; --surface: #1b1c20; --tint: #1c2233; --fg: #ececef; --muted: #a2a8b3; --line: #2b2e35;
+        --accent: #7aa7ff; --accent-ink: #0d1424; --shadow: 0 18px 48px rgb(0 0 0 / .45), 0 2px 6px rgb(0 0 0 / .3);
+        --code-bg: #0e0f12;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
     a { color: var(--accent); }
+    img { display: block; max-width: 100%; height: auto; }
+    code, pre { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; }
+    .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+    h1, h2, h3 { line-height: 1.12; letter-spacing: -0.02em; margin: 0; }
+    h2 { font-size: clamp(30px, 3.6vw, 42px); }
+    h3 { font-size: 21px; letter-spacing: -0.01em; }
+    p { margin: 0; }
+    .muted { color: var(--muted); }
+    section { padding: 96px 0; }
+
+    /* nav */
+    nav { height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 18px; color: var(--fg); text-decoration: none; }
+    .brand img { width: 30px; height: 30px; }
+    .links { display: flex; align-items: center; gap: 28px; font-size: 15px; }
+    .links a:not(.btn) { color: var(--muted); text-decoration: none; }
+    .links a:not(.btn):hover { color: var(--fg); }
+
+    /* buttons */
+    .btn { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; height: 46px; padding: 0 22px; border-radius: var(--radius);
+           font-weight: 600; font-size: 16px; text-decoration: none; border: 1px solid transparent; transition: transform .15s ease, background-color .15s ease; }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary { background: var(--accent); color: var(--accent-ink); }
+    .btn.primary:hover { filter: brightness(1.06); }
+    .btn.secondary { background: transparent; color: var(--fg); border-color: var(--line); }
+    .btn.secondary:hover { background: var(--tint); }
+    .btn.small { height: 38px; padding: 0 16px; font-size: 15px; }
+    .ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    /* hero */
+    .hero { padding: 56px 0 88px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: center; }
+    .hero h1 { font-size: clamp(36px, 4.4vw, 52px); letter-spacing: -0.03em; max-width: 13em; }
+    .hero p { font-size: 20px; color: var(--muted); margin: 22px 0 32px; max-width: 30ch; }
+    .shot { border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; background: var(--surface); }
+    .hero .shot { max-width: 560px; justify-self: end; }
+
+    /* no network */
+    .trust { background: var(--tint); }
+    .trust .lead { max-width: 62ch; margin: 18px 0 36px; font-size: 19px; color: var(--muted); }
+    pre { margin: 0; background: var(--code-bg); color: var(--code-fg); border-radius: var(--radius); padding: 22px 24px; font-size: 14.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+    pre .k { color: #9cc2ff; } pre .s { color: #b5e3a3; } pre .em { color: #ffcf86; }
+    .facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px 48px; margin-top: 44px; }
+    .facts p { color: var(--muted); }
+    .facts b { display: block; color: var(--fg); font-size: 18px; margin-bottom: 4px; }
+
+    /* ModHeader */
+    .split { display: grid; grid-template-columns: 1.2fr 1fr; gap: 64px; align-items: center; }
+    .split .copy p { color: var(--muted); font-size: 18px; margin-top: 18px; max-width: 46ch; }
+    .split .copy ul { margin: 22px 0 0; padding-left: 20px; color: var(--muted); }
+    .split .copy li { margin: 6px 0; }
+
+    /* features */
+    .bento { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 40px; }
+    .cell { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+    .cell p { color: var(--muted); }
+    .cell .shot { margin-top: 10px; box-shadow: none; border: 1px solid var(--line); }
+    .cell.wide { grid-column: span 2; display: grid; grid-template-columns: 1fr 1.25fr; gap: 32px; align-items: center; }
+    .cell.tinted { background: var(--tint); border-color: transparent; }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+    .chips span { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 12px; font-size: 15px; }
+
+    /* DevTools comparison */
+    .compare { margin-top: 32px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+    .row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 16px; padding: 16px 24px; }
+    .row + .row { border-top: 1px solid var(--line); }
+    .row.head { background: var(--tint); font-weight: 650; }
+    .row span:nth-child(2) { color: var(--muted); }
+    .row span:nth-child(3) { font-weight: 600; }
+
+    /* FAQ */
+    .faq { max-width: 760px; }
+    details { border-top: 1px solid var(--line); padding: 18px 0; }
+    details:last-of-type { border-bottom: 1px solid var(--line); }
+    summary { cursor: pointer; font-weight: 600; font-size: 18px; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: '+'; color: var(--muted); font-weight: 400; font-size: 22px; line-height: 1; }
+    details[open] summary::after { content: '\2212'; }
+    details p { color: var(--muted); margin-top: 10px; max-width: 65ch; }
+
+    /* install */
+    .install { text-align: center; }
+    .install p { color: var(--muted); margin: 14px 0 28px; font-size: 18px; }
+    .install .ctas { justify-content: center; }
+    footer { border-top: 1px solid var(--line); padding: 28px 0 40px; font-size: 15px; }
+    footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; color: var(--muted); }
+    footer a { color: var(--muted); }
+
+    @media (max-width: 900px) {
+      section { padding: 64px 0; }
+      .hero, .split, .cell.wide { grid-template-columns: 1fr; gap: 36px; }
+      .hero .shot { justify-self: stretch; }
+      .split .media { order: 2; }
+      .bento, .facts { grid-template-columns: 1fr; }
+      .cell.wide { grid-column: auto; }
+      .row { grid-template-columns: 1.2fr 1fr 1fr; padding: 14px 16px; font-size: 15px; }
+      .links a:not(.btn) { display: none; }
+    }
+    @media (max-width: 480px) {
+      .wrap { padding: 0 16px; }
+      .row { grid-template-columns: 1fr; gap: 2px; }
+      .row.head { display: none; }
+      .row span:nth-child(2)::before { content: 'DevTools: '; }
+      .row span:nth-child(3)::before { content: 'Headerwise: '; }
+    }
   </style>
 </head>
 <body>
+  <header class="wrap">
+    <nav>
+      <a class="brand" href="./"><img src="icon-128.png" alt="" />Headerwise</a>
+      <div class="links">
+        <a href="#features">Features</a>
+        <a href="#modheader">From ModHeader</a>
+        <a href="#faq">FAQ</a>
+        <a href="https://github.com/Protemir/headerwise">GitHub</a>
+        <a class="btn primary small" href="#install">Install</a>
+      </div>
+    </nav>
+  </header>
+
   <main>
-    <img src="icon-128.png" alt="" />
-    <h1>Headerwise</h1>
-    <p>Modify HTTP request and response headers in Chrome and Edge. Import your ModHeader profiles. Runs locally, sends nothing anywhere.</p>
-    <p><a href="privacy.html">Privacy</a> · <a href="https://github.com/Protemir/headerwise">Source and issues</a></p>
+    <div class="wrap hero">
+      <div>
+        <h1>Change HTTP headers in your browser</h1>
+        <p>Profiles for request and response headers in Chrome and Edge. Free, open source, and it can't send your data anywhere.</p>
+        <!-- Store search links until the listings are live; then the direct listing URLs. -->
+        <div class="ctas">
+          <a class="btn primary" href="https://chromewebstore.google.com/search/headerwise">Add to Chrome</a>
+          <a class="btn secondary" href="https://microsoftedge.microsoft.com/addons/search/headerwise">Add to Edge</a>
+        </div>
+      </div>
+      <picture class="shot">
+        <source srcset="img/main-dark.png" media="(prefers-color-scheme: dark)" />
+        <img src="img/main.png" width="560" height="655" alt="The Headerwise popup: a Staging profile with an X-Env header, a hidden Authorization token and a CORS response header, and a summary of what changed on the current tab." />
+      </picture>
+    </div>
+
+    <section class="trust">
+      <div class="wrap">
+        <h2>It can't send your data. The browser won't let it.</h2>
+        <p class="lead">ModHeader was removed from the Chrome and Edge stores in July 2026 after a hidden domain collector was found in it. Headerwise is built so that can't happen, and you can check it yourself.</p>
+        <pre><span class="k">"content_security_policy"</span>: {
+  <span class="k">"extension_pages"</span>: <span class="s">"default-src 'self'; img-src 'self' data:; <span class="em">connect-src 'none'</span>; object-src 'none'; base-uri 'none'; form-action 'none'"</span>
+}</pre>
+        <div class="facts">
+          <p><b>No network access</b>This line in the manifest covers every page of the extension and its background worker. A test checks it in a real browser on every change.</p>
+          <p><b>Never reads your pages</b>Chrome applies the header rules itself through declarativeNetRequest. Headerwise never sees page content or request bodies.</p>
+          <p><b>No account, no analytics</b>Your profiles stay in your browser's local storage. Nothing is synced to a server, because there is no server.</p>
+          <p><b>Open code</b>Read it, build it, and compare it with what the store ships. Site access is asked for only when you click "Allow".</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="modheader">
+      <div class="wrap split">
+        <picture class="shot media">
+          <source srcset="img/migrate-dark.png" media="(prefers-color-scheme: dark)" />
+          <img src="img/migrate.png" width="760" height="799" alt="The Move from ModHeader page: copy the folder path, pick the folder, and import four profiles found in it." loading="lazy" />
+        </picture>
+        <div class="copy">
+          <h2>Coming from ModHeader? Bring your profiles.</h2>
+          <p>If your browser turned ModHeader off, its Export button went with it. Your profiles are still on your disk. Pick ModHeader's folder and Headerwise reads them right in the page. Nothing is uploaded.</p>
+          <ul>
+            <li>Headers, URL filters, site, type and method filters come over.</li>
+            <li>The profile you had selected stays on.</li>
+            <li>Exported ModHeader JSON files work too.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="trust">
+      <div class="wrap">
+        <h2>What it does</h2>
+        <div class="bento">
+          <div class="cell wide">
+            <div>
+              <h3>See what changed on this tab, and why not</h3>
+              <p style="margin-top: 12px">Open the popup to see which profile changed how many requests on the current page, or which filter kept another one off. The Network panel in DevTools may not show these changes; this does.</p>
+            </div>
+            <picture class="shot">
+              <source srcset="img/this-tab-dark.png" media="(prefers-color-scheme: dark)" />
+              <img src="img/this-tab.png" width="560" height="211" alt="On this tab: Staging changed 5 requests, QA user 42 changed 3 requests, API debug only applies to api.example.com, Mobile Safari is turned off." loading="lazy" />
+            </picture>
+          </div>
+          <div class="cell">
+            <h3>Paste a request from DevTools</h3>
+            <p>Copy as cURL, fetch or PowerShell, paste, and tick the headers you want. Tokens and cookies show as dots.</p>
+            <picture class="shot">
+              <source srcset="img/paste-dark.png" media="(prefers-color-scheme: dark)" />
+              <img src="img/paste.png" width="560" height="454" alt="A pasted cURL command turned into a list of headers to add, with the token and cookie values hidden." loading="lazy" />
+            </picture>
+          </div>
+          <div class="cell">
+            <h3>Only where you need it</h3>
+            <p>Limit a profile to some URLs, to requests made by some sites, to fetch calls or POSTs, or to a single tab.</p>
+            <picture class="shot">
+              <source srcset="img/filters-dark.png" media="(prefers-color-scheme: dark)" />
+              <img src="img/filters.png" width="560" height="234" alt="Filters for a profile: only from some sites, only fetch and XHR requests, only GET and POST." loading="lazy" />
+            </picture>
+          </div>
+          <div class="cell wide tinted">
+            <div>
+              <h3>And the small things</h3>
+              <p style="margin-top: 12px">The parts you reach for every day, without a paid tier in the way.</p>
+            </div>
+            <div class="chips">
+              <span>Unlimited profiles</span>
+              <span>Set, append, remove</span>
+              <span>CORS and CSP presets</span>
+              <span>Mobile User-Agent</span>
+              <span>{{uuid}} and {{timestamp}}</span>
+              <span>Hidden secrets</span>
+              <span>Export to JSON</span>
+              <span>Keyboard shortcuts</span>
+              <span>Dark theme</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Why not just DevTools?</h2>
+        <p class="muted" style="margin-top: 16px; max-width: 60ch; font-size: 18px">DevTools is the right tool for looking at headers. For changing them day to day, it falls short.</p>
+        <div class="compare" role="table" aria-label="DevTools compared with Headerwise">
+          <div class="row head" role="row"><span role="columnheader"></span><span role="columnheader">DevTools</span><span role="columnheader">Headerwise</span></div>
+          <div class="row" role="row"><span role="cell">Add request headers like Authorization</span><span role="cell">Only User-Agent and language</span><span role="cell">Any header</span></div>
+          <div class="row" role="row"><span role="cell">Change response headers</span><span role="cell">With local overrides, per tab</span><span role="cell">Yes</span></div>
+          <div class="row" role="row"><span role="cell">Works with DevTools closed</span><span role="cell">No</span><span role="cell">Yes</span></div>
+          <div class="row" role="row"><span role="cell">Every tab, after a restart</span><span role="cell">No</span><span role="cell">Yes, until you pause it</span></div>
+          <div class="row" role="row"><span role="cell">Profiles to switch between</span><span role="cell">No</span><span role="cell">Yes</span></div>
+        </div>
+        <p class="muted" style="margin-top: 18px">They work well together: copy a request from the Network panel and paste it into Headerwise.</p>
+      </div>
+    </section>
+
+    <section id="faq" class="trust">
+      <div class="wrap faq">
+        <h2>Questions</h2>
+        <div style="margin-top: 32px">
+          <details>
+            <summary>Is it really free?</summary>
+            <p>Yes, with no limits. If paid features come later, they will be new things such as team policies. Nothing that is free now will move behind a paywall.</p>
+          </details>
+          <details>
+            <summary>Why does it ask for access to all sites?</summary>
+            <p>Chrome only lets an extension change headers on sites it has access to. Headerwise asks only when you click "Allow on all sites", and you can take it back in the browser's extension settings at any time.</p>
+          </details>
+          <details>
+            <summary>How can I tell it sends nothing?</summary>
+            <p>The manifest blocks network access for the whole extension, so the browser refuses any request it might try. The code is on GitHub, and your profiles live in the browser's local storage.</p>
+          </details>
+          <details>
+            <summary>Why don't I see the changed headers in DevTools?</summary>
+            <p>The browser applies these changes after DevTools records the request, so the Network panel can show the original headers. Open the Headerwise popup instead: "On this tab" shows what was changed.</p>
+          </details>
+          <details>
+            <summary>Which browsers does it work in?</summary>
+            <p>Chrome and Edge are tested on every change. Other Chromium browsers that install extensions from the Chrome Web Store, such as Brave and Vivaldi, should work too. Firefox is planned.</p>
+          </details>
+          <details>
+            <summary>How do I move from ModHeader?</summary>
+            <p>Click "Move from ModHeader" in the popup. It shows the folder to pick for your browser and reads it in the page. If you have an exported JSON file, use "Import JSON" instead.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section id="install" class="install">
+      <div class="wrap">
+        <h2>Install Headerwise</h2>
+        <p>Free, no account. Takes a few seconds.</p>
+        <div class="ctas">
+          <a class="btn primary" href="https://chromewebstore.google.com/search/headerwise">Add to Chrome</a>
+          <a class="btn secondary" href="https://microsoftedge.microsoft.com/addons/search/headerwise">Add to Edge</a>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Headerwise. This site has no analytics and no cookies either.</span>
+      <span><a href="privacy.html">Privacy</a> &nbsp; <a href="https://github.com/Protemir/headerwise">GitHub</a> &nbsp; <a href="https://github.com/Protemir/headerwise/issues">Report a problem</a></span>
+    </div>
+  </footer>
 </body>
 </html>

@@ -177,6 +177,21 @@ const shots = {
   migrate: await captureMigrate('migrate', false),
 };
 
+// The landing page (docs/) shows the same UI, in the visitor's theme: every shot in light and dark.
+const siteImg = join(resolve('docs'), 'img');
+mkdirSync(siteImg, { recursive: true });
+const both = async (name, take) => {
+  for (const dark of [false, true]) {
+    const file = await take(`${name}${dark ? '-dark' : ''}`, dark);
+    cpSync(file, join(siteImg, `${name}${dark ? '-dark' : ''}.png`));
+  }
+};
+await both('main', (n, dark) => capture(`${popupUrl}?tab=${siteTab}`, `site-${n}`, { dark }));
+await both('this-tab', (n, dark) => capture(`${popupUrl}?tab=${siteTab}`, `site-${n}`, { dark, from: '.bar', to: 'nav.tabs' }));
+await both('paste', (n, dark) => capture(`${popupUrl}?tab=${siteTab}`, `site-${n}`, { dark, prepare: pasteJs, from: 'nav.tabs', to: '.import' }));
+await both('filters', (n, dark) => capture(`${popupUrl}?tab=${siteTab}`, `site-${n}`, { dark, prepare: qaJs, from: '.more', to: 'details.more' }));
+await both('migrate', (n, dark) => captureMigrate(`site-${n}`, dark));
+
 // --- layout: caption on the left, the real UI on the right
 const icon = `data:image/png;base64,${readFileSync('public/icons/icon-128.png').toString('base64')}`;
 const img = file => `data:image/png;base64,${readFileSync(file).toString('base64')}`;
@@ -236,5 +251,7 @@ proc.kill();
 demo.close();
 ctl.close();
 site.close();
-console.log('written to', out);
+// Link preview image for the landing page.
+cpSync(join(out, 'screenshots', '1-headers.png'), join(siteImg, 'og.png'));
+console.log('written to', out, 'and', siteImg);
 process.exit(0);
