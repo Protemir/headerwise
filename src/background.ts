@@ -1,4 +1,4 @@
-import { toDnrRules } from './core/dnr.ts';
+import { dropUnsupportedRegexes, toDnrRules } from './core/dnr.ts';
 import { activeHeaderCount } from './core/model.ts';
 import { loadState, STATE_KEY } from './core/storage.ts';
 
@@ -9,7 +9,13 @@ let syncing: Promise<void> = Promise.resolve();
 
 async function sync(): Promise<void> {
   const state = await loadState();
-  const { rules, warnings } = toDnrRules(state);
+  const converted = toDnrRules(state);
+  const warnings = converted.warnings;
+  const rules = await dropUnsupportedRegexes(
+    converted.rules,
+    regex => chrome.declarativeNetRequest.isRegexSupported({ regex }),
+    warnings,
+  );
 
   const existing = await chrome.declarativeNetRequest.getDynamicRules();
   try {
@@ -18,8 +24,8 @@ async function sync(): Promise<void> {
       addRules: rules as unknown as chrome.declarativeNetRequest.Rule[],
     });
   } catch (e) {
-    // Usually an invalid regex. Chrome rejects the whole batch, so clear our rules
-    // instead of leaving stale ones in place.
+    // Regexes are checked above, so this should be rare. Chrome rejects the whole
+    // batch, so clear our rules instead of leaving stale ones in place.
     await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: existing.map(r => r.id) });
     warnings.push(`Chrome rejected the rules: ${e instanceof Error ? e.message : String(e)}`);
   }

@@ -28,5 +28,12 @@ pick the `dist` folder. Click the Headerwise icon and allow access to sites.
 Each enabled profile becomes one `modifyHeaders` rule per "only on" filter (or one
 rule for all URLs if there are none). "Never on" filters with a plain domain become
 `excludedRequestDomains`. The first profile in the list has the highest priority.
+
+Chrome has no way to say "skip URLs matching this regex", so a regex (or any other
+non-domain) "never on" filter becomes an `allow` rule with the profile's priority.
+Chrome then ignores all header rules with that priority or lower on matching URLs.
+To keep this from switching off other profiles, profiles with such filters are
+placed below the rest, and Headerwise warns if that changes which profile wins a
+header.
 Chrome only allows `append` for a short list of request headers; Headerwise tells
 you when it skips one.

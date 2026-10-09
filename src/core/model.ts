@@ -14,8 +14,8 @@ export interface HeaderMod {
  * exclude: the profile never applies to matching URLs.
  *
  * isRegex=true  -> RE2 regular expression (Chrome's regexFilter).
- * isRegex=false -> Chrome urlFilter syntax for include ("||example.com^", "*api*"),
- *                  plain domain for exclude ("example.com").
+ * isRegex=false -> Chrome urlFilter syntax ("||example.com^", "*api*"). A plain
+ *                  domain in an exclude ("example.com") also covers its subdomains.
  */
 export interface UrlFilter {
   id: string;

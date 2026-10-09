@@ -64,8 +64,8 @@ function addFilter(kind: 'include' | 'exclude') {
 }
 
 function filterPlaceholder(kind: 'include' | 'exclude', isRegex: boolean): string {
-  if (kind === 'exclude') return 'example.com';
-  return isRegex ? 'regex, e.g. ^https://api\\.example\\.com/' : '||example.com^';
+  if (isRegex) return kind === 'exclude' ? 'regex, e.g. /login' : 'regex, e.g. ^https://api\\.example\\.com/';
+  return kind === 'exclude' ? 'example.com or *login*' : '||example.com^';
 }
 
 function doImport() {
@@ -152,7 +152,7 @@ async function importFile(e: Event) {
           <option value="exclude">never on</option>
         </select>
         <input class="grow" v-model="f.pattern" :placeholder="filterPlaceholder(f.kind, f.isRegex)" />
-        <label v-if="f.kind === 'include'" class="small"><input type="checkbox" v-model="f.isRegex" /> regex</label>
+        <label class="small"><input type="checkbox" v-model="f.isRegex" /> regex</label>
         <button title="Remove" @click="removeAt(profile.filters, i)">×</button>
       </div>
       <button class="link" @click="addFilter('include')">+ only on…</button>

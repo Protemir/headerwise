@@ -13,11 +13,9 @@ export interface DnrHeaderInfo {
 export interface DnrRule {
   id: number;
   priority: number;
-  action: {
-    type: 'modifyHeaders';
-    requestHeaders?: DnrHeaderInfo[];
-    responseHeaders?: DnrHeaderInfo[];
-  };
+  action:
+    | { type: 'modifyHeaders'; requestHeaders?: DnrHeaderInfo[]; responseHeaders?: DnrHeaderInfo[] }
+    | { type: 'allow' };
   condition: {
     urlFilter?: string;
     regexFilter?: string;
@@ -84,13 +82,25 @@ function convertHeaders(
   return out;
 }
 
-function profileConditions(p: Profile, warnings: string[]): DnrRule['condition'][] {
+interface ProfileParts {
+  title: string;
+  index: number;
+  requestHeaders: DnrHeaderInfo[];
+  responseHeaders: DnrHeaderInfo[];
+  conditions: DnrRule['condition'][];
+  /** "Never on" filters Chrome can't express as excluded domains; they become allow rules. */
+  allowConditions: DnrRule['condition'][];
+}
+
+function profileConditions(p: Profile): Pick<ProfileParts, 'conditions' | 'allowConditions'> {
   const excludedDomains: string[] = [];
+  const allowConditions: DnrRule['condition'][] = [];
   for (const f of p.filters) {
-    if (!f.enabled || f.kind !== 'exclude') continue;
-    const d = f.pattern.trim().toLowerCase();
-    if (!f.isRegex && DOMAIN.test(d)) excludedDomains.push(d);
-    else warnings.push(`"${p.title}": exclude filter "${f.pattern}" ignored, only plain domains are supported for now.`);
+    const pattern = f.pattern.trim();
+    if (!f.enabled || f.kind !== 'exclude' || pattern === '') continue;
+    if (f.isRegex) allowConditions.push({ regexFilter: pattern, resourceTypes: ALL_RESOURCE_TYPES });
+    else if (DOMAIN.test(pattern)) excludedDomains.push(pattern.toLowerCase());
+    else allowConditions.push({ urlFilter: pattern, resourceTypes: ALL_RESOURCE_TYPES });
   }
   const base = {
     resourceTypes: ALL_RESOURCE_TYPES,
@@ -98,42 +108,118 @@ function profileConditions(p: Profile, warnings: string[]): DnrRule['condition']
   };
 
   const includes = p.filters.filter(f => f.enabled && f.kind === 'include' && f.pattern.trim() !== '');
-  if (includes.length === 0) return [{ ...base }];
-  return includes.map(f => f.isRegex
-    ? { ...base, regexFilter: f.pattern.trim() }
-    : { ...base, urlFilter: f.pattern.trim() });
+  const conditions = includes.length === 0
+    ? [{ ...base }]
+    : includes.map(f => f.isRegex
+      ? { ...base, regexFilter: f.pattern.trim() }
+      : { ...base, urlFilter: f.pattern.trim() });
+  return { conditions, allowConditions };
+}
+
+function sharedHeader(a: ProfileParts, b: ProfileParts): string | undefined {
+  for (const dir of ['requestHeaders', 'responseHeaders'] as const) {
+    const names = new Set(b[dir].map(h => h.header.toLowerCase()));
+    const hit = a[dir].find(h => names.has(h.header.toLowerCase()));
+    if (hit) return hit.header;
+  }
+  return undefined;
 }
 
 /**
  * Turns the user's profiles into declarativeNetRequest dynamic rules.
  * The first profile in the list wins when two profiles touch the same header.
+ *
+ * Chrome has no "skip URLs matching this regex" condition. Such a "never on"
+ * filter (or a non-domain urlFilter) becomes an `allow` rule with the profile's
+ * own priority: Chrome then ignores every modifyHeaders rule with priority <=
+ * that allow rule on matching URLs. That would also switch off every profile
+ * below, so profiles with these excludes are moved under all the others.
  */
 export function toDnrRules(state: State): ConversionResult {
   const warnings: string[] = [];
   const rules: DnrRule[] = [];
   if (state.paused) return { rules, warnings };
 
-  const n = state.profiles.length;
+  const parts: ProfileParts[] = [];
   state.profiles.forEach((p, index) => {
     if (!p.enabled) return;
     const requestHeaders = convertHeaders(p.requestHeaders, 'request', p.title, warnings);
     const responseHeaders = convertHeaders(p.responseHeaders, 'response', p.title, warnings);
     if (requestHeaders.length === 0 && responseHeaders.length === 0) return;
+    parts.push({ title: p.title, index, requestHeaders, responseHeaders, ...profileConditions(p) });
+  });
 
-    for (const condition of profileConditions(p, warnings)) {
+  const plain = parts.filter(x => x.allowConditions.length === 0);
+  const withAllow = parts.filter(x => x.allowConditions.length > 0);
+  for (const x of withAllow) {
+    for (const y of plain) {
+      const header = y.index > x.index ? sharedHeader(x, y) : undefined;
+      if (header) warnings.push(`"${x.title}" has "never on" patterns, so "${y.title}" wins on header "${header}" even though it is lower in the list.`);
+    }
+  }
+  withAllow.forEach((x, i) => {
+    for (const y of withAllow.slice(i + 1)) {
+      warnings.push(`"${x.title}": its "never on" patterns also turn off "${y.title}" on matching URLs.`);
+    }
+  });
+
+  const ordered = [...plain, ...withAllow];
+  ordered.forEach((x, pos) => {
+    const priority = ordered.length - pos;
+    for (const condition of x.conditions) {
       rules.push({
         id: rules.length + 1,
-        priority: n - index,
+        priority,
         action: {
           type: 'modifyHeaders',
-          ...(requestHeaders.length ? { requestHeaders } : {}),
-          ...(responseHeaders.length ? { responseHeaders } : {}),
+          ...(x.requestHeaders.length ? { requestHeaders: x.requestHeaders } : {}),
+          ...(x.responseHeaders.length ? { responseHeaders: x.responseHeaders } : {}),
         },
         condition,
       });
     }
+    for (const condition of x.allowConditions) {
+      rules.push({ id: rules.length + 1, priority, action: { type: 'allow' }, condition });
+    }
   });
 
+  return limitRules(rules, warnings);
+}
+
+/**
+ * Chrome uses RE2, so lookaheads, backreferences and very large patterns from
+ * JS-style (e.g. ModHeader) regexes are rejected, and one bad regex fails the
+ * whole update. Drops rules whose regex Chrome can't use. If it is an exclude
+ * (allow rule), the whole profile is dropped: applying headers where the user
+ * said "never" is worse than not applying them.
+ */
+export async function dropUnsupportedRegexes(
+  rules: DnrRule[],
+  isSupported: (regex: string) => Promise<{ isSupported: boolean; reason?: string }>,
+  warnings: string[],
+): Promise<DnrRule[]> {
+  const badRules = new Set<DnrRule>();
+  const badPriorities = new Set<number>();
+  for (const r of rules) {
+    const regex = r.condition.regexFilter;
+    if (regex === undefined) continue;
+    const res = await isSupported(regex);
+    if (res.isSupported) continue;
+    const why = res.reason ? ` (${res.reason})` : '';
+    if (r.action.type === 'allow') {
+      badPriorities.add(r.priority);
+      warnings.push(`"Never on" regex "${regex}" is not supported by Chrome${why}, so its profile is off.`);
+    } else {
+      badRules.add(r);
+      warnings.push(`"Only on" regex "${regex}" is not supported by Chrome${why}, skipped.`);
+    }
+  }
+  return rules
+    .filter(r => !badRules.has(r) && !badPriorities.has(r.priority))
+    .map((r, i) => ({ ...r, id: i + 1 }));
+}
+
+function limitRules(rules: DnrRule[], warnings: string[]): ConversionResult {
   if (rules.length > MAX_DYNAMIC_RULES) {
     warnings.push(`Too many rules (${rules.length}), Chrome allows ${MAX_DYNAMIC_RULES}. Only the first ${MAX_DYNAMIC_RULES} are applied.`);
     rules.length = MAX_DYNAMIC_RULES;
