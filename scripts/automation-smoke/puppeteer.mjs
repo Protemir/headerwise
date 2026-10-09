@@ -1,10 +1,12 @@
 // Puppeteer: installs the extension over the pipe, works with Chrome for Testing.
 import { resolve } from 'node:path';
 import puppeteer from 'puppeteer';
-import { smoke } from './server.mjs';
+import { ID, smoke } from './server.mjs';
 
 const ext = resolve('dist-automation');
 const browser = await puppeteer.launch({ pipe: true, enableExtensions: [ext] });
+// The extension installs after launch returns: wait for its service worker.
+await browser.waitForTarget(t => t.type() === 'service_worker' && t.url().startsWith(`chrome-extension://${ID}/`));
 const page = await browser.newPage();
 
 await smoke('puppeteer', {

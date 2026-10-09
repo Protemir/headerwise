@@ -105,6 +105,8 @@ with sync_playwright() as p:
     <h2>Puppeteer</h2>
     <pre><code>import puppeteer from 'puppeteer';
 const browser = await puppeteer.launch({ pipe: true, enableExtensions: ['/path/to/headerwise-automation'] });
+// the extension installs after launch() returns
+await browser.waitForTarget(t =&gt; t.type() === 'service_worker' &amp;&amp; t.url().includes('ogjbgamdhnjnagcdgboifgmhlgddcdce'));
 const page = await browser.newPage();
 await page.goto('chrome-extension://ogjbgamdhnjnagcdgboifgmhlgddcdce/automation.html?X-Env=staging');
 await page.waitForFunction(() =&gt; document.documentElement.dataset.status === 'ready');
