@@ -115,6 +115,7 @@
     .install { text-align: center; }
     .install p { color: var(--muted); margin: 14px 0 28px; font-size: 18px; }
     .install .ctas { justify-content: center; }
+    .install .note { font-size: 15px; margin: 18px auto 0; max-width: 52ch; }
     footer { border-top: 1px solid var(--line); padding: 28px 0 40px; font-size: 15px; }
     footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; color: var(--muted); }
     footer a { color: var(--muted); }
@@ -160,7 +161,7 @@
         <!-- Store search links until the listings are live; then the direct listing URLs. -->
         <div class="ctas">
           <a class="btn primary" href="https://chromewebstore.google.com/search/headerwise">Add to Chrome</a>
-          <a class="btn secondary" href="https://microsoftedge.microsoft.com/addons/search/headerwise">Add to Edge</a>
+          <a class="btn secondary" href="https://github.com/Protemir/headerwise">Source on GitHub</a>
         </div>
       </div>
       <picture class="shot">
@@ -292,7 +293,7 @@
           </details>
           <details>
             <summary>Which browsers does it work in?</summary>
-            <p>Chrome and Edge are tested on every change. Other Chromium browsers that install extensions from the Chrome Web Store, such as Brave and Vivaldi, should work too. Firefox is planned.</p>
+            <p>Chrome and Edge are tested on every change. Install it from the Chrome Web Store in any of them: Edge asks to "Allow extensions from other stores" the first time. Brave and Vivaldi work the same way. Firefox is planned.</p>
           </details>
           <details>
             <summary>How do I move from ModHeader?</summary>
@@ -308,8 +309,8 @@
         <p>Free, no account. Takes a few seconds.</p>
         <div class="ctas">
           <a class="btn primary" href="https://chromewebstore.google.com/search/headerwise">Add to Chrome</a>
-          <a class="btn secondary" href="https://microsoftedge.microsoft.com/addons/search/headerwise">Add to Edge</a>
         </div>
+        <p class="note">Edge, Brave and Vivaldi install it from the Chrome Web Store too. In Edge, click "Allow extensions from other stores" when asked.</p>
       </div>
     </section>
   </main>
