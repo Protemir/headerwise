@@ -35,8 +35,9 @@ describe('redirects', () => {
     ];
     for (const [redirect, url] of cases) {
       const [rule] = redirectsOf(st(p('P', { redirects: [redirect] })));
-      const pattern = redirect.isRegex ? new RegExp(redirect.from) : redirect.from;
-      const expected = url.replace(pattern, redirect.isRegex ? redirect.to : () => redirect.to);
+      const expected = redirect.isRegex
+        ? url.replace(new RegExp(redirect.from), redirect.to)
+        : url.replace(redirect.from, () => redirect.to); // a function: no $-patterns in plain text
       expect(chromeRedirect(rule, url)).toBe(expected);
     }
   });
