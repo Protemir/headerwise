@@ -21,6 +21,7 @@ import { exportChecks, filterChecks } from './checks-filters.mjs';
 import { listChecks, variableChecks, welcomeChecks } from './checks-ux.mjs';
 import { redirectChecks } from './checks-redirects.mjs';
 import { supportChecks } from './checks-support.mjs';
+import { automationChecks } from './checks-automation.mjs';
 
 const args = process.argv.slice(2);
 const browser = args.includes('--browser') ? args[args.indexOf('--browser') + 1] : 'chrome';
@@ -60,11 +61,11 @@ for (const f of readdirSync('tests/fixtures/leveldb-bulk')) {
   writeFileSync(join(fixtureDir, f.replace(/\.gz$/, '')), gunzipSync(readFileSync(join('tests/fixtures/leveldb-bulk', f))));
 }
 
-async function launch(name, grantAccess) {
+async function launch(name, grantAccess, source = dist) {
   const dir = join(root, `${browser}-${name}`);
   rmSync(dir, { recursive: true, force: true });
   const ext = join(dir, 'ext');
-  cpSync(dist, ext, { recursive: true });
+  cpSync(source, ext, { recursive: true });
   if (grantAccess) {
     // The real extension asks for site access with a button; a test can't click
     // the browser's permission dialog, so this copy gets it at install time.
@@ -184,9 +185,14 @@ const both = async (tabs, ctx, check) => {
   await cspChecks(tabs, ctx, check);
   await migrateChecks(tabs, ctx, check);
 };
-for (const [name, grant, checks] of [['no-access', false, noAccessChecks], ['access', true, both]]) {
-  const b = await launch(name, grant);
-  console.log(`\n${b.version}, ${name === 'access' ? 'site access granted' : 'real manifest, no site access'}`);
+// The automation build (npm run build:automation), when there is one.
+const automation = resolve('dist-automation');
+const runs = [['no-access', false, noAccessChecks], ['access', true, both]];
+if (existsSync(join(automation, 'manifest.json'))) runs.push(['automation', false, automationChecks, automation]);
+const labels = { 'no-access': 'real manifest, no site access', access: 'site access granted', automation: 'automation build' };
+for (const [name, grant, checks, source] of runs) {
+  const b = await launch(name, grant, source);
+  console.log(`\n${b.version}, ${labels[name]}`);
   try {
     await checks(b.tabs, { ...urls, extId: b.extId, fixtureDir, requests, saw: path => headersByPath.get(path), port: CDP_PORT, root }, check);
   } catch (e) {

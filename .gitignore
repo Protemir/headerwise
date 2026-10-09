@@ -4,3 +4,4 @@ dist/
 .DS_Store
 store/raw/
 dist-firefox/
+dist-automation/

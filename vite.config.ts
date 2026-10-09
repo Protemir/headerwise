@@ -11,6 +11,7 @@ export default defineConfig({
       input: {
         popup: 'src/popup/index.html',
         migrate: 'src/migrate/index.html',
+        automation: 'automation.html',
         background: 'src/background.ts',
       },
       output: {

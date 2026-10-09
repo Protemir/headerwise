@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Headerwise: working</title>
+</head>
+<body>
+  <main>
+    <h1>Headerwise automation</h1>
+    <p id="status">Applying…</p>
+    <ul id="summary"></ul>
+    <ul id="warnings"></ul>
+    <p class="help">Usage: <code>automation.html?X-Name=value&amp;res:X-Name=value&amp;@url=||example.com^</code>, <code>?@clear</code>, <code>?@import=&lt;json&gt;</code>. Docs: protemir.github.io/headerwise/automation.html</p>
+  </main>
+  <script type="module" src="./src/automation/main.ts"></script>
+</body>
+</html>

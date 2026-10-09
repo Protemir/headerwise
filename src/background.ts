@@ -9,6 +9,8 @@ import { loadMeta, loadState, saveMeta, saveState, STATE_KEY } from './core/stor
 const dnr = chrome.declarativeNetRequest;
 // The Firefox build runs this same file (as an event page instead of a service worker).
 const isFirefox = navigator.userAgent.includes('Firefox/');
+// The automation build (scripts/automation.mjs) runs in test browsers: no welcome tab there.
+const isAutomation = (chrome.runtime.getManifest().version_name ?? '').includes('automation');
 type Rules = chrome.declarativeNetRequest.Rule[];
 
 const engine = createEngine({
@@ -50,7 +52,13 @@ chrome.runtime.onInstalled.addListener(details => {
   // When Headerwise came into use, for the "Rate Headerwise" link two weeks later.
   loadMeta().then(meta => { if (!meta.installedAt) saveMeta({ installedAt: Date.now() }); });
   // First install only (not updates): first steps and the ModHeader move.
-  if (details.reason === 'install') chrome.tabs.create({ url: chrome.runtime.getURL('src/migrate/index.html?welcome=1') });
+  if (details.reason === 'install' && !isAutomation) chrome.tabs.create({ url: chrome.runtime.getURL('src/migrate/index.html?welcome=1') });
+});
+// The automation page asks for a sync and waits until the browser has the rules.
+chrome.runtime.onMessage.addListener((message, _sender, reply) => {
+  if (message?.type !== 'sync') return false;
+  engine.queueSync().then(() => reply(true));
+  return true;
 });
 chrome.runtime.onStartup.addListener(() => { engine.release(); });
 chrome.tabs.onRemoved.addListener(tabId => { engine.release(tabId); });

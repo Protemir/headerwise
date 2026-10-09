@@ -65,7 +65,7 @@ export function zip(files) {
   return Buffer.concat([...parts, centralBuf, end]);
 }
 
-function listFiles(dir) {
+export function listFiles(dir) {
   return readdirSync(dir).flatMap(f => (statSync(join(dir, f)).isDirectory() ? listFiles(join(dir, f)) : [join(dir, f)]));
 }
 

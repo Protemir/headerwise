@@ -1,6 +1,6 @@
 {
   "name": "headerwise",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Modify HTTP request and response headers. Runs locally, sends nothing anywhere.",
   "license": "MIT",
@@ -14,7 +14,8 @@
     "typecheck": "vue-tsc --noEmit",
     "test:live": "node scripts/live-test/run.mjs",
     "store:shots": "node scripts/store/shots.mjs",
-    "build:firefox": "node scripts/firefox.mjs"
+    "build:firefox": "node scripts/firefox.mjs",
+    "build:automation": "node scripts/automation.mjs"
   },
   "dependencies": {
     "vue": "^3.5.39"
