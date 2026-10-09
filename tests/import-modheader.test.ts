@@ -56,16 +56,33 @@ const cookies = JSON.stringify([{
 }]);
 
 describe('importModHeader', () => {
-  it('reads a 7.x export: empty value means remove; a skipped narrowing filter switches the profile off', () => {
+  it('reads a 7.x export: empty value means remove, initiator domain filter carried over', () => {
     const { profiles, warnings } = importModHeader(coinfluence);
+    expect(warnings).toEqual([]);
     expect(profiles).toHaveLength(1);
     const [p] = profiles;
-    expect([p.title, p.enabled]).toEqual(['Profile 1', false]);
+    expect([p.title, p.enabled]).toEqual(['Profile 1', true]);
     expect(p.requestHeaders.map(h => [h.name, h.op])).toEqual([['Origin', 'remove']]);
     expect(p.responseHeaders.map(h => [h.name, h.value, h.op])).toEqual([['Access-Control-Allow-Origin', '*', 'set']]);
+    expect(p.initiatorDomains).toEqual(['api.mainnet-beta.solana.com']);
+    const { rules } = toDnrRules({ version: 1, paused: false, profiles });
+    expect(rules[0].condition.initiatorDomains).toEqual(['api.mainnet-beta.solana.com']);
+  });
+
+  it('carries over resource type and method filters, v1 and v2', () => {
+    const { profiles, warnings } = importModHeader(JSON.stringify([
+      { version: 2, title: 'A', headers: [{ name: 'X-A', value: '1' }], resourceFilters: [{ enabled: true, resourceType: ['xmlhttprequest', 'main_frame'] }], requestMethodFilters: [{ enabled: true, methods: ['POST', 'PUT'] }] },
+      { title: 'B', headers: [{ name: 'X-B', value: '1' }], filters: [{ enabled: true, type: 'types', resourceType: ['script'] }] },
+      { version: 2, title: 'C', headers: [{ name: 'X-C', value: '1' }], resourceFilters: [{ enabled: true, resourceType: ['speculative'] }] },
+    ]));
+    expect(profiles.map(p => [p.title, p.enabled, p.resourceTypes ?? null, p.requestMethods ?? null])).toEqual([
+      ['A', true, ['xmlhttprequest', 'main_frame'], ['post', 'put']],
+      ['B', false, ['script'], null],
+      ['C', false, null, null], // its only type is unknown: kept off rather than applied to everything
+    ]);
     expect(warnings).toHaveLength(2);
-    expect(warnings[0]).toBe('"Profile 1": skipped "initiator domain" filters. Headerwise can\'t do these yet.');
-    expect(warnings[1]).toMatch(/"Profile 1" is imported switched off/);
+    expect(warnings[0]).toMatch(/"C": resource types speculative are not supported/);
+    expect(warnings[1]).toMatch(/"C" is imported switched off/);
   });
 
   it('reads 7.x url filters and turns the result into Chrome rules', () => {
@@ -119,7 +136,8 @@ describe('importModHeader', () => {
     ]);
     expect(profiles[0].enabled).toBe(false);
     expect(warnings).toHaveLength(3);
-    expect(warnings[0]).toBe('"Cookies": skipped request cookie rules, response cookie rules, resource type filters, tab filters. Headerwise can\'t do these yet.');
+    expect(warnings[0]).toBe('"Cookies": skipped request cookie rules, response cookie rules, tab filters. Headerwise can\'t do these yet.');
+    expect(profiles[0].resourceTypes).toEqual(['main_frame']);
     expect(warnings[1]).toMatch(/switched off/);
     expect(warnings[2]).toMatch(/\{\{\.\.\.\}\} are imported as plain text/);
   });

@@ -39,3 +39,13 @@ button.icon.on, button.icon:hover { opacity: 1; }
 .chip { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 11px; border: 1px solid var(--accent); border-radius: 10px; padding: 1px 2px 1px 8px; }
 .chip button.x { border: 0; padding: 0 4px; }
 button.icon, .icon-space { flex: 0 0 26px; box-sizing: border-box; text-align: center; }
+.more { margin: 6px 0 0; }
+.more summary { cursor: pointer; color: var(--accent); font-size: 12px; }
+.more .lbl { flex: 0 0 120px; font-size: 12px; opacity: .8; }
+.checks { display: grid; grid-template-columns: 120px 1fr; gap: 6px; align-items: start; margin: 4px 0; font-size: 12px; }
+.checks .opts { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.checks .lbl { opacity: .8; padding-top: 2px; }
+.checks label { white-space: nowrap; }
+.export .row button { flex: 0 0 auto; }
+.notes li:first-child { color: inherit; }
+.notes li.ok { list-style: none; color: inherit; }

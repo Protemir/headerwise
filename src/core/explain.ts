@@ -1,5 +1,5 @@
 import type { RuleInfo } from './dnr.ts';
-import type { Profile, State } from './model.ts';
+import { RESOURCE_TYPES, type Profile, type State } from './model.ts';
 
 /*
  * "Is it working on this tab?" Chrome tells us which of our rules matched
@@ -68,6 +68,7 @@ export type TabLine =
   | { kind: 'excluded'; pattern: string }
   | { kind: 'not-included'; patterns: string[] }
   | { kind: 'other-tab'; host: string } // "only this tab", bound to a different tab
+  | { kind: 'narrowed'; scope: string } // limited by type / method / initiator, and none of those seen
   | { kind: 'waiting' } // should apply, but no requests since the last change
   | { kind: 'off' }
   | { kind: 'empty' };
@@ -76,6 +77,18 @@ export interface TabReportLine {
   profileId: string;
   title: string;
   line: TabLine;
+}
+
+/** "fetch / XHR, POST requests from app.io", or '' when the profile isn't limited that way. */
+export function scopeSummary(p: Profile): string {
+  const types = (p.resourceTypes ?? []).map(t => RESOURCE_TYPES.find(x => x.id === t)?.label ?? t);
+  const methods = (p.requestMethods ?? []).map(m => m.toUpperCase());
+  const from = (p.initiatorDomains ?? []).filter(d => d.trim());
+  const notFrom = (p.excludedInitiatorDomains ?? []).filter(d => d.trim());
+  if (!types.length && !methods.length && !from.length && !notFrom.length) return '';
+  const what = [types.join(', '), methods.join(', ')].filter(Boolean).join(', ');
+  return [what ? `${what} requests` : 'requests', from.length ? `from ${from.join(', ')}` : '', notFrom.length ? `not from ${notFrom.join(', ')}` : '']
+    .filter(Boolean).join(' ');
 }
 
 export function hasHeaders(p: Profile): boolean {
@@ -112,6 +125,8 @@ export function tabReport(state: State, url: string, matched: MatchedRule[], inf
     if (n > 0) return { ...base, line: { kind: 'applied', requests: n, ...(excludedBy ? { skippedBy: excludedBy } : {}) } };
     if (excludedBy) return { ...base, line: { kind: 'excluded', pattern: excludedBy } };
     if (verdict.kind === 'not-included') return { ...base, line: { kind: 'not-included', patterns: verdict.patterns } };
+    const scope = scopeSummary(p);
+    if (scope) return { ...base, line: { kind: 'narrowed', scope } };
     return { ...base, line: { kind: 'waiting' } };
   });
 }

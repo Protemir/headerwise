@@ -1,4 +1,4 @@
-import { newId, type HeaderMod, type Profile, type UrlFilter } from './model.ts';
+import { newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type UrlFilter } from './model.ts';
 
 /*
  * ModHeader export format, checked against the 7.0.18 export code (as ported in
@@ -38,6 +38,9 @@ interface MhProfile {
   urlFilters?: MhUrlFilter[];
   excludeUrlFilters?: MhUrlFilter[];
   excludeRequestDomainFilters?: MhDomainFilter[];
+  initiatorDomainFilters?: MhDomainFilter[];
+  resourceFilters?: { enabled?: boolean; resourceType?: string[] }[];
+  requestMethodFilters?: { enabled?: boolean; methods?: string[] }[];
   [other: string]: unknown;
 }
 
@@ -52,9 +55,6 @@ const UNSUPPORTED: Record<string, string> = {
   cookieHeaders: 'request cookie rules',
   setCookieHeaders: 'response cookie rules',
   cspHeaders: 'CSP rules',
-  initiatorDomainFilters: '"initiator domain" filters',
-  resourceFilters: 'resource type filters',
-  requestMethodFilters: 'request method filters',
   tabFilters: 'tab filters',
   tabGroupFilters: 'tab group filters',
   windowFilters: 'window filters',
@@ -64,7 +64,6 @@ const UNSUPPORTED: Record<string, string> = {
 // Filters that narrow where a profile applies. Dropping one would make the profile
 // hit more requests than it did in ModHeader, so such profiles come in switched off.
 const NARROWING = new Set([
-  'initiatorDomainFilters', 'resourceFilters', 'requestMethodFilters',
   'tabFilters', 'tabGroupFilters', 'windowFilters', 'timeFilters',
 ]);
 
@@ -145,15 +144,11 @@ export function importModHeader(text: string, { active = 0 }: { active?: number 
     const filters: UrlFilter[] = [];
     const skipped: string[] = [];
     let narrowingSkipped = false;
+    const types: string[] = [];
 
     for (const f of p.filters ?? []) {
       if (f.type === 'excludeUrls') { const x = urlFilter(f, 'exclude'); if (x) filters.push(x); }
-      else if (f.type === 'types') {
-        if (f.enabled !== false && f.resourceType?.length) {
-          skipped.push(UNSUPPORTED.resourceFilters);
-          narrowingSkipped = true;
-        }
-      }
+      else if (f.type === 'types') { if (f.enabled !== false) types.push(...(f.resourceType ?? [])); }
       else { const x = urlFilter(f, 'include'); if (x) filters.push(x); }
     }
     for (const f of p.urlFilters ?? []) { const x = urlFilter(f, 'include'); if (x) filters.push(x); }
@@ -163,6 +158,18 @@ export function importModHeader(text: string, { active = 0 }: { active?: number 
         filters.push({ id: newId(), enabled: f.enabled !== false, kind: 'exclude', pattern: f.domain.trim(), isRegex: false });
       }
     }
+
+    // Initiator, resource type and method filters map onto Chrome's own conditions.
+    const initiators = (p.initiatorDomainFilters ?? []).filter(f => f?.enabled !== false && typeof f?.domain === 'string' && f.domain.trim()).map(f => f.domain!.trim().toLowerCase());
+    for (const f of p.resourceFilters ?? []) if (f?.enabled !== false) types.push(...(f?.resourceType ?? []));
+    const methods = (p.requestMethodFilters ?? []).filter(f => f?.enabled !== false).flatMap(f => f?.methods ?? []).map(m => String(m).toLowerCase());
+    const known = new Set(RESOURCE_TYPES.map(t => t.id));
+    const unknownTypes = [...new Set(types.filter(t => !known.has(t)))];
+    if (unknownTypes.length) warnings.push(`"${title}": resource types ${unknownTypes.join(', ')} are not supported, the rest is kept.`);
+    const resourceTypes = [...new Set(types.filter(t => known.has(t)))];
+    const requestMethods = [...new Set(methods.filter(m => REQUEST_METHODS.includes(m)))];
+    // A type/method filter that lost all its values would widen the profile.
+    if ((types.length && !resourceTypes.length) || (methods.length && !requestMethods.length)) narrowingSkipped = true;
 
     for (const [field, label] of Object.entries(UNSUPPORTED)) {
       if (!hasItems(p[field])) continue;
@@ -185,6 +192,9 @@ export function importModHeader(text: string, { active = 0 }: { active?: number 
       requestHeaders,
       responseHeaders,
       filters,
+      ...(initiators.length ? { initiatorDomains: [...new Set(initiators)] } : {}),
+      ...(resourceTypes.length ? { resourceTypes } : {}),
+      ...(requestMethods.length ? { requestMethods } : {}),
     };
   });
 

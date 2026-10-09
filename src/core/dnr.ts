@@ -1,4 +1,4 @@
-import type { HeaderMod, Profile, State } from './model.ts';
+import { REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type State } from './model.ts';
 
 /**
  * Minimal mirror of chrome.declarativeNetRequest.Rule, so the core can be
@@ -22,6 +22,9 @@ export interface DnrRule {
     excludedRequestDomains?: string[];
     /** Session rules only: "only this tab" profiles. */
     tabIds?: number[];
+    initiatorDomains?: string[];
+    excludedInitiatorDomains?: string[];
+    requestMethods?: string[];
     resourceTypes: string[];
   };
 }
@@ -107,21 +110,48 @@ interface ProfileParts {
   allowConditions: DnrRule['condition'][];
 }
 
-function profileConditions(p: Profile): Pick<ProfileParts, 'conditions' | 'allowConditions'> {
+function domains(list: string[] | undefined, what: string, title: string, warnings: string[]): string[] {
+  const out: string[] = [];
+  for (const raw of list ?? []) {
+    const d = raw.trim().toLowerCase();
+    if (d === '') continue;
+    if (DOMAIN.test(d)) out.push(d);
+    else warnings.push(`"${title}": "${raw}" in ${what} is not a domain like example.com, skipped.`);
+  }
+  return out;
+}
+
+/** Tab, initiator, method and resource type limits, shared by all of a profile's rules. */
+function profileScope(p: Profile, warnings: string[]) {
+  const initiators = domains(p.initiatorDomains, '"only from sites"', p.title, warnings);
+  const notInitiators = domains(p.excludedInitiatorDomains, '"never from sites"', p.title, warnings);
+  const known = new Set(RESOURCE_TYPES.map(t => t.id));
+  const types = (p.resourceTypes ?? []).filter(t => known.has(t));
+  const methods = (p.requestMethods ?? []).map(m => m.toLowerCase()).filter(m => REQUEST_METHODS.includes(m));
+  return {
+    ...(p.tab ? { tabIds: [p.tab.id] } : {}),
+    ...(initiators.length ? { initiatorDomains: initiators } : {}),
+    ...(notInitiators.length ? { excludedInitiatorDomains: notInitiators } : {}),
+    ...(methods.length ? { requestMethods: methods } : {}),
+    resourceTypes: types.length ? types : ALL_RESOURCE_TYPES,
+  };
+}
+
+function profileConditions(p: Profile, warnings: string[]): Pick<ProfileParts, 'conditions' | 'allowConditions'> {
   const excludedDomains: string[] = [];
   const allowConditions: DnrRule['condition'][] = [];
-  // Both the headers and the "never on" allow rules of a tab-bound profile stay in that tab.
-  const tab = p.tab ? { tabIds: [p.tab.id] } : {};
+  // The "never on" allow rules get the same limits as the headers, so they can't
+  // switch off other profiles outside this profile's own scope.
+  const scope = profileScope(p, warnings);
   for (const f of p.filters) {
     const pattern = f.pattern.trim();
     if (!f.enabled || f.kind !== 'exclude' || pattern === '') continue;
-    if (f.isRegex) allowConditions.push({ regexFilter: pattern, ...tab, resourceTypes: ALL_RESOURCE_TYPES });
+    if (f.isRegex) allowConditions.push({ regexFilter: pattern, ...scope });
     else if (DOMAIN.test(pattern)) excludedDomains.push(pattern.toLowerCase());
-    else allowConditions.push({ urlFilter: pattern, ...tab, resourceTypes: ALL_RESOURCE_TYPES });
+    else allowConditions.push({ urlFilter: pattern, ...scope });
   }
   const base = {
-    ...tab,
-    resourceTypes: ALL_RESOURCE_TYPES,
+    ...scope,
     ...(excludedDomains.length ? { excludedRequestDomains: excludedDomains } : {}),
   };
 
@@ -166,7 +196,7 @@ export function toDnrRules(state: State): ConversionResult {
     const requestHeaders = convertHeaders(p.requestHeaders, 'request', p.title, warnings);
     const responseHeaders = convertHeaders(p.responseHeaders, 'response', p.title, warnings);
     if (requestHeaders.length === 0 && responseHeaders.length === 0) return;
-    parts.push({ id: p.id, title: p.title, index, requestHeaders, responseHeaders, ...profileConditions(p) });
+    parts.push({ id: p.id, title: p.title, index, requestHeaders, responseHeaders, ...profileConditions(p, warnings) });
   });
 
   const plain = parts.filter(x => x.allowConditions.length === 0);

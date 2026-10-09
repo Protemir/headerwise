@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, toRaw, watch } from 'vue';
-import { defaultState, emptyHeader, emptyProfile, isSecret, maskValue, newId, type HeaderMod, type State } from '../core/model.ts';
-import { importModHeader } from '../core/import-modheader.ts';
+import { defaultState, emptyHeader, emptyProfile, isSecret, maskValue, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type State } from '../core/model.ts';
+import { exportFileName, exportProfiles, importProfiles } from '../core/export.ts';
 import { loadState, saveState } from '../core/storage.ts';
 import type { RuleInfo } from '../core/dnr.ts';
 import { tabReport, type MatchedRule, type TabLine } from '../core/explain.ts';
@@ -84,6 +84,7 @@ function describe(line: TabLine): string {
     case 'off': return 'turned off';
     case 'empty': return 'no headers yet';
     case 'other-tab': return `only in another tab (${line.host})`;
+    case 'narrowed': return `only ${line.scope}: none here since your last edit`;
   }
 }
 
@@ -183,15 +184,56 @@ function filterPlaceholder(kind: 'include' | 'exclude', isRegex: boolean): strin
   return kind === 'exclude' ? 'example.com or *login*' : '||example.com^';
 }
 
+// Sites / request types / methods. Lists are left out of the profile when empty.
+type ListKey = 'initiatorDomains' | 'excludedInitiatorDomains' | 'resourceTypes' | 'requestMethods';
+function setList(p: Profile, key: ListKey, list: string[]) {
+  if (list.length) p[key] = list;
+  else delete p[key];
+}
+function setDomains(p: Profile, key: 'initiatorDomains' | 'excludedInitiatorDomains', e: Event) {
+  setList(p, key, (e.target as HTMLInputElement).value.split(/[\s,]+/).map(d => d.trim()).filter(Boolean));
+}
+function toggleIn(p: Profile, key: 'resourceTypes' | 'requestMethods', value: string) {
+  const list = p[key] ?? [];
+  setList(p, key, list.includes(value) ? list.filter(x => x !== value) : [...list, value]);
+}
+const hasScope = (p: Profile) => !!(p.initiatorDomains?.length || p.excludedInitiatorDomains?.length || p.resourceTypes?.length || p.requestMethods?.length);
+
+// Export: chosen profiles to a JSON file (or the clipboard), secrets left out unless asked.
+const showExport = ref(false);
+const exportPicked = ref<Record<string, boolean>>({});
+const exportSecrets = ref(false);
+const exportChosen = computed(() => state.value.profiles.filter(p => exportPicked.value[p.id] !== false));
+const exportText = () => exportProfiles(exportChosen.value, { includeSecrets: exportSecrets.value });
+const exportDone = ref('');
+function downloadExport() {
+  const url = URL.createObjectURL(new Blob([exportText()], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = exportFileName();
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  exportDone.value = `Saved ${a.download}`;
+}
+async function copyExport() {
+  await navigator.clipboard.writeText(exportText());
+  exportDone.value = 'Copied';
+}
+
+// Kept apart from the background script's warnings, which are refreshed on every save.
+const importNotes = ref<string[]>([]);
+
 function doImport() {
-  const res = importModHeader(importText.value);
+  const res = importProfiles(importText.value);
   if (res.profiles.length) {
     state.value.profiles.push(...res.profiles);
     selected.value = state.value.profiles.length - res.profiles.length;
     importText.value = '';
     showImport.value = false;
   }
-  warnings.value = res.warnings;
+  importNotes.value = res.profiles.length
+    ? [`Imported ${res.profiles.length} profile${res.profiles.length === 1 ? '' : 's'}.`, ...res.warnings]
+    : res.warnings;
 }
 
 function openMigrate() {
@@ -323,15 +365,57 @@ async function importFile(e: Event) {
       </div>
       <button class="link" @click="addFilter('include')">+ only on…</button>
       <button class="link" @click="addFilter('exclude')">+ never on…</button>
+
+      <details class="more" :open="hasScope(profile)">
+        <summary>Sites, request types, methods</summary>
+        <div class="row">
+          <span class="lbl">Only from sites</span>
+          <input class="grow" :value="(profile.initiatorDomains ?? []).join(', ')" @change="setDomains(profile, 'initiatorDomains', $event)" placeholder="app.example.com, admin.example.com" />
+        </div>
+        <div class="row">
+          <span class="lbl">Never from sites</span>
+          <input class="grow" :value="(profile.excludedInitiatorDomains ?? []).join(', ')" @change="setDomains(profile, 'excludedInitiatorDomains', $event)" placeholder="example.org" />
+        </div>
+        <div class="checks">
+          <span class="lbl">Only these requests</span>
+          <div class="opts">
+            <label v-for="t in RESOURCE_TYPES" :key="t.id"><input type="checkbox" :checked="profile.resourceTypes?.includes(t.id)" @change="toggleIn(profile, 'resourceTypes', t.id)" /> {{ t.label }}</label>
+          </div>
+        </div>
+        <div class="checks">
+          <span class="lbl">Only these methods</span>
+          <div class="opts">
+            <label v-for="m in REQUEST_METHODS" :key="m"><input type="checkbox" :checked="profile.requestMethods?.includes(m)" @change="toggleIn(profile, 'requestMethods', m)" /> {{ m.toUpperCase() }}</label>
+          </div>
+        </div>
+        <p class="dim">Nothing ticked means all. "From sites" is the page that made the request: a page opened from the address bar or a bookmark has none, so it doesn't count.</p>
+      </details>
     </section>
 
     <section>
       <button class="link" @click="openMigrate">Move from ModHeader (turned off in Chrome)</button>
-      <button class="link" @click="showImport = !showImport">Import ModHeader JSON</button>
+      <button class="link" @click="showImport = !showImport; showExport = false">Import JSON</button>
+      <button class="link" @click="showExport = !showExport; showImport = false; exportDone = ''">Export…</button>
       <div v-if="showImport" class="import">
         <input type="file" accept=".json,application/json" @change="importFile" />
-        <textarea v-model="importText" rows="5" placeholder="…or paste the exported JSON here"></textarea>
+        <textarea v-model="importText" rows="5" placeholder="…or paste a Headerwise or ModHeader export here"></textarea>
         <button :disabled="!importText.trim()" @click="doImport">Import</button>
+      </div>
+      <ul v-if="importNotes.length" class="warnings notes">
+        <li v-for="(w, i) in importNotes" :key="i">{{ w }}</li>
+        <li class="ok"><button class="link" @click="importNotes = []">OK</button></li>
+      </ul>
+      <div v-if="showExport" class="import export">
+        <label v-for="p in state.profiles" :key="p.id" class="pasted">
+          <input type="checkbox" :checked="exportPicked[p.id] !== false" @change="exportPicked[p.id] = ($event.target as HTMLInputElement).checked" />
+          {{ p.title || 'Untitled' }}
+        </label>
+        <label class="pasted"><input type="checkbox" v-model="exportSecrets" /> Include secret values (tokens, cookies). Only for your own machines.</label>
+        <div class="row">
+          <button :disabled="!exportChosen.length" @click="downloadExport">Download {{ exportChosen.length }} profile{{ exportChosen.length === 1 ? '' : 's' }}</button>
+          <button :disabled="!exportChosen.length" @click="copyExport">Copy</button>
+          <span class="dim">{{ exportDone }}</span>
+        </div>
       </div>
     </section>
 

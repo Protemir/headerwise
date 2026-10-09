@@ -40,7 +40,30 @@ export interface Profile {
    * when the tab closes or the browser restarts.
    */
   tab?: { id: number; host: string };
+  /** Only requests started by pages on these sites (and their subdomains). */
+  initiatorDomains?: string[];
+  /** Never requests started by pages on these sites. */
+  excludedInitiatorDomains?: string[];
+  /** Only these kinds of requests (Chrome's resource types). Empty or unset: all. */
+  resourceTypes?: string[];
+  /** Only these methods, lowercase ('get', 'post', ...). Empty or unset: all. */
+  requestMethods?: string[];
 }
+
+export const RESOURCE_TYPES: { id: string; label: string }[] = [
+  { id: 'main_frame', label: 'Page' },
+  { id: 'sub_frame', label: 'Frames' },
+  { id: 'xmlhttprequest', label: 'fetch / XHR' },
+  { id: 'script', label: 'Scripts' },
+  { id: 'stylesheet', label: 'Styles' },
+  { id: 'image', label: 'Images' },
+  { id: 'font', label: 'Fonts' },
+  { id: 'media', label: 'Media' },
+  { id: 'websocket', label: 'WebSocket' },
+  { id: 'ping', label: 'Beacons' },
+  { id: 'other', label: 'Other' },
+];
+export const REQUEST_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'];
 
 export interface State {
   version: 1;

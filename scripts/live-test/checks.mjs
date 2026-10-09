@@ -145,7 +145,7 @@ export async function accessChecks(tabs, { base, ip, extId }, check) {
     await page.send('Page.navigate', { url: `chrome-extension://${extId}/src/popup/index.html` });
     await sleep(1200);
     await page.evaluate(`(async () => {
-      [...document.querySelectorAll('button')].find(b => b.textContent.includes('Import ModHeader JSON')).click();
+      [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Import JSON').click();
       await new Promise(r => setTimeout(r, 200));
       const ta = document.querySelector('textarea');
       ta.value = ${JSON.stringify(modheader)};
