@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How to get your ModHeader profiles back after it was removed</title>
+  <meta name="description" content="ModHeader was removed from the Chrome Web Store and turned off, and its Export button with it. Your profiles are still on disk. Where they are and three ways to get them out." />
+  <link rel="canonical" href="https://protemir.github.io/headerwise/modheader-export.html" />
+  <meta property="og:title" content="How to get your ModHeader profiles back after it was removed" />
+  <meta property="og:description" content="Your profiles are still on disk. Where they are and three ways to get them out." />
+  <meta property="og:image" content="https://protemir.github.io/headerwise/img/og.png" />
+  <meta property="og:type" content="article" />
+  <link rel="icon" href="icon-128.png" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "How to get your ModHeader profiles back after it was removed",
+    "datePublished": "2026-10-09",
+    "dateModified": "2026-10-09",
+    "author": { "@type": "Organization", "name": "Headerwise", "url": "https://protemir.github.io/headerwise/" },
+    "about": "Recovering ModHeader profiles from Chrome and Edge extension storage"
+  }
+  </script>
+  <style>
+    :root { color-scheme: light dark; --bg: #fbfbfc; --fg: #17181c; --muted: #5a6170; --line: #e3e6ec; --accent: #2557d6; --tint: #eef2fb; --warn-bg: #fff4e5; --warn-line: #f0b35a; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #131417; --fg: #ececef; --muted: #a2a8b3; --line: #2b2e35; --accent: #7aa7ff; --tint: #1c2233; --warn-bg: #2a2114; --warn-line: #8a6a2e; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.65 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 28px 16px 64px; }
+    header { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+    header img { width: 30px; height: 30px; }
+    header a { color: inherit; text-decoration: none; font-weight: 600; }
+    h1 { font-size: clamp(28px, 4vw, 38px); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 12px; }
+    h2 { font-size: 23px; margin: 40px 0 10px; letter-spacing: -0.01em; }
+    p, li { color: var(--fg); }
+    .lead { color: var(--muted); font-size: 19px; }
+    a { color: var(--accent); }
+    code, pre { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 14.5px; }
+    code { background: #8881; padding: 1px 5px; border-radius: 5px; }
+    pre { background: var(--tint); padding: 14px 16px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0 16px; }
+    .os { font-weight: 600; margin: 14px 0 0; }
+    .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-line); padding: 12px 16px; border-radius: 8px; margin: 20px 0; }
+    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px; }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <header><img src="icon-128.png" alt="" /><a href="./">Headerwise</a></header>
+
+    <h1>How to get your ModHeader profiles back after it was removed</h1>
+    <p class="lead">ModHeader was removed from the Chrome Web Store and Edge Add-ons in July 2026. If your browser turned it off, the Export button went with it. Your profiles are still on your disk, and here is how to get them out.</p>
+
+    <div class="warn"><b>Don't click "Remove" on ModHeader yet.</b> While it's only turned off, Chrome keeps its data. Removing the extension deletes its storage folder, and your profiles with it.</div>
+
+    <h2>What happened</h2>
+    <p>Microsoft pulled ModHeader from Edge Add-ons on July 3, 2026 and Google from the Chrome Web Store on July 10. Version 7.0.18 contained a dormant collector for visited domains and pinged a third-party server on install and update (<a href="https://thehackernews.com/2026/07/google-and-microsoft-pull-modheader.html">The Hacker News has the details</a>). The collector reportedly never switched on, but the listings are gone, and Chrome turned the extension off for many people.</p>
+
+    <h2>Where your profiles are</h2>
+    <p>Chrome keeps every extension's <code>chrome.storage.local</code> in a LevelDB folder under your browser profile. ModHeader's id is <code>idgpnmonknjnojddfkpgkljpfnnfcklj</code> in Chrome (<code>opgbiafapkbbnbnjcdomjaghbckfkglc</code> in Edge), and it keeps everything under one key, <code>profiles</code>.</p>
+    <p class="os">Windows, Chrome</p>
+    <pre>%LOCALAPPDATA%\Google\Chrome\User Data\Default\Local Extension Settings\idgpnmonknjnojddfkpgkljpfnnfcklj</pre>
+    <p class="os">Windows, Edge</p>
+    <pre>%LOCALAPPDATA%\Microsoft\Edge\User Data\Default\Local Extension Settings\opgbiafapkbbnbnjcdomjaghbckfkglc</pre>
+    <p class="os">macOS, Chrome</p>
+    <pre>~/Library/Application Support/Google/Chrome/Default/Local Extension Settings/idgpnmonknjnojddfkpgkljpfnnfcklj</pre>
+    <p class="os">Linux, Chrome</p>
+    <pre>~/.config/google-chrome/Default/Local Extension Settings/idgpnmonknjnojddfkpgkljpfnnfcklj</pre>
+    <p>Several Chrome profiles? Open <code>chrome://version</code> in the one where you used ModHeader and use its "Profile Path" instead of <code>…/Default</code>. Copy the folder somewhere safe before anything else.</p>
+
+    <h2>Option 1: read it in the browser</h2>
+    <p>This is why I added a "Move from ModHeader" page to <a href="./">Headerwise</a>, a free and open source header editor. You pick that folder and the page reads the LevelDB files right there, with nothing uploaded. Headers, URL filters and site, type and method filters come over, and the profile you had selected stays on. The extension can't make network requests at all, which you can check in its manifest.</p>
+
+    <h2>Option 2: a command line tool</h2>
+    <p>Requestly published a small CLI that finds the folder and writes the same JSON file ModHeader's own export would have. It needs Node.js 20 or newer:</p>
+    <pre>npx @requestly/modheader-export-backup</pre>
+    <p>The file it writes works with any tool that imports ModHeader JSON, Headerwise included ("Import JSON" in the popup).</p>
+
+    <h2>Option 3: by hand</h2>
+    <p>Copy the folder, open the copy with any LevelDB viewer, and read the value of the <code>profiles</code> key. It's plain JSON: an array of profiles with <code>headers</code>, <code>respHeaders</code>, <code>urlFilters</code> and so on.</p>
+
+    <h2>Whatever you pick</h2>
+    <p>Exports often hold Authorization tokens and session cookies. Treat the file like a password: don't commit it, and rotate anything sensitive you kept in ModHeader if you're unsure what happened to it. Once your profiles are safe, you can remove ModHeader.</p>
+
+    <footer>
+      Written by the author of Headerwise. Corrections welcome on <a href="https://github.com/Protemir/headerwise/issues">GitHub</a>.
+      <a href="./">Headerwise</a> &nbsp; <a href="privacy.html">Privacy</a>
+    </footer>
+  </main>
+</body>
+</html>

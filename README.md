@@ -15,6 +15,8 @@ checks this (fetch, image, beacon, worker) in a real browser.
 
 Site: https://protemir.github.io/headerwise/ · Privacy: https://protemir.github.io/headerwise/privacy.html
 
+ModHeader turned off and its Export button gone? [How to get your profiles back](https://protemir.github.io/headerwise/modheader-export.html).
+
 ## Status
 
 Free, and staying free. In review at the Chrome Web Store (Edge installs it from
