@@ -1,5 +1,8 @@
-:root { color-scheme: light dark; --line: #8884; --accent: #2563eb; --warn: #c2410c; --ok: #15803d; }
-body { margin: 0; font: 14px/1.5 system-ui, sans-serif; }
+:root { color-scheme: light dark; --bg: #ffffff; --fg: #1f2328; --line: #8884; --accent: #2563eb; --on-accent: #ffffff; --warn: #c2410c; --ok: #15803d; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #1f2023; --fg: #e8e8ea; --line: #ffffff2e; --accent: #7aa7ff; --on-accent: #0d1424; --warn: #fb923c; --ok: #4ade80; }
+}
+body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
 main { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; min-height: 80vh; box-sizing: border-box; }
 main.dragging { outline: 2px dashed var(--accent); outline-offset: -8px; }
 h1 { font-size: 22px; margin: 0 0 8px; }
@@ -18,7 +21,7 @@ code { font: 12px/1.4 ui-monospace, Consolas, monospace; background: #8881; bord
 .done { border-color: var(--ok); }
 .done h2 { color: var(--ok); }
 button, .pick span { font: inherit; padding: 4px 12px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
-button.primary, .pick span { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary, .pick span { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 button:disabled { opacity: .4; cursor: default; }
 .pick { display: inline-block; margin-right: 8px; }
 .pick input { display: none; }

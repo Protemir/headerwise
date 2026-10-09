@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy · Headerwise</title>
+  <link rel="icon" href="icon-128.png" />
+  <style>
+    :root { color-scheme: light dark; --bg: #ffffff; --fg: #1f2328; --muted: #57606a; --accent: #2563eb; --line: #d0d7de; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #1f2023; --fg: #e8e8ea; --muted: #a8adb5; --accent: #7aa7ff; --line: #3a3d42; } }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+    main { max-width: 680px; margin: 0 auto; padding: 40px 16px 64px; }
+    header { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+    header img { width: 36px; height: 36px; }
+    header a { color: inherit; text-decoration: none; font-weight: 600; }
+    h1 { font-size: 30px; margin: 0 0 8px; }
+    .updated { color: var(--muted); margin: 0 0 24px; }
+    li { margin: 10px 0; }
+    code { font: 14px ui-monospace, Consolas, monospace; background: #8881; padding: 1px 4px; border-radius: 4px; }
+    a { color: var(--accent); }
+    footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <header><img src="icon-128.png" alt="" /><a href="./">Headerwise</a></header>
+    <h1>Privacy</h1>
+    <p class="updated">Last updated 9 October 2026</p>
+    <p><strong>Headerwise does not collect, store or send any personal data.</strong></p>
+    <ul>
+      <li>Your profiles are stored with <code>chrome.storage.local</code> on your computer. They are not synced or sent anywhere.</li>
+      <li>The extension makes no network requests, and can't: its manifest sets <code>connect-src 'none'</code> for all its pages and its background worker, so the browser blocks any attempt.</li>
+      <li>Header changes are applied by the browser through the <code>declarativeNetRequest</code> API, so Headerwise never sees page content or request bodies.</li>
+      <li>When you open the popup, it reads the address of the current tab and asks the browser which Headerwise rules matched there, to show "On this tab". This is only shown in the popup and is not stored.</li>
+      <li>"Move from ModHeader" reads only the folder you pick, inside that page. The files are not uploaded or kept; only the profiles you choose to import are saved.</li>
+      <li>Access to sites is optional and asked for only when you click "Allow on all sites". You can revoke it in the browser's extension settings at any time.</li>
+      <li>There are no analytics, ads or trackers, in the extension or on this site.</li>
+    </ul>
+    <p>If a paid feature is ever added, this page will say exactly what it sends and to whom before that ships.</p>
+    <footer>Questions: open an issue on <a href="https://github.com/Protemir/headerwise/issues">GitHub</a> or use the support email on the store listing.</footer>
+  </main>
+</body>
+</html>

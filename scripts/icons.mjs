@@ -27,8 +27,9 @@ function inGlyph(x, y) {
   return dx >= 0 && dx <= 18 && Math.abs(y - 64) <= 20 * (1 - dx / 18);
 }
 
-// Chrome Web Store wants the 128px artwork at 96x96 with 16px of transparent padding.
-const padding = size => (size === 128 ? 16 : 0);
+// Chrome Web Store wants the 128px artwork at 96x96 with 16px of transparent padding;
+// the 300px Edge store logo gets the same proportion.
+const padding = size => (size === 128 ? 16 : size === 300 ? 38 : 0);
 
 function pixel(px, py, size) {
   const n = 8;
@@ -99,3 +100,9 @@ for (const size of SIZES) {
   writeFileSync(new URL(`icon-${size}.png`, OUT), png(size));
   console.log(`icon-${size}.png`);
 }
+
+// Edge Add-ons store logo.
+const STORE = new URL('../store/', import.meta.url);
+mkdirSync(STORE, { recursive: true });
+writeFileSync(new URL('logo-300.png', STORE), png(300));
+console.log('store/logo-300.png');

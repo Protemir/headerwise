@@ -9,7 +9,8 @@
     "dev": "vite build --watch --mode development",
     "test": "node --test tests/*.test.ts",
     "typecheck": "vue-tsc --noEmit",
-    "test:live": "node scripts/live-test/run.mjs"
+    "test:live": "node scripts/live-test/run.mjs",
+    "store:shots": "node scripts/store/shots.mjs"
   },
   "dependencies": {
     "vue": "^3.5.39"
