@@ -1,0 +1,16 @@
+name: Idea or missing feature
+description: Something you'd use, for example a ModHeader feature you miss
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What are you trying to do?
+      description: The situation matters more than the solution. "I test our app as different tenants and..." helps more than "add a button".
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: How do you do it today?
+      description: Another extension, DevTools, Postman, a workaround?

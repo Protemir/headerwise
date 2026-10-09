@@ -1,0 +1,22 @@
+name: Something doesn't work
+description: A header isn't changed, an import fails, the popup misbehaves
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What you did and what happened
+      description: The header, filter or file involved, what you expected, what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: In the popup, at the bottom, click "Copy diagnostics" and paste it here. It has header names and settings but no header values, profile names or URLs; still, glance over the warnings before posting.
+      render: text
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Chrome 154 on Windows 11
