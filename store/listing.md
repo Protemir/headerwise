@@ -11,8 +11,9 @@ Everything to paste into the two developer dashboards. Images are in this folder
 - **Category:** Developer Tools
 - **Language:** English
 - **Price:** free
-- **Privacy policy URL:** https://protemir.github.io/headerwise/privacy.html (from `docs/`, needs GitHub Pages, see below)
-- **Support / homepage:** https://github.com/Protemir/headerwise (issues)
+- **Privacy policy URL:** https://protemir.github.io/headerwise/privacy.html (live, from `docs/` via GitHub Pages)
+- **Homepage:** https://protemir.github.io/headerwise/
+- **Support:** https://github.com/Protemir/headerwise/issues
 
 ## Detailed description
 
@@ -85,4 +86,4 @@ Modify HTTP request and response headers in the browser, organized in profiles t
 1. Version in `public/manifest.json` and `package.json` to 1.0.0.
 2. `npm run build`, `npm test`, `npm run test:live` (and `-- --browser edge`).
 3. Upload the zip CI builds from `dist/` (Actions → latest run → artifact).
-4. Privacy policy online: GitHub Pages serves `docs/` only from a public repository (or with a paid plan), so this waits for the decision to open the code. Without it, put `docs/privacy.html` on any static host.
+4. After approval: put the listing URLs into the install buttons in `docs/index.html` (they search the stores for now).
