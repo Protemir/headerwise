@@ -1,0 +1,13 @@
+{
+  "extName": {
+    "message": "Headerwise: HTTP ヘッダーを変更",
+    "description": "Extension name in the store and browser"
+  },
+  "extShortName": {
+    "message": "Headerwise"
+  },
+  "extDescription": {
+    "message": "プロファイルごとにリクエスト／レスポンスヘッダーを変更。ModHeader のプロファイルを読み込めます。ローカルで動作し、何も送信しません。",
+    "description": "Store summary, at most 132 characters"
+  }
+}

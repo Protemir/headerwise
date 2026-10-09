@@ -90,3 +90,11 @@ Modify HTTP request and response headers in the browser, organized in profiles t
 2. `npm run build`, `npm test`, `npm run test:live` (and `-- --browser edge`).
 3. Upload the zip CI builds from `dist/` (Actions → latest run → artifact).
 4. After approval: put the listing URLs into the install buttons in `docs/index.html` (they search the stores for now).
+
+## Other languages (from 1.0.1)
+
+The package carries a translated name and summary for es, pt_BR, de, fr, ja,
+zh_CN and ru (`public/_locales`), so the store can show a localized listing.
+Full descriptions to paste for each language: `store/translations/<locale>.txt`.
+In the dashboard: Store listing → language selector → pick the language →
+paste the description. Screenshots can stay the same (the UI is in English).

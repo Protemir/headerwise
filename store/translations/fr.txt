@@ -1,0 +1,26 @@
+Headerwise modifie les en-têtes HTTP de requête et de réponse dans Chrome et Edge. Définissez, ajoutez ou supprimez des en-têtes, regroupez-les en profils et activez-les uniquement là où vous en avez besoin.
+
+Tout se passe dans votre navigateur. Pas de compte, pas de statistiques, et l'extension ne peut rien envoyer nulle part : son manifeste interdit les connexions réseau, donc le navigateur lui-même les bloque. Les modifications d'en-têtes sont appliquées par le navigateur via declarativeNetRequest, si bien que Headerwise ne lit jamais les pages que vous visitez.
+
+CE QUE VOUS POUVEZ FAIRE
+• En-têtes de requête et de réponse : définir, ajouter ou supprimer, par profil.
+• Profils : autant que vous voulez, plusieurs actifs à la fois. Dupliquez-les, réordonnez-les par glisser-déposer (celui de gauche l'emporte si deux touchent le même en-tête), changez-en avec un raccourci clavier.
+• Filtres : uniquement sur ou jamais sur des motifs d'URL et des expressions régulières, uniquement pour les requêtes envoyées par certains sites, pour certains types de requêtes (page, fetch/XHR, scripts…) ou méthodes, ou uniquement dans un onglet.
+• Redirections : remplacez une partie de l'adresse, par exemple envoyez les requêtes vers api.example.com à votre serveur de préproduction.
+• Dans cet onglet : ouvrez la fenêtre pour voir quel profil a modifié combien de requêtes sur la page actuelle, et pourquoi un autre ne s'est pas appliqué.
+• Coller depuis les DevTools : copiez une requête en cURL, fetch ou PowerShell, collez-la et choisissez les en-têtes à garder.
+• Préréglages : CORS, supprimer Content-Security-Policy, autoriser un site dans une iframe, jeton Bearer, sans cache, User-Agent iPhone ou Googlebot, et plus.
+• Variables : {{uuid}}, {{timestamp}}, {{date}} et d'autres, remplies à chaque modification et renouvelées chaque minute.
+• Les secrets restent cachés : jetons et cookies s'affichent en points jusqu'à ce que vous cliquiez sur l'œil, pratique lors d'un partage d'écran.
+• Exportez et importez des profils en JSON. Les valeurs secrètes sont exclues, sauf si vous les demandez.
+• Thème clair et sombre.
+
+VOUS VENEZ DE MODHEADER ?
+ModHeader a été retiré des boutiques de Chrome et d'Edge en juillet 2026. Si votre navigateur l'a désactivé, son bouton d'export a disparu aussi, mais vos profils sont toujours sur votre disque. Headerwise lit le dossier de ModHeader directement dans la page (rien n'est envoyé) et récupère les profils avec leurs filtres, redirections et règles de cookies. Les fichiers JSON exportés de ModHeader fonctionnent aussi.
+
+POURQUOI PAS SIMPLEMENT LES DEVTOOLS ?
+Les DevTools sont parfaits pour regarder les en-têtes. Ils ne peuvent pas ajouter des en-têtes de requête comme Authorization à toutes les requêtes, et leurs substitutions ne fonctionnent que tant que les DevTools sont ouverts dans cet onglet. Headerwise fonctionne dans tous les onglets, tout le temps, jusqu'à ce que vous le mettiez en pause.
+
+Gratuit et sans limites. Tout ce qui est listé ici est gratuit et le restera.
+
+Open source (MIT) : https://github.com/Protemir/headerwise

@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Headerwise: Modify HTTP Headers",
-  "short_name": "Headerwise",
+  "name": "__MSG_extName__",
+  "short_name": "__MSG_extShortName__",
+  "default_locale": "en",
   "version": "1.0.0",
-  "description": "Modify request and response headers per profile. Import your ModHeader profiles. Runs locally, sends nothing anywhere.",
+  "description": "__MSG_extDescription__",
   "minimum_chrome_version": "121",
   "icons": {
     "16": "icons/icon-16.png",

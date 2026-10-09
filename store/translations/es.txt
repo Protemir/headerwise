@@ -1,0 +1,26 @@
+Headerwise cambia los encabezados HTTP de solicitud y de respuesta en Chrome y Edge. Añade, agrega o elimina encabezados, agrúpalos en perfiles y actívalos solo donde los necesites.
+
+Todo funciona dentro de tu navegador. No hay cuenta ni analíticas, y la extensión no puede enviar nada a ningún sitio: su manifiesto prohíbe las conexiones de red, así que el propio navegador las bloquea. Los cambios de encabezados los aplica el navegador mediante declarativeNetRequest, por lo que Headerwise nunca lee las páginas que visitas.
+
+QUÉ PUEDES HACER
+• Encabezados de solicitud y de respuesta: establecer, añadir o eliminar, por perfil.
+• Perfiles: tantos como quieras, varios activos a la vez. Duplícalos, arrástralos para ordenarlos (el de la izquierda gana si dos tocan el mismo encabezado) y cámbialos con un atajo de teclado.
+• Filtros: solo en o nunca en patrones de URL y expresiones regulares, solo para solicitudes hechas por ciertos sitios, solo para ciertos tipos de solicitud (página, fetch/XHR, scripts…) o métodos, o solo en una pestaña.
+• Redirecciones: reemplaza parte de la dirección, por ejemplo envía las solicitudes de api.example.com a tu servidor de staging.
+• En esta pestaña: abre la ventana emergente para ver qué perfil cambió cuántas solicitudes en la página actual y por qué otro no se aplicó.
+• Pegar desde DevTools: copia una solicitud como cURL, fetch o PowerShell, pégala y elige los encabezados que quieras.
+• Ajustes rápidos: CORS, quitar Content-Security-Policy, permitir un sitio en un iframe, token Bearer, sin caché, User-Agent de iPhone o Googlebot y más.
+• Variables: {{uuid}}, {{timestamp}}, {{date}} y otras, que se rellenan en cada cambio y se renuevan cada minuto.
+• Los secretos quedan ocultos: los tokens y cookies se muestran como puntos hasta que pulsas el ojo, útil al compartir pantalla.
+• Exporta e importa perfiles en JSON. Los valores secretos no se incluyen salvo que lo pidas.
+• Tema claro y oscuro.
+
+¿VIENES DE MODHEADER?
+ModHeader se retiró de las tiendas de Chrome y Edge en julio de 2026. Si tu navegador lo desactivó, su botón de exportar también desapareció, pero tus perfiles siguen en tu disco. Headerwise lee la carpeta de ModHeader directamente en la página (no se sube nada) y trae los perfiles con sus filtros, redirecciones y reglas de cookies. Los archivos JSON exportados de ModHeader también funcionan.
+
+¿POR QUÉ NO BASTA CON DEVTOOLS?
+DevTools es ideal para ver encabezados. No puede añadir encabezados de solicitud como Authorization a todas las solicitudes, y sus sobrescrituras solo funcionan mientras DevTools está abierto en esa pestaña. Headerwise funciona en todas las pestañas, siempre, hasta que lo pausas.
+
+Gratis y sin límites. Todo lo que aparece aquí es gratis y seguirá siéndolo.
+
+Código abierto (MIT): https://github.com/Protemir/headerwise

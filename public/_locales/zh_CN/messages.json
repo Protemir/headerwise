@@ -1,0 +1,13 @@
+{
+  "extName": {
+    "message": "Headerwise：修改 HTTP 请求头",
+    "description": "Extension name in the store and browser"
+  },
+  "extShortName": {
+    "message": "Headerwise"
+  },
+  "extDescription": {
+    "message": "按配置文件修改请求头和响应头。可导入 ModHeader 配置。完全在本地运行，不发送任何数据。",
+    "description": "Store summary, at most 132 characters"
+  }
+}

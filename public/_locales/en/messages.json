@@ -1,0 +1,13 @@
+{
+  "extName": {
+    "message": "Headerwise: Modify HTTP Headers",
+    "description": "Extension name in the store and browser"
+  },
+  "extShortName": {
+    "message": "Headerwise"
+  },
+  "extDescription": {
+    "message": "Modify request and response headers per profile. Import your ModHeader profiles. Runs locally, sends nothing anywhere.",
+    "description": "Store summary, at most 132 characters"
+  }
+}

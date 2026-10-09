@@ -1,0 +1,13 @@
+{
+  "extName": {
+    "message": "Headerwise: изменение HTTP-заголовков",
+    "description": "Extension name in the store and browser"
+  },
+  "extShortName": {
+    "message": "Headerwise"
+  },
+  "extDescription": {
+    "message": "Меняйте заголовки запросов и ответов в профилях. Импорт профилей из ModHeader. Работает локально и ничего никуда не отправляет.",
+    "description": "Store summary, at most 132 characters"
+  }
+}

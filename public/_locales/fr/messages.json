@@ -1,0 +1,13 @@
+{
+  "extName": {
+    "message": "Headerwise : modifier les en-têtes HTTP",
+    "description": "Extension name in the store and browser"
+  },
+  "extShortName": {
+    "message": "Headerwise"
+  },
+  "extDescription": {
+    "message": "Modifiez les en-têtes de requête et de réponse par profil. Importez vos profils ModHeader. Tout reste local, rien n'est envoyé.",
+    "description": "Store summary, at most 132 characters"
+  }
+}

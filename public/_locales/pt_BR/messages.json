@@ -1,0 +1,13 @@
+{
+  "extName": {
+    "message": "Headerwise: modificar cabeçalhos HTTP",
+    "description": "Extension name in the store and browser"
+  },
+  "extShortName": {
+    "message": "Headerwise"
+  },
+  "extDescription": {
+    "message": "Modifique cabeçalhos de requisição e resposta por perfil. Importe seus perfis do ModHeader. Roda localmente, não envia nada.",
+    "description": "Store summary, at most 132 characters"
+  }
+}
