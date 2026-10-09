@@ -10,12 +10,17 @@ import { newId, type HeaderMod, type State } from './model.ts';
  *   Name=Value       set a request header (an empty value removes the header)
  *   res:Name=Value   the same for a response header
  *   @url=pattern     only on matching URLs (Chrome's urlFilter syntax, repeatable)
+ *   @add             keep the headers earlier calls set, add these to them
  *   @clear           drop the Automation profile (alone: no headers at all)
  *   @import=json     replace all profiles with a Headerwise or ModHeader export
  *   (nothing)        change nothing, just show what is in effect
  *
- * Each call replaces the "Automation" profile, so a test always gets exactly the
- * headers it asked for. Names can't contain ":" or "@", so these never clash.
+ * Each call replaces the "Automation" profile (unless @add), so a test gets exactly
+ * the headers it asked for. Names can't contain ":" or "@", so these never clash.
+ *
+ * ModHeader's webdriver URLs (webdriver.modheader.com/add, /clear, /load?profile=)
+ * are redirected here by the automation build, see modheaderRules in
+ * scripts/automation.mjs.
  */
 
 export const AUTOMATION_ID = 'automation';
@@ -48,27 +53,37 @@ export function applyQuery(state: State, query: string): AutomationResult {
     warnings.push(...got.warnings);
   }
 
-  const request: HeaderMod[] = [];
-  const response: HeaderMod[] = [];
+  // @add keeps what earlier calls set (a header of the same name is replaced).
+  const add = params.some(([k]) => k === '@add');
+  const before = add ? state.profiles.find(p => p.id === AUTOMATION_ID) : undefined;
+  const request: HeaderMod[] = structuredClone(before?.requestHeaders ?? []);
+  const response: HeaderMod[] = structuredClone(before?.responseHeaders ?? []);
   const urls: string[] = [];
   let clear = false;
   for (const [key, value] of params) {
-    if (key === '@import') continue;
+    if (key === '@import' || key === '@add') continue;
     if (key === '@clear') { clear = true; continue; }
     if (key === '@url') {
       if (!value.trim()) return fail('@url is empty.');
       urls.push(value.trim());
       continue;
     }
-    if (key.startsWith('@')) return fail(`Unknown option ${key}. Known: @url, @clear, @import.`);
+    if (key.startsWith('@')) return fail(`Unknown option ${key}. Known: @url, @add, @clear, @import.`);
     const res = key.startsWith('res:');
     const name = res ? key.slice(4) : key;
     if (!TOKEN.test(name)) return fail(`"${name}" is not a valid header name.`);
     const header: HeaderMod = { id: newId(), enabled: true, name, value, op: value === '' ? 'remove' : 'set' };
-    (res ? response : request).push(header);
+    const list = res ? response : request;
+    const same = list.findIndex(h => h.name.toLowerCase() === name.toLowerCase());
+    if (add && same >= 0) list[same] = header;
+    else list.push(header);
   }
-  if (clear && (request.length || response.length || urls.length)) return fail('@clear goes alone (or with @import).');
+  if (clear && (add || request.length || response.length || urls.length)) return fail('@clear goes alone (or with @import).');
   if (urls.length && !request.length && !response.length) return fail('@url needs at least one header.');
+  // @add without its own @url keeps the earlier URL filters.
+  const filters = urls.length || !before
+    ? urls.map(pattern => ({ id: newId(), enabled: true, kind: 'include' as const, pattern, isRegex: false }))
+    : before.filters;
 
   next.profiles = next.profiles.filter(p => p.id !== AUTOMATION_ID);
   if (request.length || response.length) {
@@ -78,7 +93,7 @@ export function applyQuery(state: State, query: string): AutomationResult {
       enabled: true,
       requestHeaders: request,
       responseHeaders: response,
-      filters: urls.map(pattern => ({ id: newId(), enabled: true, kind: 'include' as const, pattern, isRegex: false })),
+      filters,
     });
   } else if (!imported.length) {
     // @clear: no headers at all, so the test starts from a clean browser.

@@ -34,6 +34,11 @@ export async function smoke(name, { open, text, close }) {
     check('bad name refused', await open(`chrome-extension://${ID}/automation.html?Bad%20Name=1`), 'error');
     check('@clear', await open(`chrome-extension://${ID}/automation.html?@clear`), 'ready');
     check('nothing sent after @clear', await text(`${base}/h/x-test`), '(none)');
+    // chrome-modheader's URLs, unchanged.
+    check('modheader /add', await open('https://webdriver.modheader.com/add?X-Test=mh'), 'ready');
+    check('modheader header sent', await text(`${base}/h/x-test`), 'mh');
+    check('modheader /clear', await open('https://webdriver.modheader.com/clear'), 'ready');
+    check('nothing sent after /clear', await text(`${base}/h/x-test`), '(none)');
   } finally {
     await close();
     server.close();

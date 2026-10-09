@@ -54,7 +54,7 @@
     <header><img src="icon-128.png" alt="" /><a href="./">Headerwise</a></header>
 
     <h1>Set HTTP headers in Selenium, Playwright and Puppeteer</h1>
-    <p class="lead">ModHeader's test packages (<code>chrome-modheader</code>, <code>modheader_selenium</code>) shipped an old extension that modern Chrome won't run, and ModHeader itself is gone from the stores. Headerwise has a build for tests: load it, open one URL with the headers you want, and the page tells you when they're in effect.</p>
+    <p class="lead">ModHeader's test packages (<code>chrome-modheader</code>, <code>modheader_selenium</code>) shipped an old extension that modern Chrome won't run, and ModHeader itself is gone from the stores. Headerwise has a build for tests: load it, open one URL with the headers you want, and the page tells you when they're in effect. Tests written for ModHeader <a href="#modheader">keep their URLs</a>.</p>
 
     <h2>Get it</h2>
     <pre><code>curl -L -o headerwise-automation.zip https://github.com/Protemir/headerwise/releases/latest/download/headerwise-automation.zip
@@ -70,11 +70,12 @@ unzip headerwise-automation.zip -d headerwise-automation</code></pre>
       <tr><td><code>Name=Value</code></td><td>Set a request header. An empty value removes the header.</td></tr>
       <tr><td><code>res:Name=Value</code></td><td>Set a response header (CORS, CSP, caching…).</td></tr>
       <tr><td><code>@url=pattern</code></td><td>Only on matching URLs, Chrome's <a href="https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest#property-RuleCondition-urlFilter">urlFilter</a> syntax: <code>||api.example.com^</code>, <code>*://localhost:*/*</code>. Can repeat.</td></tr>
+      <tr><td><code>@add</code></td><td>Keep the headers earlier calls set and add these (same name: replaced).</td></tr>
       <tr><td><code>@clear</code></td><td>No headers at all.</td></tr>
       <tr><td><code>@import=json</code></td><td>Replace all profiles with a Headerwise or ModHeader JSON export.</td></tr>
       <tr><td>nothing</td><td>Change nothing, show what's in effect.</td></tr>
     </table></div>
-    <p>Each call replaces the previous one, so pass all headers in one URL. URL-encode the values (<code>encodeURIComponent</code>, <code>urllib.parse.quote</code>): a bare <code>+</code> turns into a space. When the rules are in the browser, the page sets <code>document.documentElement.dataset.status</code> to <code>ready</code> (or <code>error</code>, with the reason on the page), and the title to "Headerwise: ready". It lists header names, never values, so screenshots and logs don't leak tokens.</p>
+    <p>Each call replaces the previous one unless it has <code>@add</code>. URL-encode the values (<code>encodeURIComponent</code>, <code>urllib.parse.quote</code>): a bare <code>+</code> turns into a space. When the rules are in the browser, the page sets <code>document.documentElement.dataset.status</code> to <code>ready</code> (or <code>error</code>, with the reason on the page), and the title to "Headerwise: ready". It lists header names, never values, so screenshots and logs don't leak tokens.</p>
 
     <h2>Playwright</h2>
     <h3>Node.js</h3>
@@ -132,18 +133,18 @@ await driver.get('chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation
 await driver.wait(() =&gt; driver.executeScript("return document.documentElement.dataset.status === 'ready'"), 10000);</code></pre>
     <p>Java and C# take the same two settings (<code>setBrowserVersion("stable")</code> and the <code>--load-extension</code> argument). Headless works with <code>--headless=new</code>.</p>
 
-    <h2>Coming from ModHeader</h2>
+    <h2 id="modheader">Coming from ModHeader</h2>
+    <p><b>Your test code can stay as it is.</b> The automation build catches ModHeader's webdriver addresses and handles them itself, so <code>getAddHeaderUrl()</code>, <code>getClearHeadersUrl()</code> and <code>getLoadProfileUrl()</code> from <code>chrome-modheader</code> keep working. Nothing goes to modheader.com: the browser redirects these addresses to the extension's page before any request leaves.</p>
     <div class="table"><table>
-      <tr><th>ModHeader</th><th>Headerwise</th></tr>
-      <tr><td><code>webdriver.modheader.com/add?Name=Value</code></td><td><code>automation.html?Name=Value</code> (replaces instead of adding: put every header in one call)</td></tr>
+      <tr><th>ModHeader URL</th><th>Same as</th></tr>
+      <tr><td><code>webdriver.modheader.com/add?Name=Value</code></td><td><code>automation.html?@add&amp;Name=Value</code></td></tr>
       <tr><td><code>webdriver.modheader.com/clear</code></td><td><code>automation.html?@clear</code></td></tr>
       <tr><td><code>webdriver.modheader.com/load?profile=…</code></td><td><code>automation.html?@import=…</code>, same JSON</td></tr>
-      <tr><td><code>getExtension()</code> / the bundled .crx</td><td>the unzipped folder and <code>--load-extension</code></td></tr>
     </table></div>
-    <p>The URL is <code>chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/</code> followed by the Headerwise column.</p>
+    <p>What you change is how the extension gets into the browser: instead of <code>getExtension()</code> and the bundled .crx, point <code>--load-extension</code> at the unzipped folder (see the snippets above). Only these three addresses are handled, and only top-level navigations by the test: a web page can't open them in a frame or link to the extension's page.</p>
 
     <h2>Checked on every change</h2>
-    <p>CI loads this build into Playwright, Puppeteer and Selenium (JavaScript and Python) and checks what a server really receives: headers set, replaced, limited to URLs and cleared, response headers, and that a mistake in the URL is reported instead of guessed at. The scripts are in <a href="https://github.com/Protemir/headerwise/tree/main/scripts/automation-smoke">scripts/automation-smoke</a>. Something missing for your setup? <a href="https://github.com/Protemir/headerwise/issues">Open an issue</a>.</p>
+    <p>CI loads this build into Playwright, Puppeteer and Selenium (JavaScript and Python) and checks what a server really receives: headers set, replaced, limited to URLs and cleared, response headers, ModHeader's URLs, and that a mistake in the URL is reported instead of guessed at. The scripts are in <a href="https://github.com/Protemir/headerwise/tree/main/scripts/automation-smoke">scripts/automation-smoke</a>. Something missing for your setup? <a href="https://github.com/Protemir/headerwise/issues">Open an issue</a>.</p>
 
     <footer>
       <a href="./">Headerwise</a> &nbsp; <a href="modheader-export.html">Get your ModHeader profiles back</a> &nbsp; <a href="privacy.html">Privacy</a>

@@ -41,4 +41,38 @@ export async function automationChecks({ page, port }, { extId, base, saw }, che
   r = await go(`chrome-extension://${ID}/automation.html?@clear`);
   got = await visit('/auto-only-3');
   check('automation: @clear', r.status === 'ready' && !got['x-auto'] && /No headers are changed/.test(r.text), JSON.stringify({ text: r.text, got }));
+
+  // Tests written for chrome-modheader keep their URLs.
+  r = await go('https://webdriver.modheader.com/add?X-Mh=1');
+  const url = await page.evaluate('location.href');
+  r = await go('https://webdriver.modheader.com/add?X-Mh2=2&X-Mh=one');
+  got = await visit('/mh-1');
+  check('modheader: /add lands on the page and adds to earlier calls', r.status === 'ready' && url.startsWith(`chrome-extension://${ID}/automation.html?@add&X-Mh=1`) && got['x-mh'] === 'one' && got['x-mh2'] === '2', JSON.stringify({ url, got }));
+  const profile = [{ title: 'Loaded', headers: [{ enabled: true, name: 'X-Loaded', value: 'yes' }], respHeaders: [] }];
+  r = await go(`https://webdriver.modheader.com/load?profile=${encodeURIComponent(JSON.stringify(profile))}`);
+  got = await visit('/mh-2');
+  check('modheader: /load?profile= imports the export', r.status === 'ready' && got['x-loaded'] === 'yes' && !got['x-mh'], JSON.stringify({ text: r.text, got }));
+  r = await go('https://webdriver.modheader.com/clear');
+  got = await visit('/mh-3');
+  check('modheader: /clear', r.status === 'ready' && !got['x-loaded'], JSON.stringify(got));
+
+  // A web page must not be able to set headers through the page.
+  await visit('/evil-start');
+  const tryFrom = async (how, target) => {
+    await page.evaluate(`(() => { ${how === 'iframe'
+      ? `const f = document.createElement('iframe'); f.src = ${JSON.stringify(target)}; document.body.append(f);`
+      : `location.href = ${JSON.stringify(target)};`} })()`).catch(() => {});
+    await sleep(1500);
+    const seen = await visit('/evil-check');
+    await visit('/evil-start');
+    return seen['x-evil'] ?? null;
+  };
+  const evil = {
+    direct: await tryFrom('navigate', `chrome-extension://${ID}/automation.html?X-Evil=1`),
+    iframe: await tryFrom('iframe', `chrome-extension://${ID}/automation.html?X-Evil=2`),
+    viaModheader: await tryFrom('navigate', 'https://webdriver.modheader.com/add?X-Evil=3'),
+    viaModheaderIframe: await tryFrom('iframe', 'https://webdriver.modheader.com/add?X-Evil=4'),
+  };
+  check('automation: web pages cannot reach the page', Object.values(evil).every(v => v === null), JSON.stringify(evil));
+  await go(`chrome-extension://${ID}/automation.html?@clear`);
 }

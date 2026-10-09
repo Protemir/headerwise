@@ -6,7 +6,7 @@ import { toDnrRules } from '../src/core/dnr.ts';
 import { exportProfiles } from '../src/core/export.ts';
 import { defaultState, emptyProfile, type State } from '../src/core/model.ts';
 // @ts-expect-error plain .mjs build script, no type declarations
-import { automationManifest, AUTOMATION_EXTENSION_ID, extensionId } from '../scripts/automation.mjs';
+import { automationManifest, AUTOMATION_EXTENSION_ID, extensionId, MODHEADER_RULESET, modheaderRules } from '../scripts/automation.mjs';
 
 const headers = (s: State | undefined) => s!.profiles.find(p => p.id === AUTOMATION_ID);
 
@@ -57,6 +57,17 @@ describe('automation page', () => {
     expect(both.summary).toEqual(['Automation: set X-Extra', 'MH: set X-Mh']);
   });
 
+  it('@add keeps earlier headers and their URL filters, same name replaced', () => {
+    const first = applyQuery(defaultState(), '?X-A=1&X-B=1&@url=||a.com^').state!;
+    const second = applyQuery(first, '?@add&x-b=2&res:X-R=3').state!;
+    const p = headers(second)!;
+    expect(p.requestHeaders.map(h => [h.name, h.value])).toEqual([['X-A', '1'], ['x-b', '2']]);
+    expect(p.responseHeaders.map(h => h.name)).toEqual(['X-R']);
+    expect(p.filters.map(f => f.pattern)).toEqual(['||a.com^']);
+    expect(headers(applyQuery(defaultState(), '?@add&X-A=1').state)!.requestHeaders.length).toBe(1);
+    expect(typeof applyQuery(first, '?@add&@clear').error).toBe('string');
+  });
+
   it('without anything changes nothing', () => {
     const r = applyQuery(applyQuery(defaultState(), '?X-A=1').state!, '');
     expect([r.state, r.error, r.summary]).toEqual([undefined, undefined, ['Automation: set X-A']]);
@@ -80,6 +91,27 @@ describe('automation build', () => {
   it('has a key that gives the documented id', () => {
     expect(extensionId(m.key)).toBe(AUTOMATION_EXTENSION_ID);
     expect(AUTOMATION_EXTENSION_ID).toBe('mhlgmcieamjogdlnfjaoeophmdajkkek');
+  });
+
+  it("sends ModHeader's webdriver URLs to the automation page", () => {
+    const rules = modheaderRules();
+    const to = (url: string) => {
+      for (const r of rules) {
+        const re = new RegExp(r.condition.regexFilter);
+        if (re.test(url)) return url.replace(re, r.action.redirect.regexSubstitution.replace(/\\(\d)/g, '$$$1'));
+      }
+      return null;
+    };
+    const page = `chrome-extension://${AUTOMATION_EXTENSION_ID}/automation.html?`;
+    expect(to('https://webdriver.modheader.com/add?X-A=1&X-B=two')).toBe(`${page}@add&X-A=1&X-B=two`);
+    expect(to('https://webdriver.modheader.com/clear')).toBe(`${page}@clear`);
+    expect(to('http://webdriver.modheader.com/clear?x=1')).toBe(`${page}@clear`);
+    expect(to('https://webdriver.modheader.com/load?profile=%5B%7B%7D%5D')).toBe(`${page}@import=%5B%7B%7D%5D`);
+    expect(to('https://example.com/add?X-A=1')).toBe(null);
+    expect(to('https://webdriver.modheader.com.evil.com/add?X-A=1')).toBe(null);
+    expect(m.declarative_net_request.rule_resources[0].path).toBe(MODHEADER_RULESET);
+    // Only ModHeader's address may open the page, not any web page.
+    expect(m.web_accessible_resources).toEqual([{ resources: ['automation.html'], matches: ['https://webdriver.modheader.com/*', 'http://webdriver.modheader.com/*'] }]);
   });
 
   it('gets site access at install, says it is the automation build, keeps the rest', () => {

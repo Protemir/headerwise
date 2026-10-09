@@ -190,7 +190,9 @@ const automation = resolve('dist-automation');
 const runs = [['no-access', false, noAccessChecks], ['access', true, both]];
 if (existsSync(join(automation, 'manifest.json'))) runs.push(['automation', false, automationChecks, automation]);
 const labels = { 'no-access': 'real manifest, no site access', access: 'site access granted', automation: 'automation build' };
-for (const [name, grant, checks, source] of runs) {
+// --only automation (or access, no-access): one of the runs, for a quicker check.
+const only = args.includes('--only') ? args[args.indexOf('--only') + 1] : null;
+for (const [name, grant, checks, source] of runs.filter(([n]) => !only || n === only)) {
   const b = await launch(name, grant, source);
   console.log(`\n${b.version}, ${labels[name]}`);
   try {
