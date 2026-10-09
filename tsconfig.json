@@ -10,7 +10,7 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
-    "lib": ["ES2022", "DOM"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["chrome", "node"]
   },
   "include": ["src/**/*.ts", "src/**/*.vue", "tests/**/*.ts"]

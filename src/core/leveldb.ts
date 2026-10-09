@@ -122,7 +122,7 @@ function* blockEntries(block: Uint8Array): Generator<[Uint8Array, Uint8Array]> {
   const restarts = u32(block, block.length - 4);
   const end = block.length - 4 - restarts * 4;
   const r = new Reader(block.subarray(0, end));
-  let key = new Uint8Array(0);
+  let key: Uint8Array = new Uint8Array(0);
   while (r.pos < end) {
     const shared = r.varint();
     const unshared = r.varint();
