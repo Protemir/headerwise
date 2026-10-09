@@ -1,4 +1,4 @@
-import type { RuleInfo } from './dnr.ts';
+import { isDomainPattern, type RuleInfo } from './dnr.ts';
 import { activeRedirects, RESOURCE_TYPES, type Profile, type State } from './model.ts';
 
 /*
@@ -26,13 +26,12 @@ export function urlFilterRegExp(filter: string): RegExp {
 
 function matches(pattern: string, isRegex: boolean, url: string): boolean | undefined {
   try {
-    return isRegex ? new RegExp(pattern).test(url) : urlFilterRegExp(pattern).test(url);
+    return isRegex ? new RegExp(pattern, 'i').test(url) : urlFilterRegExp(pattern).test(url);
   } catch {
     return undefined; // a regex JS can't parse; Chrome will have warned about it
   }
 }
 
-const DOMAIN = /^(?:[a-z0-9-]+\.)*[a-z0-9-]+$/i;
 
 export type PageVerdict =
   | { kind: 'applies' }
@@ -46,7 +45,7 @@ export function pageVerdict(p: Profile, url: string): PageVerdict {
   for (const f of p.filters) {
     const pattern = f.pattern.trim();
     if (!f.enabled || f.kind !== 'exclude' || pattern === '') continue;
-    const hit = !f.isRegex && DOMAIN.test(pattern)
+    const hit = !f.isRegex && isDomainPattern(pattern)
       ? host === pattern.toLowerCase() || host.endsWith(`.${pattern.toLowerCase()}`)
       : matches(pattern, f.isRegex, url);
     if (hit) return { kind: 'excluded', pattern };

@@ -74,6 +74,17 @@ describe('automation page', () => {
     expect(typeof applyQuery(first, '?@add&@clear').error).toBe('string');
   });
 
+  it('one value per name, a control character is an error, "@add" with nothing changes nothing', () => {
+    expect(headers(applyQuery(defaultState(), '?X-A=1&x-a=2').state)!.requestHeaders.map(h => [h.name, h.value])).toEqual([['x-a', '2']]);
+    expect(applyQuery(defaultState(), '?X-A=%0d%0aY').error).toMatch(/control character/);
+    expect(applyQuery(defaultState(), '?X-A=%00').error).toMatch(/control character/);
+    const set = applyQuery(defaultState(), '?X-A=1').state!;
+    for (const q of ['?@add', '?@modheader&@add&', '?@modheader']) {
+      const r = applyQuery(set, q);
+      expect([r.state, r.error, r.summary]).toEqual([undefined, undefined, ['Automation: set X-A']]);
+    }
+  });
+
   it('without anything changes nothing', () => {
     const r = applyQuery(applyQuery(defaultState(), '?X-A=1').state!, '');
     expect([r.state, r.error, r.summary]).toEqual([undefined, undefined, ['Automation: set X-A']]);

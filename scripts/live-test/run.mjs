@@ -118,7 +118,8 @@ async function launchWithFlag(dir, ext) {
   let extId;
   for (let i = 0; i < 50 && !extId; i++) {
     const list = await (await fetch(`http://127.0.0.1:${CDP_PORT}/json/list`)).json();
-    extId = list.map(t => /^chrome-extension:\/\/([a-p]{32})\/src\/migrate\/index\.html\?welcome=1/.exec(t.url)?.[1]).find(Boolean);
+    // (the automation build opens no welcome page: its service worker gives the id)
+    extId = list.map(t => /^chrome-extension:\/\/([a-p]{32})\/(src\/migrate\/index\.html\?welcome=1|background\.js)/.exec(t.url)?.[1]).find(Boolean);
     if (!extId) await sleep(200);
   }
   if (!extId) throw new Error(`${browser}: extension did not load`);

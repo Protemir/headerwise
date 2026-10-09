@@ -44,12 +44,12 @@ describe('export', () => {
     expect(p.id === 'p1').toBe(false);
     expect([p.title, p.enabled, p.tab]).toEqual(['Staging', true, undefined]);
     expect(p.requestHeaders.map(h => [h.name, h.value, h.enabled, h.secret ?? null, h.comment ?? null])).toEqual([
-      ['Authorization', '', true, true, null], ['X-Env', 'staging', false, null, 'routes to staging'], ['X-Team', '', true, true, null],
+      ['Authorization', '', false, true, null], ['X-Env', 'staging', false, null, 'routes to staging'], ['X-Team', '', false, true, null],
     ]);
     expect(p.responseHeaders[0].op).toBe('remove');
     expect(p.filters.map(f => [f.kind, f.pattern, f.isRegex])).toEqual([['exclude', '/login', true]]);
     expect([p.initiatorDomains, p.resourceTypes, p.requestMethods]).toEqual([['app.io'], ['xmlhttprequest'], ['post']]);
-    expect(warnings).toEqual(['Secret values were not in the file, fill them in: "Staging" → Authorization, "Staging" → X-Team.']);
+    expect(warnings).toEqual(['Secret values were not in the file, so these headers are switched off until you fill them in: "Staging" → Authorization, "Staging" → X-Team.']);
   });
 
   it('drops junk from hand-edited files', () => {

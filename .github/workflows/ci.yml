@@ -63,8 +63,9 @@ jobs:
         if: success() || failure()
       - run: python scripts/automation-smoke/selenium_smoke.py
         if: success() || failure()
+      # Needs the signed .crx, which forks can't build (no key): skipped there.
       - run: node scripts/automation-smoke/modheader-compat.mjs
-        if: success() || failure()
+        if: (success() || failure()) && hashFiles('headerwise-automation.crx') != ''
       - uses: actions/upload-artifact@v4
         if: success() || failure()
         with:

@@ -71,21 +71,27 @@ async function readFiles(list: { path: string; file: File }[]) {
       groups.get(dir)!.push(f);
     }
     const ids = Object.values(MODHEADER_IDS);
+    const unreadable: string[] = [];
     const order = [...groups.keys()].sort((a, b) => Number(ids.some(id => b.endsWith(id))) - Number(ids.some(id => a.endsWith(id))));
     for (const dir of order) {
       const files: DbFile[] = await Promise.all(groups.get(dir)!
         .filter(f => /\.(log|ldb|sst)$/i.test(f.file.name))
         .map(async f => ({ name: f.file.name, data: new Uint8Array(await f.file.arrayBuffer()) })));
       if (files.length === 0) continue;
-      const { result } = readModHeaderStore(files);
+      const { result, errors } = readModHeaderStore(files);
+      unreadable.push(...errors);
       if (!result) continue;
       const { profiles, warnings } = importModHeader(JSON.stringify(result.profiles), { active: result.selected });
+      // A damaged file can hide newer profiles: say so instead of quietly showing older ones.
+      if (errors.length) warnings.unshift(`Some files in the folder could not be read, so these may not be your latest profiles: ${errors.join('; ')}`);
       found.value = { profiles, warnings, source: result.source, picked: profiles.map(() => true) };
       return;
     }
     error.value = list.length === 0
       ? 'That folder is empty.'
-      : 'No ModHeader profiles in that folder. Check the path below, or try the same path with "Sync Extension Settings" instead of "Local Extension Settings".';
+      : unreadable.length
+        ? `Could not read ModHeader's files: ${unreadable.join('; ')}. Copy the folder somewhere else and pick the copy, or close the browser that uses it and try again.`
+        : 'No ModHeader profiles in that folder. Check the path below, or try the same path with "Sync Extension Settings" instead of "Local Extension Settings".';
   } catch (e) {
     error.value = `Could not read the folder: ${e instanceof Error ? e.message : String(e)}`;
   } finally {
@@ -126,8 +132,11 @@ async function onDrop(e: DragEvent) {
 
 // A fresh install has one empty "Profile 1"; replace it instead of keeping it around.
 function isUntouched(s: State): boolean {
-  return s.profiles.length === 1 && s.profiles[0].filters.length === 0
-    && [...s.profiles[0].requestHeaders, ...s.profiles[0].responseHeaders].every(h => h.name.trim() === '');
+  const p = s.profiles[0];
+  return s.profiles.length === 1 && p.title === 'Profile 1' && p.filters.length === 0
+    && !p.redirects?.length && !p.initiatorDomains?.length && !p.excludedInitiatorDomains?.length
+    && !p.resourceTypes?.length && !p.requestMethods?.length && !p.tab
+    && [...p.requestHeaders, ...p.responseHeaders].every(h => h.name.trim() === '');
 }
 
 const pickedCount = computed(() => found.value?.picked.filter(Boolean).length ?? 0);

@@ -69,18 +69,22 @@ export function createEngine(api: EngineApi) {
     const key = JSON.stringify(filled);
     const stored = await api.session.get(['rulesKey', 'structureKey']);
     let rejected = false;
+    // "Only this tab" rules need tabIds, which are allowed in session rules only.
+    // Old rules go and new ones come in one call per kind: Chrome applies such an
+    // update as a whole, so no request slips through with no rules in between.
+    const replace = async (list: DnrRule[]) => {
+      await api.dnr.updateDynamicRules({
+        removeRuleIds: (await api.dnr.getDynamicRules()).map(r => r.id),
+        addRules: list.filter(r => !r.condition.tabIds),
+      });
+      await api.dnr.updateSessionRules({
+        removeRuleIds: (await api.dnr.getSessionRules()).map(r => r.id),
+        addRules: list.filter(r => r.condition.tabIds),
+      });
+    };
     if (stored.rulesKey !== key) {
-      // "Only this tab" rules need tabIds, which are allowed in session rules only.
-      const session = filled.filter(r => r.condition.tabIds);
-      const dynamic = filled.filter(r => !r.condition.tabIds);
-      const clear = async () => {
-        await api.dnr.updateDynamicRules({ removeRuleIds: (await api.dnr.getDynamicRules()).map(r => r.id) });
-        await api.dnr.updateSessionRules({ removeRuleIds: (await api.dnr.getSessionRules()).map(r => r.id) });
-      };
       try {
-        await clear();
-        await api.dnr.updateDynamicRules({ addRules: dynamic });
-        await api.dnr.updateSessionRules({ addRules: session });
+        await replace(filled);
         await api.session.set({
           rulesKey: key,
           structureKey,
@@ -88,14 +92,37 @@ export function createEngine(api: EngineApi) {
           ...(stored.structureKey !== structureKey ? { rulesUpdatedAt: api.now() } : {}),
         });
       } catch (e) {
-        // Regexes are checked above, so this should be rare. The browser rejects
-        // the whole batch, so clear our rules instead of leaving stale ones.
+        // Everything Headerwise knows to check is checked above, so this is rare.
+        // The browser rejects a whole batch for one bad rule; rather than lose every
+        // profile, add them one at a time and leave out the ones it refuses.
         rejected = true;
-        await clear();
+        const byProfile = new Map<string, DnrRule[]>();
+        for (const r of filled) {
+          const id = converted.info[r.id]?.profileId ?? '';
+          byProfile.set(id, [...(byProfile.get(id) ?? []), r]);
+        }
+        const kept: DnrRule[] = [];
+        const refused: string[] = [];
+        await replace([]);
+        for (const [, group] of byProfile) {
+          try {
+            await replace([...kept, ...group]);
+            kept.push(...group);
+          } catch (err) {
+            refused.push(`"${converted.titles[group[0].priority] ?? '?'}" (${err instanceof Error ? err.message : String(err)})`);
+          }
+        }
+        await replace(kept).catch(() => replace([]));
         // An empty key makes the next sync try again.
-        await api.session.set({ rulesKey: '', structureKey: '', ruleInfo: {}, rulesUpdatedAt: api.now() });
-        warnings.push(`The browser rejected the rules: ${e instanceof Error ? e.message : String(e)}`);
+        await api.session.set({ rulesKey: '', structureKey: '', ruleInfo: converted.info, rulesUpdatedAt: api.now() });
+        warnings.push(refused.length
+          ? `The browser refused the rules of ${refused.join(', ')}, so ${refused.length === 1 ? 'that profile is' : 'those profiles are'} off.`
+          : `The browser rejected the rules at first: ${e instanceof Error ? e.message : String(e)}`);
       }
+    } else if (stored.structureKey !== structureKey) {
+      // Same rules, different profiles behind them (a duplicate switched on, the
+      // original off): "On this tab" must name the right one.
+      await api.session.set({ structureKey, ruleInfo: converted.info, rulesUpdatedAt: api.now() });
     }
 
     // {{uuid}}, {{timestamp}}...: new values every minute while any rule uses them.
@@ -136,24 +163,37 @@ export function createEngine(api: EngineApi) {
     return queue;
   }
 
+  // Changes the background makes to the profiles (closing a window releases
+  // several tabs at once) run one after another, so none overwrites another.
+  let edits: Promise<unknown> = Promise.resolve();
+  function edit<T>(fn: () => Promise<T>): Promise<T> {
+    const run = edits.then(fn, fn);
+    edits = run.catch(() => {});
+    return run;
+  }
+
   return {
     queueSync,
 
     /** Tab ids are per browser session: "only this tab" bindings end with the tab (no id: browser start). */
-    async release(tabId?: number): Promise<void> {
-      const state = await api.loadState();
-      if (releaseTabs(state, tabId)) await api.saveState(state); // the storage change triggers a sync
-      else if (tabId === undefined) await queueSync(); // browser start: session rules are gone, rebuild
+    release(tabId?: number): Promise<void> {
+      return edit(async () => {
+        const state = await api.loadState();
+        if (releaseTabs(state, tabId)) await api.saveState(state); // the storage change triggers a sync
+        else if (tabId === undefined) await queueSync(); // browser start: session rules are gone, rebuild
+      });
     },
 
     /** Keyboard shortcuts. Returns whether the command was ours. */
-    async command(name: string): Promise<boolean> {
-      const state = await api.loadState();
-      if (name === 'toggle-pause') state.paused = !state.paused;
-      else if (name === 'next-profile') nextProfile(state);
-      else return false;
-      await api.saveState(state);
-      return true;
+    command(name: string): Promise<boolean> {
+      if (name !== 'toggle-pause' && name !== 'next-profile') return Promise.resolve(false);
+      return edit(async () => {
+        const state = await api.loadState();
+        if (name === 'toggle-pause') state.paused = !state.paused;
+        else nextProfile(state);
+        await api.saveState(state);
+        return true;
+      });
     },
   };
 }

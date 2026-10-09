@@ -5,7 +5,7 @@ import type { DnrRule } from '../src/core/dnr.ts';
 import type { Profile, State } from '../src/core/model.ts';
 
 // A fake browser that keeps everything in memory and records what was called.
-function fakeBrowser(initial: State, { origins = ['<all_urls>'] as string[], rejectWith = '' } = {}) {
+function fakeBrowser(initial: State, { origins = ['<all_urls>'] as string[], rejectWith = '', rejectValue = '' } = {}) {
   let state = structuredClone(initial);
   const session: Record<string, unknown> = {};
   let dynamic: DnrRule[] = [];
@@ -18,6 +18,8 @@ function fakeBrowser(initial: State, { origins = ['<all_urls>'] as string[], rej
   const update = (list: () => DnrRule[], set: (r: DnrRule[]) => void, name: string) => async (u: RuleUpdate) => {
     calls.push(name);
     if (rejectWith && u.addRules?.length) throw new Error(rejectWith);
+    // Like Chrome: one bad rule and the whole update is refused, nothing changes.
+    if (rejectValue && u.addRules?.some(r => valueOf(r) === rejectValue)) throw new Error('Invalid value');
     set([...list().filter(r => !u.removeRuleIds?.includes(r.id)), ...(u.addRules ?? [])]);
   };
   const api: EngineApi = {
@@ -125,8 +127,44 @@ describe('engine', () => {
     const b = fakeBrowser(st([p('A')]), { rejectWith: 'Internal error' });
     await createEngine(b.api).queueSync();
     expect([b.dynamic.length, b.session.length, b.badge.text]).toEqual([0, 0, '!']);
-    expect((b.stored.warnings as string[]).some(w => /rejected the rules: Internal error/.test(w))).toBe(true);
+    expect((b.stored.warnings as string[]).some(w => /refused the rules of "A" \(Internal error\), so that profile is off/.test(w))).toBe(true);
     expect(b.stored.rulesKey).toBe('');
+  });
+
+  it('when the browser refuses one profile, the others keep working', async () => {
+    const b = fakeBrowser(st([p('Good'), p('Bad', { requestHeaders: [h('X-B', 'BAD')] }), p('Also good', { requestHeaders: [h('X-C')] })]), { rejectValue: 'BAD' });
+    await createEngine(b.api).queueSync();
+    expect(b.dynamic.map(valueOf).sort()).toEqual(['1', '1']);
+    expect((b.stored.warnings as string[]).some(w => /refused the rules of "Bad"/.test(w))).toBe(true);
+    expect(b.badge.text).toBe('!');
+  });
+
+  it('swaps old rules for new ones in one update, so requests never go out with none', async () => {
+    const b = fakeBrowser(st([p('A')]));
+    const e = createEngine(b.api);
+    await e.queueSync();
+    b.calls.length = 0;
+    b.state = st([p('A', { requestHeaders: [h('X-A', '2')] })]);
+    await e.queueSync();
+    expect(b.calls.filter(c => c === 'updateDynamic')).toHaveLength(1);
+    expect(valueOf(b.dynamic[0])).toBe('2');
+  });
+
+  it('names the right profile when a copy takes over with the same rules', async () => {
+    const b = fakeBrowser(st([p('Orig'), p('Copy', { enabled: false })]));
+    const e = createEngine(b.api);
+    await e.queueSync();
+    b.state = st([p('Orig', { enabled: false }), p('Copy')]);
+    await e.queueSync();
+    const info = b.stored.ruleInfo as Record<number, { profileId: string }>;
+    expect(Object.values(info).map(i => i.profileId)).toEqual(['Copy']);
+  });
+
+  it('closing a window with two bound tabs releases both', async () => {
+    const b = fakeBrowser(st([p('T1', { tab: { id: 1, host: 'a.io' } }), p('T2', { tab: { id: 2, host: 'b.io' } })]));
+    const e = createEngine(b.api);
+    await Promise.all([e.release(1), e.release(2)]);
+    expect(b.state.profiles.map(x => [x.enabled, x.tab ?? null])).toEqual([[false, null], [false, null]]);
   });
 
   it('never fails silently on broken stored state', async () => {

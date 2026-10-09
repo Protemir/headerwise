@@ -3,9 +3,9 @@ import { computed, onMounted, ref, toRaw, watch } from 'vue';
 import { defaultState, duplicateProfile, emptyHeader, emptyProfile, isSecret, moveProfile, maskValue, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type State } from '../core/model.ts';
 import { exportFileName, exportProfiles, importProfiles } from '../core/export.ts';
 import { VARIABLES } from '../core/variables.ts';
-import { loadMeta, loadState, saveMeta, saveState } from '../core/storage.ts';
+import { loadMeta, loadState, saveMeta, saveState, STATE_KEY } from '../core/storage.ts';
 import type { RuleInfo } from '../core/dnr.ts';
-import { scopeSummary, tabReport, type MatchedRule, type TabLine } from '../core/explain.ts';
+import { tabReport, type MatchedRule, type TabLine } from '../core/explain.ts';
 import { parsePasted } from '../core/paste.ts';
 import { addHeaders, applyPreset, PRESETS, REQUEST_HEADER_NAMES, RESPONSE_HEADER_NAMES } from '../core/presets.ts';
 
@@ -22,13 +22,59 @@ const showImport = ref(false);
 const profile = computed(() => state.value.profiles[selected.value]);
 
 onMounted(async () => {
-  state.value = await loadState();
-  hasAccess.value = await chrome.permissions.contains(ALL_SITES);
-  await refreshWarnings();
-  await refreshTab();
-  loaded.value = true;
+  try {
+    state.value = await loadState();
+    lastSaved = JSON.stringify(state.value);
+    hasAccess.value = await chrome.permissions.contains(ALL_SITES);
+    await refreshWarnings();
+    await refreshTab();
+  } catch (e) {
+    // Show the editor anyway: a blank popup helps nobody.
+    tabNote.value = `Headerwise couldn't check this tab (${e instanceof Error ? e.message : String(e)}).`;
+  } finally {
+    loaded.value = true;
+  }
   chrome.storage.session.onChanged.addListener(refreshWarnings);
+  chrome.storage.local.onChanged.addListener(onStateChanged);
 });
+
+// Saving. Edits are saved 250 ms after the last keystroke, and right away when
+// the popup closes (Chrome closes it on any click outside).
+let timer: ReturnType<typeof setTimeout> | undefined;
+let lastSaved = '';
+function saveNow() {
+  clearTimeout(timer);
+  timer = undefined;
+  const json = JSON.stringify(state.value);
+  if (json === lastSaved) return Promise.resolve();
+  lastSaved = json;
+  return saveState(structuredClone(toRaw(state.value)));
+}
+watch(state, () => {
+  if (!loaded.value) return;
+  clearTimeout(timer);
+  timer = setTimeout(saveNow, 250);
+}, { deep: true });
+addEventListener('pagehide', () => { saveNow(); });
+addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveNow(); });
+
+// Changed elsewhere while the popup is open: a keyboard shortcut (pause, next
+// profile), a closed tab releasing "only this tab", another Headerwise window.
+// Take that in, or the next edit here would save the old state over it.
+function onStateChanged(changes: Record<string, chrome.storage.StorageChange>) {
+  const next = changes[STATE_KEY]?.newValue as State | undefined;
+  if (!next || JSON.stringify(next) === lastSaved) return; // our own save
+  const current = state.value.profiles[selected.value]?.id;
+  // Typed here in the last 250 ms: that edit is newer, keep it (rare: it means a
+  // shortcut pressed mid-typing).
+  if (timer !== undefined) saveNow();
+  else {
+    lastSaved = JSON.stringify(next);
+    state.value = next;
+    const i = next.profiles.findIndex(p => p.id === current);
+    selected.value = i >= 0 ? i : Math.min(selected.value, next.profiles.length - 1);
+  }
+}
 
 // What the background script left for us: warnings, and which profile each rule belongs to.
 const ruleInfo = ref<Record<number, RuleInfo>>({});
@@ -46,8 +92,9 @@ async function refreshWarnings() {
 const badRegex = ref<Record<string, string>>({});
 let regexRun = 0;
 watch(() => (profile.value ? [
-  ...profile.value.filters.filter(f => f.isRegex && f.pattern.trim()).map(f => [f.id, f.pattern.trim()]),
-  ...(profile.value.redirects ?? []).filter(r => r.isRegex && r.from.trim()).map(r => [r.id, r.from.trim()]),
+  // Rows that are switched on: the warning at the top only speaks about those.
+  ...profile.value.filters.filter(f => f.enabled && f.isRegex && f.pattern.trim()).map(f => [f.id, f.pattern.trim()]),
+  ...(profile.value.redirects ?? []).filter(r => r.enabled && r.isRegex && r.from.trim()).map(r => [r.id, r.from.trim()]),
 ] : []), async patterns => {
   const run = ++regexRun;
   const bad: Record<string, string> = {};
@@ -76,7 +123,9 @@ async function refreshTab() {
     return;
   }
   tab.value = { id: t.id, url: t.url, host: new URL(t.url).host };
-  tabAccess.value = await chrome.permissions.contains({ origins: [`${new URL(t.url).origin}/*`] });
+  // No port in the pattern: Chrome's patterns cover all ports anyway, Firefox rejects one.
+  const u = new URL(t.url);
+  tabAccess.value = await chrome.permissions.contains({ origins: [`${u.protocol}//${u.hostname}/*`] });
   if (typeof chrome.declarativeNetRequest.getMatchedRules !== 'function') {
     // Firefox doesn't report matched rules to extensions.
     exact.value = false;
@@ -120,13 +169,6 @@ async function reloadTab() {
   setTimeout(refreshTab, 1500);
 }
 
-let timer: ReturnType<typeof setTimeout> | undefined;
-watch(state, () => {
-  if (!loaded.value) return;
-  clearTimeout(timer);
-  timer = setTimeout(() => saveState(structuredClone(toRaw(state.value))), 250);
-}, { deep: true });
-
 async function grantAccess() {
   hasAccess.value = await chrome.permissions.request(ALL_SITES);
   await refreshTab();
@@ -141,11 +183,19 @@ const showPaste = ref(false);
 const pasteText = ref('');
 const pasted = computed(() => (pasteText.value.trim() ? parsePasted(pasteText.value) : null));
 const pastePicked = ref<boolean[]>([]);
-watch(pasted, r => { pastePicked.value = r ? r.headers.map(h => h.suggested) : []; });
+// Ticks the user changed survive further typing in the box.
+watch(pasted, (r, old) => {
+  const before = new Map((old?.headers ?? []).map((h, i) => [h.name.toLowerCase(), pastePicked.value[i]]));
+  pastePicked.value = r ? r.headers.map(h => before.get(h.name.toLowerCase()) ?? h.suggested) : [];
+});
 const pasteHost = computed(() => {
   try { return pasted.value?.url ? new URL(pasted.value.url).hostname : ''; } catch { return ''; }
 });
+// "Only on <host>" limits the whole profile: suggested only while it has no headers of its own.
 const pasteOnlyHost = ref(true);
+watch(showPaste, open => {
+  if (open) pasteOnlyHost.value = [...profile.value.requestHeaders, ...profile.value.responseHeaders].every(h => h.name.trim() === '');
+});
 const canLimitToHost = computed(() => pasteHost.value !== '' && !profile.value.filters.some(f => f.kind === 'include'));
 
 function addPasted() {
@@ -175,9 +225,10 @@ onMounted(async () => {
   showRate.value = !!meta.installedAt && Date.now() - meta.installedAt > 14 * 24 * 3600 * 1000 && !meta.rateDone;
 });
 async function rateDone(open: boolean) {
-  if (open) chrome.tabs.create({ url: RATE_URL });
   showRate.value = false;
+  // Saved before the new tab opens: that closes the popup.
   await saveMeta({ rateDone: true });
+  if (open) chrome.tabs.create({ url: RATE_URL });
 }
 
 // Copy a summary for a bug report. There is no telemetry, so this is how
@@ -191,7 +242,7 @@ async function copyDiagnostics() {
   const text = [
     `Headerwise ${chrome.runtime.getManifest().version}`,
     `Browser: ${navigator.userAgent}`,
-    `Paused: ${s.paused ? 'yes' : 'no'}. Site access: ${perms.origins?.length ? perms.origins.join(', ') : 'none'}`,
+    `Paused: ${s.paused ? 'yes' : 'no'}. Site access: ${perms.origins?.includes('<all_urls>') ? 'all sites' : `${perms.origins?.length ?? 0} sites`}`,
     `Rules in the browser: ${dynamic.length} dynamic, ${session.length} session`,
     `Profiles (${s.profiles.length}):`,
     ...s.profiles.map((p, i) => [
@@ -200,7 +251,8 @@ async function copyDiagnostics() {
       `response [${names(p.responseHeaders)}]`,
       `${p.redirects?.filter(r => r.enabled).length ?? 0} redirects`,
       `filters [${p.filters.map(f => `${f.enabled ? '' : '(off) '}${f.kind === 'include' ? 'only on' : 'never on'}${f.isRegex ? ' regex' : ''}`).join(', ')}]`,
-      ...(scopeSummary(p) ? [scopeSummary(p)] : []),
+      // counts only: site names are the user's business
+      `${p.initiatorDomains?.length ?? 0} only-from sites, ${p.excludedInitiatorDomains?.length ?? 0} never-from sites, types [${(p.resourceTypes ?? []).join(', ')}], methods [${(p.requestMethods ?? []).join(', ')}]`,
     ].join('; ')),
     'Warnings:',
     ...(warnings.value.length ? warnings.value.map(w => `  ${w}`) : ['  none']),
@@ -332,7 +384,13 @@ async function copyExport() {
 const importNotes = ref<string[]>([]);
 
 function doImport() {
-  const res = importProfiles(importText.value);
+  let res: ReturnType<typeof importProfiles>;
+  try {
+    res = importProfiles(importText.value);
+  } catch (e) {
+    importNotes.value = [`Couldn't read that: ${e instanceof Error ? e.message : String(e)}`];
+    return;
+  }
   if (res.profiles.length) {
     state.value.profiles.push(...res.profiles);
     selected.value = state.value.profiles.length - res.profiles.length;
@@ -344,13 +402,16 @@ function doImport() {
     : res.warnings;
 }
 
-function openMigrate() {
+async function openMigrate() {
+  await saveNow();
   chrome.tabs.create({ url: chrome.runtime.getURL('src/migrate/index.html') });
   window.close();
 }
 
 async function importFile(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0];
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = ''; // picking the same file again must load it again
   if (file) importText.value = await file.text();
 }
 </script>
@@ -394,8 +455,10 @@ async function importFile(e: Event) {
         :class="{ on: i === selected, off: !p.enabled }"
         draggable="true"
         :title="`${p.title || 'Untitled'}. Drag to reorder: the leftmost profile wins when two set the same header`"
+        :aria-pressed="i === selected"
         @click="selected = i"
         @dragstart="dragFrom = i"
+        @dragend="dragFrom = -1"
         @dragover.prevent
         @drop.prevent="dropOn(i)"
       >
@@ -427,9 +490,9 @@ async function importFile(e: Event) {
         </select>
         <input v-model="h.name" placeholder="Name" list="request-names" aria-label="Request header name" />
         <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" :placeholder="h.op === 'remove' ? '(removed)' : 'Value'" aria-label="Header value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
-        <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? 'Hide value' : 'Show value'" @click="toggleReveal(h)">👁</button>
+        <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? 'Hide value' : 'Show value'" :aria-label="revealed.has(h.id) ? 'Hide value' : 'Show value'" :aria-pressed="revealed.has(h.id)" @click="toggleReveal(h)">👁</button>
         <span v-else class="icon-space"></span>
-        <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? 'Secret: value hidden. Click to show it always' : 'Mark as secret: hide the value'" @click="toggleSecret(h)">🔒</button>
+        <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? 'Secret: value hidden. Click to show it always' : 'Mark as secret: hide the value'" aria-label="Secret value" :aria-pressed="isSecret(h)" @click="toggleSecret(h)">🔒</button>
         <button title="Remove" aria-label="Remove" @click="removeAt(profile.requestHeaders, i)">×</button>
       </div>
       <p v-if="isBlank" class="dim small-hint">Start here: type a header name and value above, paste a request copied in DevTools, or pick a preset.</p>
@@ -451,7 +514,7 @@ async function importFile(e: Event) {
             <code>{{ h.name }}</code>
             <span class="val">{{ isSecret(h) ? maskValue(h.value) : h.value }}</span>
           </label>
-          <label v-if="canLimitToHost" class="pasted"><input type="checkbox" v-model="pasteOnlyHost" /> only on {{ pasteHost }}</label>
+          <label v-if="canLimitToHost" class="pasted"><input type="checkbox" v-model="pasteOnlyHost" /> make this profile apply only on {{ pasteHost }}</label>
           <button :disabled="!pastePicked.some(Boolean)" @click="addPasted">Add {{ pastePicked.filter(Boolean).length }} header{{ pastePicked.filter(Boolean).length === 1 ? '' : 's' }}</button>
         </template>
       </div>
@@ -466,9 +529,9 @@ async function importFile(e: Event) {
         </select>
         <input v-model="h.name" placeholder="Name" list="response-names" aria-label="Response header name" />
         <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" :placeholder="h.op === 'remove' ? '(removed)' : 'Value'" aria-label="Header value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
-        <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? 'Hide value' : 'Show value'" @click="toggleReveal(h)">👁</button>
+        <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? 'Hide value' : 'Show value'" :aria-label="revealed.has(h.id) ? 'Hide value' : 'Show value'" :aria-pressed="revealed.has(h.id)" @click="toggleReveal(h)">👁</button>
         <span v-else class="icon-space"></span>
-        <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? 'Secret: value hidden. Click to show it always' : 'Mark as secret: hide the value'" @click="toggleSecret(h)">🔒</button>
+        <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? 'Secret: value hidden. Click to show it always' : 'Mark as secret: hide the value'" aria-label="Secret value" :aria-pressed="isSecret(h)" @click="toggleSecret(h)">🔒</button>
         <button title="Remove" aria-label="Remove" @click="removeAt(profile.responseHeaders, i)">×</button>
       </div>
       <button class="link" @click="addHeader(profile.responseHeaders)">+ response header</button>
@@ -503,11 +566,11 @@ async function importFile(e: Event) {
         <summary>Sites, request types, methods</summary>
         <div class="row">
           <span class="lbl">Only from sites</span>
-          <input class="grow" :value="(profile.initiatorDomains ?? []).join(', ')" @change="setDomains(profile, 'initiatorDomains', $event)" placeholder="app.example.com, admin.example.com" />
+          <input class="grow" :value="(profile.initiatorDomains ?? []).join(', ')" @change="setDomains(profile, 'initiatorDomains', $event)" aria-label="Only from sites" placeholder="app.example.com, admin.example.com" />
         </div>
         <div class="row">
           <span class="lbl">Never from sites</span>
-          <input class="grow" :value="(profile.excludedInitiatorDomains ?? []).join(', ')" @change="setDomains(profile, 'excludedInitiatorDomains', $event)" placeholder="example.org" />
+          <input class="grow" :value="(profile.excludedInitiatorDomains ?? []).join(', ')" @change="setDomains(profile, 'excludedInitiatorDomains', $event)" aria-label="Never from sites" placeholder="example.org" />
         </div>
         <div class="checks">
           <span class="lbl">Only these requests</span>

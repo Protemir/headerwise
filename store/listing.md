@@ -86,7 +86,7 @@ Modify HTTP request and response headers in the browser, organized in profiles t
 
 ## Before submitting
 
-1. Version in `public/manifest.json` and `package.json`: 1.0.0 (set 09.10; raise it for every later upload, the stores reject a repeated version).
+1. Version in `public/manifest.json` and `package.json`: 1.0.4 in main, 1.0.0 in review (raise it for every later upload, the stores reject a repeated version).
 2. `npm run build`, `npm test`, `npm run test:live` (and `-- --browser edge`).
 3. Upload the zip CI builds from `dist/` (Actions → latest run → artifact).
 4. After approval: put the listing URLs into the install buttons in `docs/index.html` (they search the stores for now).

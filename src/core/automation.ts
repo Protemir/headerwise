@@ -72,12 +72,19 @@ export function applyQuery(state: State, query: string): AutomationResult {
     const res = key.startsWith('res:');
     const name = res ? key.slice(4) : key;
     if (!TOKEN.test(name)) return fail(`"${name}" is not a valid header name.`);
+    // A header value can't hold control characters: Chrome would refuse the rule
+    // and the test would run without its headers.
+    if (/[\x00-\x08\x0a-\x1f\x7f]/.test(value)) return fail(`The value of "${name}" has a line break or another control character.`);
     const header: HeaderMod = { id: newId(), enabled: true, name, value, op: value === '' ? 'remove' : 'set' };
     const list = res ? response : request;
+    // One value per name: the last one given wins (with @add, over earlier calls too).
     const same = list.findIndex(h => h.name.toLowerCase() === name.toLowerCase());
-    if (add && same >= 0) list[same] = header;
+    if (same >= 0) list[same] = header;
     else list.push(header);
   }
+  // "?@add" or ModHeader's "/add?" with nothing to add: nothing changes.
+  const given = params.some(([k]) => !k.startsWith('@')) || clear || urls.length > 0 || imported.length > 0;
+  if (!given) return { summary: summarize(state), warnings: [] };
   if (clear && (add || request.length || response.length || urls.length)) return fail('@clear goes alone (or with @import).');
   if (urls.length && !request.length && !response.length) return fail('@url needs at least one header.');
   // @add without its own @url keeps the earlier URL filters.

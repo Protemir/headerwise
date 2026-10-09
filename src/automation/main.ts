@@ -28,7 +28,11 @@ async function run() {
   const { warnings = [] } = await chrome.storage.session.get('warnings') as { warnings?: string[] };
   list('summary', result.summary.length ? result.summary : ['No headers are changed.']);
   list('warnings', [...result.warnings, ...warnings]);
+  // "ready" only if the browser really took the headers: a test that goes on
+  // without them would fail somewhere far from the cause.
+  const broken = warnings.find(w => (w.startsWith('"Automation"') && /skipped|is off/.test(w)) || /refused the rules|rejected the rules|could not apply/.test(w));
   if (result.error) done(false, result.error);
+  else if (broken) done(false, broken);
   else done(true, result.state ? 'Done. In effect now:' : 'Nothing changed. In effect now:');
 }
 

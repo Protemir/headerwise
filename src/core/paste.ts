@@ -81,6 +81,21 @@ export function shellWords(s: string): string[] {
   return out;
 }
 
+// btoa takes Latin-1 only; curl sends the user name and password as UTF-8.
+function base64Utf8(s: string): string {
+  return btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+}
+
+// A JS string literal's value: "...", '...' or `...` (no ${} in what DevTools or people paste).
+function jsString(lit: string): string {
+  const body = lit.slice(1, -1);
+  if (lit[0] === '"') { try { return JSON.parse(lit); } catch { return body; } }
+  return body.replace(/\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|[\s\S])/g, (_, e: string) =>
+    e[0] === 'u' || e[0] === 'x' ? String.fromCharCode(parseInt(e.slice(1), 16)) : e === 'n' ? '\n' : e === 't' ? '\t' : e);
+}
+
+const JS_STRING = String.raw`"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|` + '`(?:[^`\\\\]|\\\\.)*`';
+
 // curl flags that take a value we don't need.
 const SKIP_VALUE = new Set(['-X', '--request', '-d', '--data', '--data-raw', '--data-binary', '--data-urlencode', '--data-ascii', '-F', '--form', '-o', '--output', '-x', '--proxy', '-m', '--max-time']);
 
@@ -107,7 +122,7 @@ function fromCurl(text: string): PasteResult {
     else if ((w === '-b' || w === '--cookie') && next !== undefined) { if (next.includes('=')) add(header('Cookie', next)); i++; }
     else if ((w === '-A' || w === '--user-agent') && next !== undefined) { add(header('User-Agent', next)); i++; }
     else if ((w === '-e' || w === '--referer') && next !== undefined) { add(header('Referer', next)); i++; }
-    else if ((w === '-u' || w === '--user') && next !== undefined) { add(header('Authorization', `Basic ${btoa(next)}`)); i++; }
+    else if ((w === '-u' || w === '--user') && next !== undefined) { add(header('Authorization', `Basic ${base64Utf8(next)}`)); i++; }
     else if (SKIP_VALUE.has(w)) i++;
     else if (!w.startsWith('-') && url === undefined && /^https?:\/\//i.test(w)) url = w;
   }
@@ -115,7 +130,7 @@ function fromCurl(text: string): PasteResult {
 }
 
 function fromFetch(text: string): PasteResult {
-  const url = /fetch\(\s*("(?:[^"\\]|\\.)*")/.exec(text)?.[1];
+  const urlLiteral = new RegExp(String.raw`fetch\(\s*(${JS_STRING})`).exec(text)?.[1];
   const start = text.indexOf('{', text.indexOf('fetch('));
   const end = text.lastIndexOf('}');
   const headers: PastedHeader[] = [];
@@ -123,10 +138,15 @@ function fromFetch(text: string): PasteResult {
   try {
     options = JSON.parse(text.slice(start, end + 1));
   } catch {
-    // Hand-edited or with comments: pick "name": "value" pairs out of the headers block.
-    const block = /"headers"\s*:\s*\{([\s\S]*?)\}/.exec(text)?.[1] ?? '';
+    // Written by hand or with comments: name/value pairs out of the headers block,
+    // with keys quoted or not and any kind of JS string as the value.
+    const block = /["']?headers["']?\s*:\s*\{([\s\S]*?)\}/.exec(text)?.[1] ?? '';
     options = { headers: {} };
-    for (const m of block.matchAll(/"((?:[^"\\]|\\.)*)"\s*:\s*"((?:[^"\\]|\\.)*)"/g)) options.headers![JSON.parse(`"${m[1]}"`)] = JSON.parse(`"${m[2]}"`);
+    const pair = new RegExp(String.raw`(${JS_STRING}|[A-Za-z_$][\w$-]*)\s*:\s*(${JS_STRING})`, 'g');
+    for (const m of block.matchAll(pair)) {
+      const key = /^["'`]/.test(m[1]) ? jsString(m[1]) : m[1];
+      options.headers![key] = jsString(m[2]);
+    }
   }
   for (const [name, value] of Object.entries(options?.headers ?? {})) {
     const h = header(name, String(value));
@@ -136,15 +156,16 @@ function fromFetch(text: string): PasteResult {
     const h = header('Referer', options.referrer);
     if (h) headers.push(h);
   }
-  return { url: url ? JSON.parse(url) : undefined, headers };
+  return { url: urlLiteral ? jsString(urlLiteral) : undefined, headers };
 }
 
 function psString(s: string): string {
-  // "..." with `-escapes and $([char]NNN) for non-ASCII
+  // '...' is literal ('' is a quote); "..." has `-escapes and $([char]NNN) for non-ASCII
+  if (s[0] === "'") return s.slice(1, -1).replace(/''/g, "'");
   return s.slice(1, -1).replace(/\$\(\[char\](\d+)\)/g, (_, code) => String.fromCharCode(Number(code))).replace(/`([\s\S])/g, '$1');
 }
 
-const PS_STRING = '"(?:[^"`]|`[\\s\\S])*"';
+const PS_STRING = String.raw`"(?:[^"` + '`' + String.raw`]|` + '`' + String.raw`[\s\S])*"|'(?:[^']|'')*'`;
 
 function fromPowerShell(text: string): PasteResult {
   const headers: PastedHeader[] = [];
@@ -154,8 +175,11 @@ function fromPowerShell(text: string): PasteResult {
   const cookies = [...text.matchAll(new RegExp(`System\\.Net\\.Cookie\\((${PS_STRING}),\\s*(${PS_STRING})`, 'g'))]
     .map(m => `${psString(m[1])}=${psString(m[2])}`);
   if (cookies.length) add(header('Cookie', cookies.join('; ')));
-  const block = /-Headers\s*@\{([\s\S]*?)\n\}/.exec(text)?.[1] ?? '';
-  for (const m of block.matchAll(new RegExp(`(${PS_STRING})\\s*=\\s*(${PS_STRING})`, 'g'))) add(header(psString(m[1]), psString(m[2])));
+  // DevTools writes the block over several lines and closes it on a line of its
+  // own; by hand it is often one line: -Headers @{ Authorization = 'Bearer x'; "X-A" = "1" }
+  const block = (/-Headers\s*@\{([\s\S]*?)\n\}/.exec(text) ?? /-Headers\s*@\{([\s\S]*?)\}/.exec(text))?.[1] ?? '';
+  const pair = new RegExp(String.raw`(${PS_STRING}|[A-Za-z_][\w-]*)\s*=\s*(${PS_STRING})`, 'g');
+  for (const m of block.matchAll(pair)) add(header(/^["']/.test(m[1]) ? psString(m[1]) : m[1], psString(m[2])));
   const url = new RegExp(`-Uri\\s+(${PS_STRING})`).exec(text)?.[1];
   return { url: url ? psString(url) : undefined, headers };
 }
@@ -166,11 +190,15 @@ function fromLines(text: string): PasteResult {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (line === '' || /^[A-Z]+ \S+ HTTP\/[\d.]+$/.test(line) || /^HTTP\/[\d.]+ /.test(line)) continue;
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(line)) continue; // a URL, not "Name: value"
     const colon = line.indexOf(':', line.startsWith(':') ? 1 : 0);
     if (colon < 0) continue;
     let value = line.slice(colon + 1);
-    // The DevTools headers pane copies as "Name:" on one line and the value on the next.
-    if (value.trim() === '' && lines[i + 1] !== undefined && !lines[i + 1].includes(': ')) value = lines[++i];
+    // The DevTools headers pane copies as "Name:" on one line and the value on the
+    // next. The next line is a value unless it starts a header itself (a URL value
+    // like https://... doesn't).
+    const next = lines[i + 1];
+    if (value.trim() === '' && next !== undefined && next !== '' && !/^:?[!#$%&'*+\-.^_`|~0-9A-Za-z]+:(?!\/\/)/.test(next)) value = lines[++i];
     const h = header(line.slice(0, colon), value);
     if (h) headers.push(h);
   }

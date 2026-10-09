@@ -61,9 +61,12 @@ export async function automationChecks({ page, port }, { extId, base, saw }, che
   // A web page must not be able to set headers through the page.
   await visit('/evil-start');
   const tryFrom = async (how, target) => {
-    await page.evaluate(`(() => { ${how === 'iframe'
-      ? `const f = document.createElement('iframe'); f.src = ${JSON.stringify(target)}; document.body.append(f);`
-      : `location.href = ${JSON.stringify(target)};`} })()`).catch(() => {});
+    const js = {
+      iframe: `const f = document.createElement('iframe'); f.src = ${JSON.stringify(target)}; document.body.append(f);`,
+      'navigate-link': `const a = document.createElement('a'); a.href = ${JSON.stringify(target)}; a.textContent = 'x'; document.body.append(a); a.click();`,
+      navigate: `location.href = ${JSON.stringify(target)};`,
+    }[how];
+    await page.evaluate(`(() => { ${js} })()`).catch(() => {});
     await sleep(1500);
     const seen = await visit('/evil-check');
     await visit('/evil-start');
@@ -73,7 +76,9 @@ export async function automationChecks({ page, port }, { extId, base, saw }, che
     direct: await tryFrom('navigate', `chrome-extension://${ID}/automation.html?X-Evil=1`),
     iframe: await tryFrom('iframe', `chrome-extension://${ID}/automation.html?X-Evil=2`),
     viaModheader: await tryFrom('navigate', 'https://webdriver.modheader.com/add?X-Evil=3'),
+    viaModheaderHttp: await tryFrom('navigate', 'http://webdriver.modheader.com/load?profile=%5B%7B%22headers%22%3A%5B%7B%22name%22%3A%22X-Evil%22%2C%22value%22%3A%225%22%7D%5D%7D%5D'),
     viaModheaderIframe: await tryFrom('iframe', 'https://webdriver.modheader.com/add?X-Evil=4'),
+    viaLinkClick: await tryFrom('navigate-link', 'http://webdriver.modheader.com/add?X-Evil=6'),
   };
   check('automation: web pages cannot reach the page', Object.values(evil).every(v => v === null), JSON.stringify(evil));
   await go(`chrome-extension://${ID}/automation.html?@clear`);

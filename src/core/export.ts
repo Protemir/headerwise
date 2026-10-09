@@ -90,10 +90,15 @@ export function importProfiles(text: string): ImportResult {
 
   const d = data as { version?: unknown; profiles?: unknown };
   const warnings: string[] = [];
-  if (d.version !== 1) warnings.push(`This file is from a newer Headerwise (format version ${String(d.version)}); some settings may be missing.`);
+  if (typeof d.version === 'number' && d.version > 1) warnings.push(`This file is from a newer Headerwise (format version ${d.version}); some settings may be missing.`);
   const profiles = (Array.isArray(d.profiles) ? d.profiles : []).map(profile).filter((p): p is Profile => p !== null);
-  const emptied = profiles.flatMap(p => [...p.requestHeaders, ...p.responseHeaders].filter(h => h.secret && h.value === '' && h.op !== 'remove').map(h => `"${p.title}" → ${h.name}`));
-  if (emptied.length) warnings.push(`Secret values were not in the file, fill them in: ${emptied.join(', ')}.`);
+  // An export without secrets has them empty. Switched on, an empty Authorization
+  // or Cookie would be sent everywhere and log the user out, so they come in off.
+  const emptied = profiles.flatMap(p => [...p.requestHeaders, ...p.responseHeaders]
+    .filter(h => h.secret && h.value === '' && h.op !== 'remove')
+    .map(h => { const was = h.enabled; h.enabled = false; return was ? `"${p.title}" → ${h.name}` : ''; })
+    .filter(Boolean));
+  if (emptied.length) warnings.push(`Secret values were not in the file, so these headers are switched off until you fill them in: ${emptied.join(', ')}.`);
   if (profiles.length === 0) warnings.push('No profiles found in the file.');
   return { profiles, warnings };
 }

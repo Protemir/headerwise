@@ -1,5 +1,6 @@
 import { unknownVariables } from './variables.ts';
-import { newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type Redirect, type UrlFilter } from './model.ts';
+import { APPENDABLE_REQUEST_HEADERS } from './dnr.ts';
+import { newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type HeaderOp, type Profile, type Redirect, type UrlFilter } from './model.ts';
 
 /*
  * ModHeader export format, checked against the 7.0.18 export code (as ported in
@@ -73,8 +74,15 @@ const NARROWING = new Set([
 ]);
 
 // ModHeader's "URL replacements" are redirects: the regex in name, the replacement in value.
+// Exports are edited by hand and come from many ModHeader versions: lists may hold
+// nulls, single values may stand where arrays belong.
+const objs = <T>(v: unknown): T[] => (Array.isArray(v) ? v.filter(x => x && typeof x === 'object') : []) as T[];
+const many = (v: unknown): unknown[] => (Array.isArray(v) ? v : v === undefined || v === null ? [] : [v]);
+const asText = (v: unknown): string => (typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '');
+const cap = (v: unknown): string => { const t = asText(v); return t ? t[0].toUpperCase() + t.slice(1).toLowerCase() : ''; };
+
 function redirectsOf(list: MhHeader[] | undefined): Redirect[] {
-  return (list ?? [])
+  return objs<MhHeader>(list)
     .filter(r => typeof r?.name === 'string' && r.name.trim() !== '')
     .map(r => ({ id: newId(), enabled: r.enabled !== false, from: r.name!.trim(), to: r.value ?? '', isRegex: true }));
 }
@@ -89,12 +97,12 @@ function cookieRules(p: MhProfile, title: string, warnings: string[]): { request
   const request: HeaderMod[] = [];
   const response: HeaderMod[] = [];
   let skipped = 0;
-  for (const c of p.cookieHeaders ?? []) {
+  for (const c of objs<MhCookie>(p.cookieHeaders)) {
     if (typeof c?.name !== 'string' || c.name.trim() === '') continue;
     if (c.regexEnabled || !c.value) { skipped++; continue; }
     request.push({ id: newId(), enabled: c.enabled !== false, name: 'Cookie', value: `${c.name.trim()}=${c.value}`, op: 'append' });
   }
-  for (const c of p.setCookieHeaders ?? []) {
+  for (const c of objs<MhCookie>(p.setCookieHeaders)) {
     if (typeof c?.name !== 'string' || c.name.trim() === '') continue;
     if (c.regexEnabled) { skipped++; continue; }
     const parts = [`${c.name.trim()}=${c.value ?? ''}`];
@@ -103,8 +111,8 @@ function cookieRules(p: MhProfile, title: string, warnings: string[]): { request
     if (c.path) parts.push(`Path=${c.path}`);
     if (c.secure) parts.push('Secure');
     if (c.httpOnly) parts.push('HttpOnly');
-    if (c.sameSite) parts.push(`SameSite=${c.sameSite[0].toUpperCase()}${c.sameSite.slice(1).toLowerCase()}`);
-    if (c.priority) parts.push(`Priority=${c.priority[0].toUpperCase()}${c.priority.slice(1).toLowerCase()}`);
+    if (cap(c.sameSite)) parts.push(`SameSite=${cap(c.sameSite)}`);
+    if (cap(c.priority)) parts.push(`Priority=${cap(c.priority)}`);
     response.push({ id: newId(), enabled: c.enabled !== false, name: 'Set-Cookie', value: parts.join('; '), op: 'append' });
   }
   if (request.length) warnings.push(`"${title}": request cookies are added to the Cookie header, so a cookie the site set with the same name is still sent too.`);
@@ -120,29 +128,37 @@ function hasItems(v: unknown): boolean {
   return Array.isArray(v) && v.some(x => x && typeof x === 'object' && (x as { enabled?: boolean }).enabled !== false);
 }
 
-function headers(list: MhHeader[] | undefined, profile: MhProfile): HeaderMod[] {
+function headers(list: MhHeader[] | undefined, profile: MhProfile, direction: 'request' | 'response', title: string, warnings: string[]): HeaderMod[] {
   const out: HeaderMod[] = [];
-  for (const h of list ?? []) {
-    if (typeof h?.name !== 'string' || h.name.trim() === '') continue;
-    const value = typeof h.value === 'string' ? h.value : '';
+  const setInstead: string[] = [];
+  for (const h of objs<MhHeader>(list)) {
+    if (typeof h.name !== 'string' || h.name.trim() === '') continue;
+    const value = asText(h.value);
     const sendEmpty = h.sendEmptyHeader ?? profile.sendEmptyHeader ?? false;
-    const op = value === '' && !sendEmpty ? 'remove' : isAppend(h.appendMode ?? profile.appendMode) ? 'append' : 'set';
+    let op: HeaderOp = value === '' && !sendEmpty ? 'remove' : isAppend(h.appendMode ?? profile.appendMode) ? 'append' : 'set';
+    // Chrome appends only to a few request headers. For the rest (custom ones,
+    // usually not there to begin with) "set" does what the user saw in ModHeader.
+    if (op === 'append' && direction === 'request' && !APPENDABLE_REQUEST_HEADERS.has(h.name.trim().toLowerCase())) {
+      op = 'set';
+      setInstead.push(h.name.trim());
+    }
     out.push({
       id: newId(),
       enabled: h.enabled !== false,
       name: h.name.trim(),
       value,
       op,
-      ...(h.comment ? { comment: h.comment } : {}),
+      ...(typeof h.comment === 'string' && h.comment ? { comment: h.comment } : {}),
     });
   }
+  if (setInstead.length) warnings.push(`"${title}": Chrome can't append to ${setInstead.join(', ')}, so ${setInstead.length === 1 ? 'it is' : 'they are'} set instead.`);
   return out;
 }
 
 // reqCookieAppend adds name=value to the Cookie header, which is what Chrome's
 // append on Cookie does.
 function cookieAppends(list: MhHeader[] | undefined): HeaderMod[] {
-  return (list ?? [])
+  return objs<MhHeader>(list)
     .filter(c => typeof c?.name === 'string' && c.name.trim() !== '')
     .map(c => ({ id: newId(), enabled: c.enabled !== false, name: 'Cookie', value: `${c.name!.trim()}=${c.value ?? ''}`, op: 'append' as const }));
 }
@@ -170,10 +186,10 @@ function parse(text: string): { list?: MhProfile[]; error?: string } {
   } catch {
     return { error: 'Not valid JSON.' };
   }
-  if (Array.isArray(data)) return { list: data.filter(p => p && typeof p === 'object') as MhProfile[] };
+  if (Array.isArray(data)) return { list: objs<MhProfile>(data) };
   if (data && typeof data === 'object') {
     const wrapped = (data as { profiles?: unknown }).profiles;
-    return { list: Array.isArray(wrapped) ? wrapped as MhProfile[] : [data as MhProfile] };
+    return { list: Array.isArray(wrapped) ? objs<MhProfile>(wrapped) : [data as MhProfile] };
   }
   return { error: 'Unexpected format: expected a ModHeader profile export.' };
 }
@@ -185,29 +201,29 @@ export function importModHeader(text: string, { active = 0 }: { active?: number 
   if (!list) return { profiles: [], warnings: [error!] };
 
   const profiles = list.map((p, i): Profile => {
-    const title = p.title?.trim() || p.shortTitle?.trim() || `Imported ${i + 1}`;
+    const title = asText(p.title).trim() || asText(p.shortTitle).trim() || `Imported ${i + 1}`;
     const filters: UrlFilter[] = [];
     const skipped: string[] = [];
     let narrowingSkipped = false;
     const types: string[] = [];
 
-    for (const f of p.filters ?? []) {
+    for (const f of objs<MhUrlFilter>(p.filters)) {
       if (f.type === 'excludeUrls') { const x = urlFilter(f, 'exclude'); if (x) filters.push(x); }
-      else if (f.type === 'types') { if (f.enabled !== false) types.push(...(f.resourceType ?? [])); }
+      else if (f.type === 'types') { if (f.enabled !== false) types.push(...many(f.resourceType).map(asText)); }
       else { const x = urlFilter(f, 'include'); if (x) filters.push(x); }
     }
-    for (const f of p.urlFilters ?? []) { const x = urlFilter(f, 'include'); if (x) filters.push(x); }
-    for (const f of p.excludeUrlFilters ?? []) { const x = urlFilter(f, 'exclude'); if (x) filters.push(x); }
-    for (const f of p.excludeRequestDomainFilters ?? []) {
+    for (const f of objs<MhUrlFilter>(p.urlFilters)) { const x = urlFilter(f, 'include'); if (x) filters.push(x); }
+    for (const f of objs<MhUrlFilter>(p.excludeUrlFilters)) { const x = urlFilter(f, 'exclude'); if (x) filters.push(x); }
+    for (const f of objs<MhDomainFilter>(p.excludeRequestDomainFilters)) {
       if (typeof f?.domain === 'string' && f.domain.trim() !== '') {
         filters.push({ id: newId(), enabled: f.enabled !== false, kind: 'exclude', pattern: f.domain.trim(), isRegex: false });
       }
     }
 
     // Initiator, resource type and method filters map onto Chrome's own conditions.
-    const initiators = (p.initiatorDomainFilters ?? []).filter(f => f?.enabled !== false && typeof f?.domain === 'string' && f.domain.trim()).map(f => f.domain!.trim().toLowerCase());
-    for (const f of p.resourceFilters ?? []) if (f?.enabled !== false) types.push(...(f?.resourceType ?? []));
-    const methods = (p.requestMethodFilters ?? []).filter(f => f?.enabled !== false).flatMap(f => f?.methods ?? []).map(m => String(m).toLowerCase());
+    const initiators = objs<MhDomainFilter>(p.initiatorDomainFilters).filter(f => f?.enabled !== false && typeof f?.domain === 'string' && f.domain.trim()).map(f => f.domain!.trim().toLowerCase());
+    for (const f of objs<{ enabled?: boolean; resourceType?: unknown }>(p.resourceFilters)) if (f.enabled !== false) types.push(...many(f.resourceType).map(asText));
+    const methods = objs<{ enabled?: boolean; methods?: unknown }>(p.requestMethodFilters).filter(f => f.enabled !== false).flatMap(f => many(f.methods)).map(m => asText(m).toLowerCase());
     const known = new Set(RESOURCE_TYPES.map(t => t.id));
     const unknownTypes = [...new Set(types.filter(t => !known.has(t)))];
     if (unknownTypes.length) warnings.push(`"${title}": resource types ${unknownTypes.join(', ')} are not supported, the rest is kept.`);
@@ -225,9 +241,11 @@ export function importModHeader(text: string, { active = 0 }: { active?: number 
     if (narrowingSkipped) warnings.push(`"${title}" is imported switched off: without those filters it would apply to more requests than in ModHeader.`);
 
     const cookies = cookieRules(p, title, warnings);
-    const requestHeaders = [...headers(p.headers, p), ...cookieAppends(p.reqCookieAppend), ...cookies.request];
-    const responseHeaders = [...headers(p.respHeaders, p), ...cookies.response];
+    const requestHeaders = [...headers(p.headers, p, 'request', title, warnings), ...cookieAppends(p.reqCookieAppend), ...cookies.request];
+    const responseHeaders = [...headers(p.respHeaders, p, 'response', title, warnings), ...cookies.response];
     const redirects = redirectsOf(p.urlReplacements);
+    const blankTargets = redirects.filter(r => r.to.trim() === '').length;
+    if (blankTargets) warnings.push(`"${title}": ${blankTargets} URL replacement${blankTargets === 1 ? ' has' : 's have'} nothing to replace with, so ${blankTargets === 1 ? 'it does' : 'they do'} nothing until you fill in where to go.`);
     const unknown = [...new Set([...requestHeaders, ...responseHeaders].flatMap(h => unknownVariables(h.value)))];
     if (unknown.length) {
       warnings.push(`"${title}": ${unknown.map(n => `{{${n}}}`).join(', ')} is not a Headerwise variable and will be sent as plain text.`);

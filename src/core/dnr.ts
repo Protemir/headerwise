@@ -1,4 +1,5 @@
 import { unknownVariables } from './variables.ts';
+import { urlFilterRegExp } from './explain.ts';
 import { activeRedirects, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type State } from './model.ts';
 
 /**
@@ -70,6 +71,47 @@ export const MAX_REGEX_RULES = 1000;
 const TOKEN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
 const DOMAIN = /^(?:[a-z0-9-]+\.)*[a-z0-9-]+$/i;
 
+/**
+ * A domain as Chrome's domain lists want it, from what people type:
+ * "https://App.Example.com:8080/path" or "*.example.com" -> "app.example.com".
+ * Non-ASCII names become punycode. Undefined if it isn't a domain at all.
+ */
+export function normalizeDomain(raw: string): string | undefined {
+  let d = raw.trim().toLowerCase()
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//, '')
+    .replace(/[/?#].*$/, '')
+    .replace(/:\d*$/, '')
+    .replace(/^\*\./, '')
+    .replace(/\.$/, '');
+  if (/[^\x00-\x7f]/.test(d)) {
+    try { d = new URL(`http://${d}`).hostname; } catch { return undefined; }
+  }
+  return d !== '' && DOMAIN.test(d) ? d : undefined;
+}
+
+/** A plain "never on" pattern that means a site (and its subdomains), not part of a URL. */
+export function isDomainPattern(pattern: string): boolean {
+  return DOMAIN.test(pattern) && (pattern.includes('.') || pattern.toLowerCase() === 'localhost');
+}
+
+/**
+ * Chrome rejects a urlFilter with non-ASCII characters or starting with "||*",
+ * and one rejected rule fails every profile's rules. Fixes what has an obvious
+ * meaning ("||*.example.com^" -> "||example.com^", an international domain ->
+ * punycode, other text -> percent-encoded as in a URL); undefined if not fixable.
+ */
+export function fixUrlFilter(pattern: string): string | undefined {
+  let p = pattern.trim();
+  if (p.startsWith('||*.')) p = `||${p.slice(4)}`;
+  if (p.startsWith('||*')) return undefined;
+  if (!/[^\x00-\x7f]/.test(p)) return p;
+  if (p.startsWith('||')) {
+    const host = /^[^/:?^*|]*/.exec(p.slice(2))![0];
+    try { p = `||${new URL(`http://${host}`).hostname}${p.slice(2 + host.length)}`; } catch { return undefined; }
+  }
+  return p.replace(/[^\x00-\x7f]+/g, s => encodeURIComponent(s));
+}
+
 function convertHeaders(
   headers: HeaderMod[],
   direction: 'request' | 'response',
@@ -119,12 +161,31 @@ interface ProfileParts {
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** Number of capturing groups in a regex: "(" not escaped and not "(?". */
-function groupCount(pattern: string): number {
+/**
+ * Number of capturing groups in an RE2 regex: "(" that isn't escaped, isn't
+ * inside [...], and isn't "(?:", "(?i)" and the like; named groups "(?P<n>"
+ * and "(?<n>" capture too.
+ */
+export function groupCount(pattern: string): number {
   let n = 0;
+  let inClass = false;
   for (let i = 0; i < pattern.length; i++) {
-    if (pattern[i] === '\\') { i++; continue; }
-    if (pattern[i] === '(' && pattern[i + 1] !== '?') n++;
+    const c = pattern[i];
+    if (c === '\\') { i++; continue; }
+    if (inClass) {
+      if (c === ']') inClass = false;
+      continue;
+    }
+    if (c === '[') {
+      inClass = true;
+      if (pattern[i + 1] === '^') i++;
+      if (pattern[i + 1] === ']') i++; // "[]a]" and "[^]a]": a leading ] is literal
+      continue;
+    }
+    if (c !== '(') continue;
+    if (pattern[i + 1] !== '?') n++;
+    else if (pattern[i + 2] === 'P' && pattern[i + 3] === '<') n++;
+    else if (pattern[i + 2] === '<' && pattern[i + 3] !== '=' && pattern[i + 3] !== '!') n++;
   }
   return n;
 }
@@ -145,10 +206,14 @@ function convertRedirects(p: Profile, warnings: string[]): ProfileParts['redirec
       warnings.push(`${where}: too many groups in the pattern (Chrome allows 7), skipped.`);
       continue;
     }
-    let check: RegExp | undefined;
-    try { check = new RegExp(pattern); } catch { /* left to Chrome's own regex check */ }
     const to = r.to.trim();
-    if (check && to !== '' && check.test(to)) {
+    // Both fields first: while "to" is still empty, a half-typed "from" would
+    // cut that text out of every address.
+    if (to === '') continue;
+    let check: RegExp | undefined;
+    // Chrome matches regexFilter case-insensitively.
+    try { check = new RegExp(pattern, 'i'); } catch { /* left to Chrome's own regex check */ }
+    if (check && check.test(to)) {
       warnings.push(`${where}: the new address would match again and redirect in a loop, skipped.`);
       continue;
     }
@@ -163,21 +228,31 @@ function convertRedirects(p: Profile, warnings: string[]): ProfileParts['redirec
 // Chrome can't redirect these.
 const NO_REDIRECT_TYPES = ['websocket', 'webtransport'];
 
-function domains(list: string[] | undefined, what: string, title: string, warnings: string[]): string[] {
+/**
+ * A profile's site lists as Chrome wants them. An entry that isn't a domain
+ * can't just be dropped: without it "only from" would cover every site and
+ * "never from" would let in the one it was meant to keep out. So it turns the
+ * profile off (undefined), with a warning saying which entry.
+ */
+function domains(list: string[] | undefined, what: string, title: string, warnings: string[]): string[] | undefined {
   const out: string[] = [];
   for (const raw of list ?? []) {
-    const d = raw.trim().toLowerCase();
-    if (d === '') continue;
-    if (DOMAIN.test(d)) out.push(d);
-    else warnings.push(`"${title}": "${raw}" in ${what} is not a domain like example.com, skipped.`);
+    if (raw.trim() === '') continue;
+    const d = normalizeDomain(raw);
+    if (d === undefined) {
+      warnings.push(`"${title}": "${raw}" in ${what} is not a site like example.com, so this profile is off.`);
+      return undefined;
+    }
+    if (!out.includes(d)) out.push(d);
   }
   return out;
 }
 
-/** Tab, initiator, method and resource type limits, shared by all of a profile's rules. */
+/** Tab, initiator, method and resource type limits, shared by all of a profile's rules. Undefined: the profile is off. */
 function profileScope(p: Profile, warnings: string[]) {
   const initiators = domains(p.initiatorDomains, '"only from sites"', p.title, warnings);
   const notInitiators = domains(p.excludedInitiatorDomains, '"never from sites"', p.title, warnings);
+  if (!initiators || !notInitiators) return undefined;
   const known = new Set(RESOURCE_TYPES.map(t => t.id));
   const types = (p.resourceTypes ?? []).filter(t => known.has(t));
   const methods = (p.requestMethods ?? []).map(m => m.toLowerCase()).filter(m => REQUEST_METHODS.includes(m));
@@ -190,30 +265,56 @@ function profileScope(p: Profile, warnings: string[]) {
   };
 }
 
-function profileConditions(p: Profile, warnings: string[]): Pick<ProfileParts, 'conditions' | 'allowConditions' | 'base'> {
+/** Undefined: the profile is off (a warning says why). */
+function profileConditions(p: Profile, warnings: string[], combineIncludes: boolean): Pick<ProfileParts, 'conditions' | 'allowConditions' | 'base'> | undefined {
   const excludedDomains: string[] = [];
   const allowConditions: DnrRule['condition'][] = [];
   // The "never on" allow rules get the same limits as the headers, so they can't
   // switch off other profiles outside this profile's own scope.
   const scope = profileScope(p, warnings);
+  if (!scope) return undefined;
   for (const f of p.filters) {
     const pattern = f.pattern.trim();
     if (!f.enabled || f.kind !== 'exclude' || pattern === '') continue;
     if (f.isRegex) allowConditions.push({ regexFilter: pattern, ...scope });
-    else if (DOMAIN.test(pattern)) excludedDomains.push(pattern.toLowerCase());
-    else allowConditions.push({ urlFilter: pattern, ...scope });
+    else if (isDomainPattern(pattern)) excludedDomains.push(pattern.toLowerCase());
+    else {
+      const urlFilter = fixUrlFilter(pattern);
+      if (urlFilter === undefined) {
+        warnings.push(`"${p.title}": "never on" pattern "${pattern}" is not something Chrome can use, so this profile is off.`);
+        return undefined;
+      }
+      allowConditions.push({ urlFilter, ...scope });
+    }
   }
   const base = {
     ...scope,
     ...(excludedDomains.length ? { excludedRequestDomains: excludedDomains } : {}),
   };
 
-  const includes = p.filters.filter(f => f.enabled && f.kind === 'include' && f.pattern.trim() !== '');
-  const conditions = includes.length === 0
-    ? [{ ...base }]
-    : includes.map(f => f.isRegex
-      ? { ...base, regexFilter: f.pattern.trim() }
-      : { ...base, urlFilter: f.pattern.trim() });
+  const includes: { regexFilter?: string; urlFilter?: string }[] = [];
+  for (const f of p.filters) {
+    const pattern = f.pattern.trim();
+    if (!f.enabled || f.kind !== 'include' || pattern === '') continue;
+    if (f.isRegex) { includes.push({ regexFilter: pattern }); continue; }
+    const urlFilter = fixUrlFilter(pattern);
+    if (urlFilter === undefined) warnings.push(`"${p.title}": "only on" pattern "${pattern}" is not something Chrome can use, skipped.`);
+    else includes.push({ urlFilter });
+  }
+  const hadIncludes = p.filters.some(f => f.enabled && f.kind === 'include' && f.pattern.trim() !== '');
+  if (hadIncludes && includes.length === 0) {
+    // Not "everywhere": the user asked for some places only.
+    warnings.push(`"${p.title}": none of its "only on" patterns can be used, so this profile is off.`);
+    return undefined;
+  }
+  let conditions: DnrRule['condition'][];
+  if (includes.length === 0) conditions = [{ ...base }];
+  else if (combineIncludes && includes.length > 1) {
+    // One rule per filter would apply an "append" twice where two filters match
+    // the same URL, so here the filters become one regex.
+    const parts = includes.map(i => i.regexFilter ?? urlFilterRegExp(i.urlFilter!).source);
+    conditions = [{ ...base, regexFilter: parts.map(s => `(?:${s})`).join('|') }];
+  } else conditions = includes.map(i => ({ ...base, ...i }));
   return { conditions, allowConditions, base };
 }
 
@@ -250,7 +351,10 @@ export function toDnrRules(state: State): ConversionResult {
     const responseHeaders = convertHeaders(p.responseHeaders, 'response', p.title, warnings);
     const redirects = convertRedirects(p, warnings);
     if (requestHeaders.length === 0 && responseHeaders.length === 0 && redirects.length === 0) return;
-    parts.push({ id: p.id, title: p.title, index, requestHeaders, responseHeaders, redirects, ...profileConditions(p, warnings) });
+    const appends = [...requestHeaders, ...responseHeaders].some(h => h.operation === 'append');
+    const conditions = profileConditions(p, warnings, appends);
+    if (!conditions) return;
+    parts.push({ id: p.id, title: p.title, index, requestHeaders, responseHeaders, redirects, ...conditions });
   });
 
   const plain = parts.filter(x => x.allowConditions.length === 0);
