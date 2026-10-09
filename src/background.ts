@@ -47,6 +47,10 @@ chrome.commands.onCommand.addListener(command => { engine.command(command); });
 
 chrome.runtime.onInstalled.addListener(details => {
   engine.queueSync();
+  // When Headerwise came into use, for the "Rate Headerwise" link two weeks later.
+  chrome.storage.local.get('meta').then(({ meta }) => {
+    if (!meta?.installedAt) chrome.storage.local.set({ meta: { ...meta, installedAt: Date.now() } });
+  });
   // First install only (not updates): first steps and the ModHeader move.
   if (details.reason === 'install') chrome.tabs.create({ url: chrome.runtime.getURL('src/migrate/index.html?welcome=1') });
 });

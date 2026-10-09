@@ -5,7 +5,7 @@ import { exportFileName, exportProfiles, importProfiles } from '../core/export.t
 import { VARIABLES } from '../core/variables.ts';
 import { loadState, saveState } from '../core/storage.ts';
 import type { RuleInfo } from '../core/dnr.ts';
-import { tabReport, type MatchedRule, type TabLine } from '../core/explain.ts';
+import { scopeSummary, tabReport, type MatchedRule, type TabLine } from '../core/explain.ts';
 import { parsePasted } from '../core/paste.ts';
 import { addHeaders, applyPreset, PRESETS, REQUEST_HEADER_NAMES, RESPONSE_HEADER_NAMES } from '../core/presets.ts';
 
@@ -148,6 +148,58 @@ function onPreset() {
   if (preset) applyPreset(profile.value, preset);
   presetChoice.value = '';
 }
+
+// "Rate Headerwise": once, two weeks after install; never again once clicked or closed.
+const RATE_URL = 'https://chromewebstore.google.com/detail/jedoaeaapdofoldmkacjbpojbnpapkna/reviews';
+const ISSUES_URL = 'https://github.com/Protemir/headerwise/issues/new';
+const showRate = ref(false);
+onMounted(async () => {
+  const { meta } = await chrome.storage.local.get('meta');
+  showRate.value = !!meta?.installedAt && Date.now() - meta.installedAt > 14 * 24 * 3600 * 1000 && !meta.rateDone;
+});
+async function rateDone(open: boolean) {
+  if (open) chrome.tabs.create({ url: RATE_URL });
+  showRate.value = false;
+  const { meta } = await chrome.storage.local.get('meta');
+  await chrome.storage.local.set({ meta: { ...meta, rateDone: true } });
+}
+
+// Copy a summary for a bug report. There is no telemetry, so this is how
+// problems reach us: header names and settings, no values, profile names or URLs.
+const diagnosticsDone = ref('');
+async function copyDiagnostics() {
+  const dnr = chrome.declarativeNetRequest;
+  const [dynamic, session, perms] = await Promise.all([dnr.getDynamicRules(), dnr.getSessionRules(), chrome.permissions.getAll()]);
+  const names = (list: HeaderMod[]) => list.filter(h => h.name.trim()).map(h => `${h.enabled ? '' : '(off) '}${h.op} ${h.name.trim()}`).join(', ');
+  const s = state.value;
+  const text = [
+    `Headerwise ${chrome.runtime.getManifest().version}`,
+    `Browser: ${navigator.userAgent}`,
+    `Paused: ${s.paused ? 'yes' : 'no'}. Site access: ${perms.origins?.length ? perms.origins.join(', ') : 'none'}`,
+    `Rules in the browser: ${dynamic.length} dynamic, ${session.length} session`,
+    `Profiles (${s.profiles.length}):`,
+    ...s.profiles.map((p, i) => [
+      `  ${i + 1}. ${p.enabled ? 'on' : 'off'}${p.tab ? ', only one tab' : ''}`,
+      `request [${names(p.requestHeaders)}]`,
+      `response [${names(p.responseHeaders)}]`,
+      `${p.redirects?.filter(r => r.enabled).length ?? 0} redirects`,
+      `filters [${p.filters.map(f => `${f.enabled ? '' : '(off) '}${f.kind === 'include' ? 'only on' : 'never on'}${f.isRegex ? ' regex' : ''}`).join(', ')}]`,
+      ...(scopeSummary(p) ? [scopeSummary(p)] : []),
+    ].join('; ')),
+    'Warnings:',
+    ...(warnings.value.length ? warnings.value.map(w => `  ${w}`) : ['  none']),
+  ].join('\n');
+  await navigator.clipboard.writeText(text);
+  diagnosticsDone.value = 'Copied. Warnings are included as they are: check them before posting.';
+}
+function reportProblem() {
+  chrome.tabs.create({ url: ISSUES_URL });
+}
+
+// A profile with nothing in it yet gets a hint on where to start.
+const isBlank = computed(() => !!profile.value
+  && [...profile.value.requestHeaders, ...profile.value.responseHeaders].every(h => h.name.trim() === '')
+  && !profile.value.redirects?.length);
 
 function addRedirect() {
   (profile.value.redirects ??= []).push({ id: newId(), enabled: true, from: '', to: '', isRegex: false });
@@ -333,8 +385,8 @@ async function importFile(e: Event) {
 
     <section v-if="profile">
       <div class="row">
-        <input type="checkbox" v-model="profile.enabled" title="Profile on/off" />
-        <input class="grow" v-model="profile.title" placeholder="Profile name" />
+        <input type="checkbox" v-model="profile.enabled" title="Profile on/off" aria-label="Profile on or off" />
+        <input class="grow" v-model="profile.title" placeholder="Profile name" aria-label="Profile name" />
         <span v-if="profile.tab" class="chip" :title="profile.tab.id === tab?.id ? 'Applies only in this tab' : 'Applies only in another tab'">
           only in {{ profile.tab.id === tab?.id ? 'this tab' : 'another tab' }} · {{ profile.tab.host }}
           <button class="x" title="Apply in all tabs again" @click="unbindTab">×</button>
@@ -346,19 +398,20 @@ async function importFile(e: Event) {
 
       <h3>Request headers</h3>
       <div v-for="(h, i) in profile.requestHeaders" :key="h.id" class="row">
-        <input type="checkbox" v-model="h.enabled" />
-        <select v-model="h.op">
+        <input type="checkbox" v-model="h.enabled" aria-label="Header on or off" />
+        <select v-model="h.op" aria-label="What to do with the header">
           <option>set</option>
           <option>append</option>
           <option>remove</option>
         </select>
-        <input v-model="h.name" placeholder="Name" list="request-names" />
-        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" placeholder="Value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
+        <input v-model="h.name" placeholder="Name" list="request-names" aria-label="Request header name" />
+        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" placeholder="Value" aria-label="Header value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
         <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? 'Hide value' : 'Show value'" @click="toggleReveal(h)">👁</button>
         <span v-else class="icon-space"></span>
         <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? 'Secret: value hidden. Click to show it always' : 'Mark as secret: hide the value'" @click="toggleSecret(h)">🔒</button>
-        <button title="Remove" @click="removeAt(profile.requestHeaders, i)">×</button>
+        <button title="Remove" aria-label="Remove" @click="removeAt(profile.requestHeaders, i)">×</button>
       </div>
+      <p v-if="isBlank" class="dim small-hint">Start here: type a header name and value above, paste a request copied in DevTools, or pick a preset.</p>
       <div class="row">
         <button class="link" @click="addHeader(profile.requestHeaders)">+ request header</button>
         <button class="link" @click="showPaste = !showPaste">Paste from DevTools…</button>
@@ -384,43 +437,43 @@ async function importFile(e: Event) {
 
       <h3>Response headers</h3>
       <div v-for="(h, i) in profile.responseHeaders" :key="h.id" class="row">
-        <input type="checkbox" v-model="h.enabled" />
-        <select v-model="h.op">
+        <input type="checkbox" v-model="h.enabled" aria-label="Header on or off" />
+        <select v-model="h.op" aria-label="What to do with the header">
           <option>set</option>
           <option>append</option>
           <option>remove</option>
         </select>
-        <input v-model="h.name" placeholder="Name" list="response-names" />
-        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" placeholder="Value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
+        <input v-model="h.name" placeholder="Name" list="response-names" aria-label="Response header name" />
+        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" placeholder="Value" aria-label="Header value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
         <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? 'Hide value' : 'Show value'" @click="toggleReveal(h)">👁</button>
         <span v-else class="icon-space"></span>
         <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? 'Secret: value hidden. Click to show it always' : 'Mark as secret: hide the value'" @click="toggleSecret(h)">🔒</button>
-        <button title="Remove" @click="removeAt(profile.responseHeaders, i)">×</button>
+        <button title="Remove" aria-label="Remove" @click="removeAt(profile.responseHeaders, i)">×</button>
       </div>
       <button class="link" @click="addHeader(profile.responseHeaders)">+ response header</button>
 
       <h3>Redirects</h3>
       <div v-for="(r, i) in profile.redirects ?? []" :key="r.id" class="row">
-        <input type="checkbox" v-model="r.enabled" />
-        <input class="grow" v-model="r.from" :placeholder="r.isRegex ? 'regex, e.g. /v(\\d+)/' : 'part of the URL, e.g. api.example.com'" spellcheck="false" />
+        <input type="checkbox" v-model="r.enabled" aria-label="Redirect on or off" />
+        <input class="grow" v-model="r.from" aria-label="Replace this part of the address" :placeholder="r.isRegex ? 'regex, e.g. /v(\\d+)/' : 'part of the URL, e.g. api.example.com'" spellcheck="false" />
         <span class="arrow" aria-hidden="true">→</span>
-        <input class="grow" v-model="r.to" :placeholder="r.isRegex ? 'e.g. /v$1-beta/' : 'e.g. api.staging.example.com'" spellcheck="false" />
+        <input class="grow" v-model="r.to" aria-label="With this" :placeholder="r.isRegex ? 'e.g. /v$1-beta/' : 'e.g. api.staging.example.com'" spellcheck="false" />
         <label class="small"><input type="checkbox" v-model="r.isRegex" /> regex</label>
-        <button title="Remove" @click="removeAt(profile.redirects!, i)">×</button>
+        <button title="Remove" aria-label="Remove" @click="removeAt(profile.redirects!, i)">×</button>
       </div>
       <button class="link" @click="addRedirect">+ redirect</button>
       <p v-if="profile.redirects?.length" class="dim small-hint">Replaces the first match in the address of a request and sends it there. "Only on" filters don't apply to redirects; "never on" and the other limits do.</p>
 
       <h3>Only on / never on</h3>
       <div v-for="(f, i) in profile.filters" :key="f.id" class="row">
-        <input type="checkbox" v-model="f.enabled" />
-        <select v-model="f.kind">
+        <input type="checkbox" v-model="f.enabled" aria-label="Filter on or off" />
+        <select v-model="f.kind" aria-label="Only on or never on">
           <option value="include">only on</option>
           <option value="exclude">never on</option>
         </select>
-        <input class="grow" v-model="f.pattern" :placeholder="filterPlaceholder(f.kind, f.isRegex)" />
+        <input class="grow" v-model="f.pattern" :placeholder="filterPlaceholder(f.kind, f.isRegex)" aria-label="URL pattern" />
         <label class="small"><input type="checkbox" v-model="f.isRegex" /> regex</label>
-        <button title="Remove" @click="removeAt(profile.filters, i)">×</button>
+        <button title="Remove" aria-label="Remove" @click="removeAt(profile.filters, i)">×</button>
       </div>
       <button class="link" @click="addFilter('include')">+ only on…</button>
       <button class="link" @click="addFilter('exclude')">+ never on…</button>
@@ -485,9 +538,17 @@ async function importFile(e: Event) {
     <datalist id="request-names"><option v-for="n in REQUEST_HEADER_NAMES" :key="n" :value="n" /></datalist>
     <datalist id="response-names"><option v-for="n in RESPONSE_HEADER_NAMES" :key="n" :value="n" /></datalist>
 
+    <p v-if="showRate" class="rate">
+      Finding Headerwise useful?
+      <button class="link" @click="rateDone(true)">Rate it in the Chrome Web Store</button>
+      <button class="link x" title="Don't show again" aria-label="Don't show again" @click="rateDone(false)">×</button>
+    </p>
+
     <footer>
       Runs locally. No account, no analytics, nothing is sent anywhere.
       <span v-if="shortcuts.length" class="keys"><br />Shortcuts: <template v-for="(k, i) in shortcuts" :key="k.what">{{ i ? ', ' : '' }}<kbd>{{ k.key }}</kbd> {{ k.what }}</template></span>
+      <br />Something wrong? <button class="link" @click="copyDiagnostics">Copy diagnostics</button> and <button class="link" @click="reportProblem">report a problem</button>.
+      <span v-if="diagnosticsDone" class="note-done"><br />{{ diagnosticsDone }}</span>
     </footer>
   </main>
 </template>

@@ -57,3 +57,6 @@ kbd { font: 10px ui-monospace, Consolas, monospace; border: 1px solid var(--line
 .tabs button[draggable] { cursor: grab; }
 .row input[list] { flex: 0 1 220px; } /* header names: room for Access-Control-Allow-Origin */
 .arrow { opacity: .6; flex: 0 0 auto; }
+.rate { margin: 12px 0 0; font-size: 12px; }
+.rate .x { padding: 0 4px; opacity: .6; }
+.note-done { color: var(--ok); }
