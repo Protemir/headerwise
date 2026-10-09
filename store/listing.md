@@ -41,6 +41,8 @@ WHY NOT JUST DEVTOOLS?
 DevTools is great for looking at headers. It can't add request headers like Authorization to every request, and its overrides only work while DevTools is open in that one tab. Headerwise works in every tab, all the time, until you pause it.
 
 Free, with no limits. Everything listed here is free and will stay free.
+
+Open source (MIT): https://github.com/Protemir/headerwise
 ```
 
 ## Single purpose (Chrome)
