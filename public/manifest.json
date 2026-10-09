@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Headerwise",
+  "version": "0.1.0",
+  "description": "Modify HTTP request and response headers. Runs locally, sends nothing anywhere.",
+  "minimum_chrome_version": "121",
+  "action": { "default_popup": "src/popup/index.html", "default_title": "Headerwise" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["declarativeNetRequest", "storage"],
+  "optional_host_permissions": ["<all_urls>"]
+}

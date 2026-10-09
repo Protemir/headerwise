@@ -1,0 +1,32 @@
+# Headerwise
+
+Change HTTP request and response headers in Chrome and Edge. Set, append or remove
+headers per profile, limit a profile to some URLs or keep it off others, and import
+your old ModHeader profiles.
+
+It runs entirely in your browser. No account, no analytics, no network requests of
+its own. Rules are applied by Chrome itself through `declarativeNetRequest`, so the
+extension never reads the pages you visit.
+
+## Status
+
+Early work in progress, not in the stores yet.
+
+## Develop
+
+```
+npm install
+npm test          # unit tests, plain node --test
+npm run build     # builds the extension into dist/
+```
+
+Then open `chrome://extensions`, turn on Developer mode, click "Load unpacked" and
+pick the `dist` folder. Click the Headerwise icon and allow access to sites.
+
+## How rules map to Chrome
+
+Each enabled profile becomes one `modifyHeaders` rule per "only on" filter (or one
+rule for all URLs if there are none). "Never on" filters with a plain domain become
+`excludedRequestDomains`. The first profile in the list has the highest priority.
+Chrome only allows `append` for a short list of request headers; Headerwise tells
+you when it skips one.
