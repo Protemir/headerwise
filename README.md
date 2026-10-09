@@ -17,8 +17,11 @@ Site: https://protemir.github.io/headerwise/ · Privacy: https://protemir.github
 
 ## Status
 
-Free, and staying free. Being submitted to the Chrome Web Store and Edge Add-ons;
-until then, build it yourself (below). Bugs and requests: GitHub Issues.
+Free, and staying free. In review at the Chrome Web Store (Edge installs it from
+there too). Until it's live, take the zip from the
+[1.0.0 release](https://github.com/Protemir/headerwise/releases/tag/v1.0.0), unzip it and
+"Load unpacked" in `chrome://extensions` with Developer mode on, or build it yourself
+(below). Bugs and requests: GitHub Issues.
 
 ## Develop
 
