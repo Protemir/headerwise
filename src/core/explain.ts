@@ -37,8 +37,7 @@ const DOMAIN = /^(?:[a-z0-9-]+\.)*[a-z0-9-]+$/i;
 export type PageVerdict =
   | { kind: 'applies' }
   | { kind: 'excluded'; pattern: string }
-  | { kind: 'not-included'; patterns: string[] }
-  | { kind: 'other-tab'; host: string } // "only this tab", bound to a different tab;
+  | { kind: 'not-included'; patterns: string[] };
 
 /** Would the profile's filters let it touch the page itself (the main document)? */
 export function pageVerdict(p: Profile, url: string): PageVerdict {
@@ -68,6 +67,7 @@ export type TabLine =
   | { kind: 'applied'; requests: number; skippedBy?: string } // skippedBy: a "never on" that keeps it off part of the tab
   | { kind: 'excluded'; pattern: string }
   | { kind: 'not-included'; patterns: string[] }
+  | { kind: 'other-tab'; host: string } // "only this tab", bound to a different tab
   | { kind: 'waiting' } // should apply, but no requests since the last change
   | { kind: 'off' }
   | { kind: 'empty' };
