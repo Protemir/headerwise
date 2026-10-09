@@ -49,13 +49,16 @@ jobs:
       - run: npm i --no-save --no-audit --no-fund playwright puppeteer selenium-webdriver
       - run: npx playwright install --with-deps chromium
       - run: pip install selenium
+      # Ubuntu 24.04 blocks the user namespaces Chrome's sandbox needs; Playwright
+      # turns the sandbox off itself, Chrome for Testing does not.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: node scripts/automation-smoke/playwright.mjs
         if: success() || failure()
       - run: node scripts/automation-smoke/puppeteer.mjs
         if: success() || failure()
       - run: node scripts/automation-smoke/selenium.mjs
         if: success() || failure()
-      - run: python scripts/automation-smoke/selenium.py
+      - run: python scripts/automation-smoke/selenium_smoke.py
         if: success() || failure()
       - uses: actions/upload-artifact@v4
         if: success() || failure()

@@ -1,4 +1,4 @@
-# Selenium (Python): the snippet from docs/automation.html, checked in CI.
+# Selenium (Python), not named selenium.py so it does not shadow the package: the snippet from docs/automation.html, checked in CI.
 import os, subprocess, sys, time
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
