@@ -225,6 +225,7 @@
             <li>The profile you had selected stays on.</li>
             <li>Exported ModHeader JSON files work too.</li>
             <li>Not ready to install anything? <a href="modheader-export.html">Here is where ModHeader keeps your profiles and how to save them</a>.</li>
+            <li>Used ModHeader in Selenium or Playwright tests? <a href="automation.html">There is a build for that</a>.</li>
           </ul>
         </div>
       </div>
@@ -347,6 +348,10 @@
           <details>
             <summary>How do I move from ModHeader?</summary>
             <p>Click "Move from ModHeader" in the popup. It shows the folder to pick for your browser and reads it in the page. If you have an exported JSON file, use "Import JSON" instead.</p>
+          </details>
+          <details>
+            <summary>Does it work in Selenium, Playwright or Puppeteer?</summary>
+            <p>Yes. A separate build has a fixed id, and your test sets headers by opening one URL, the way ModHeader's test packages did. <a href="automation.html">Setup and examples</a>, checked in CI with all three tools.</p>
           </details>
         </div>
       </div>

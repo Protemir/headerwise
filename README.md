@@ -17,11 +17,15 @@ Site: https://protemir.github.io/headerwise/ · Privacy: https://protemir.github
 
 ModHeader turned off and its Export button gone? [How to get your profiles back](https://protemir.github.io/headerwise/modheader-export.html).
 
+Setting headers in Selenium, Playwright or Puppeteer tests (where `chrome-modheader` used to go)?
+There is an [automation build](https://protemir.github.io/headerwise/automation.html) with a fixed id
+and a URL to set headers from your test.
+
 ## Status
 
 Free, and staying free. In review at the Chrome Web Store (Edge installs it from
 there too). Until it's live, take the zip from the
-[1.0.0 release](https://github.com/Protemir/headerwise/releases/tag/v1.0.0), unzip it and
+[latest release](https://github.com/Protemir/headerwise/releases/latest), unzip it and
 "Load unpacked" in `chrome://extensions` with Developer mode on, or build it yourself
 (below). Bugs and requests: GitHub Issues.
 
@@ -31,8 +35,9 @@ there too). Until it's live, take the zip from the
 npm ci            # exact versions from package-lock.json
 npm test          # unit tests, plain node --test
 npm run build     # builds the extension into dist/
+npm run build:automation # dist-automation/: fixed id, site access, automation.html
 npm run test:live # loads dist/ into a throwaway Chrome profile and checks real requests
-                  # (add -- --browser edge for Edge)
+                  # (add -- --browser edge for Edge; also checks dist-automation/ if built)
 ```
 
 Then open `chrome://extensions`, turn on Developer mode, click "Load unpacked" and

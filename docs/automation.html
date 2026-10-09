@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Set HTTP headers in Selenium, Playwright and Puppeteer · Headerwise</title>
+  <meta name="description" content="A replacement for ModHeader's chrome-modheader and modheader_selenium packages: a Chrome extension build with a fixed id that tests drive through a URL. Works with Selenium, Playwright and Puppeteer." />
+  <link rel="canonical" href="https://protemir.github.io/headerwise/automation.html" />
+  <meta property="og:title" content="Set HTTP headers in Selenium, Playwright and Puppeteer" />
+  <meta property="og:description" content="A replacement for ModHeader in browser tests: one URL sets the headers, the page says when they're in effect." />
+  <meta property="og:image" content="https://protemir.github.io/headerwise/img/og.png" />
+  <meta property="og:type" content="article" />
+  <link rel="icon" href="icon-128.png" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Set HTTP headers in Selenium, Playwright and Puppeteer",
+    "datePublished": "2026-10-09",
+    "dateModified": "2026-10-09",
+    "author": { "@type": "Organization", "name": "Headerwise", "url": "https://protemir.github.io/headerwise/" },
+    "about": "Modifying request and response headers in browser automation with a Chrome extension"
+  }
+  </script>
+  <style>
+    :root { color-scheme: light dark; --bg: #fbfbfc; --fg: #17181c; --muted: #5a6170; --line: #e3e6ec; --accent: #2557d6; --tint: #eef2fb; --warn-bg: #fff4e5; --warn-line: #f0b35a; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #131417; --fg: #ececef; --muted: #a2a8b3; --line: #2b2e35; --accent: #7aa7ff; --tint: #1c2233; --warn-bg: #2a2114; --warn-line: #8a6a2e; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.65 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 28px 16px 64px; }
+    header { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+    header img { width: 30px; height: 30px; }
+    header a { color: inherit; text-decoration: none; font-weight: 600; }
+    h1 { font-size: clamp(28px, 4vw, 38px); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 12px; }
+    h2 { font-size: 23px; margin: 40px 0 10px; letter-spacing: -0.01em; }
+    h3 { font-size: 18px; margin: 24px 0 4px; }
+    .lead { color: var(--muted); font-size: 19px; }
+    a { color: var(--accent); }
+    code, pre { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 14.5px; }
+    code { background: #8881; padding: 1px 5px; border-radius: 5px; }
+    pre { background: var(--tint); padding: 14px 16px; border-radius: 10px; overflow-x: auto; margin: 8px 0 16px; }
+    pre code { background: none; padding: 0; }
+    table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; font-size: 15.5px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; }
+    .table { overflow-x: auto; }
+    .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-line); padding: 12px 16px; border-radius: 8px; margin: 20px 0; }
+    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px; }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <header><img src="icon-128.png" alt="" /><a href="./">Headerwise</a></header>
+
+    <h1>Set HTTP headers in Selenium, Playwright and Puppeteer</h1>
+    <p class="lead">ModHeader's test packages (<code>chrome-modheader</code>, <code>modheader_selenium</code>) shipped an old extension that modern Chrome won't run, and ModHeader itself is gone from the stores. Headerwise has a build for tests: load it, open one URL with the headers you want, and the page tells you when they're in effect.</p>
+
+    <h2>Get it</h2>
+    <pre><code>curl -L -o headerwise-automation.zip https://github.com/Protemir/headerwise/releases/latest/download/headerwise-automation.zip
+unzip headerwise-automation.zip -d headerwise-automation</code></pre>
+    <p>The automation build is the regular extension with three differences: a fixed id, <code>mhlgmcieamjogdlnfjaoeophmdajkkek</code>, so your tests know its URL; access to all sites from the start, since nobody is there to click "Allow"; and no welcome tab. Free and MIT licensed, <a href="https://github.com/Protemir/headerwise">source on GitHub</a>.</p>
+
+    <div class="warn"><b>Chrome 137 and newer ignore <code>--load-extension</code>.</b> Google Chrome dropped the flag; Chrome for Testing and Chromium still have it. Playwright's Chromium and Puppeteer's Chrome for Testing work as they are; Selenium needs <code>browser_version</code> set so it downloads Chrome for Testing (below).</div>
+
+    <h2>Set headers with a URL</h2>
+    <pre><code>chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation.html?X-Env=staging&amp;Authorization=Bearer%20abc</code></pre>
+    <div class="table"><table>
+      <tr><th>In the query</th><th>What it does</th></tr>
+      <tr><td><code>Name=Value</code></td><td>Set a request header. An empty value removes the header.</td></tr>
+      <tr><td><code>res:Name=Value</code></td><td>Set a response header (CORS, CSP, caching…).</td></tr>
+      <tr><td><code>@url=pattern</code></td><td>Only on matching URLs, Chrome's <a href="https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest#property-RuleCondition-urlFilter">urlFilter</a> syntax: <code>||api.example.com^</code>, <code>*://localhost:*/*</code>. Can repeat.</td></tr>
+      <tr><td><code>@clear</code></td><td>No headers at all.</td></tr>
+      <tr><td><code>@import=json</code></td><td>Replace all profiles with a Headerwise or ModHeader JSON export.</td></tr>
+      <tr><td>nothing</td><td>Change nothing, show what's in effect.</td></tr>
+    </table></div>
+    <p>Each call replaces the previous one, so pass all headers in one URL. URL-encode the values (<code>encodeURIComponent</code>, <code>urllib.parse.quote</code>): a bare <code>+</code> turns into a space. When the rules are in the browser, the page sets <code>document.documentElement.dataset.status</code> to <code>ready</code> (or <code>error</code>, with the reason on the page), and the title to "Headerwise: ready". It lists header names, never values, so screenshots and logs don't leak tokens.</p>
+
+    <h2>Playwright</h2>
+    <h3>Node.js</h3>
+    <pre><code>import { chromium } from 'playwright';
+const ext = '/path/to/headerwise-automation';
+const context = await chromium.launchPersistentContext('', {
+  channel: 'chromium', // full Chromium: the headless shell has no extensions
+  args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`],
+});
+const page = await context.newPage();
+await page.goto('chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation.html?X-Env=staging');
+await page.waitForFunction(() =&gt; document.documentElement.dataset.status === 'ready');
+await page.goto('https://example.com'); // sent with X-Env: staging</code></pre>
+    <h3>Python</h3>
+    <pre><code>from playwright.sync_api import sync_playwright
+ext = '/path/to/headerwise-automation'
+with sync_playwright() as p:
+    context = p.chromium.launch_persistent_context('', channel='chromium',
+        args=[f'--disable-extensions-except={ext}', f'--load-extension={ext}'])
+    page = context.new_page()
+    page.goto('chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation.html?X-Env=staging')
+    page.wait_for_function("document.documentElement.dataset.status === 'ready'")
+    page.goto('https://example.com')</code></pre>
+    <p>Playwright's own <code>extraHTTPHeaders</code> is simpler when all you need is request headers on every request. Use Headerwise for response headers, removing headers, headers on some URLs only, or a setup shared with people who use the extension by hand.</p>
+
+    <h2>Puppeteer</h2>
+    <pre><code>import puppeteer from 'puppeteer';
+const browser = await puppeteer.launch({ pipe: true, enableExtensions: ['/path/to/headerwise-automation'] });
+const page = await browser.newPage();
+await page.goto('chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation.html?X-Env=staging');
+await page.waitForFunction(() =&gt; document.documentElement.dataset.status === 'ready');
+await page.goto('https://example.com');</code></pre>
+
+    <h2>Selenium</h2>
+    <h3>Python</h3>
+    <pre><code>from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+
+options = webdriver.ChromeOptions()
+options.browser_version = 'stable'  # Chrome for Testing, which still loads extensions
+options.add_argument('--load-extension=/path/to/headerwise-automation')
+driver = webdriver.Chrome(options=options)
+
+driver.get('chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation.html?X-Env=staging')
+WebDriverWait(driver, 10).until(lambda d: d.execute_script(
+    "return document.documentElement.dataset.status === 'ready'"))
+driver.get('https://example.com')</code></pre>
+    <h3>JavaScript</h3>
+    <pre><code>import { Builder } from 'selenium-webdriver';
+import chrome from 'selenium-webdriver/chrome.js';
+const options = new chrome.Options().addArguments('--load-extension=/path/to/headerwise-automation');
+options.setBrowserVersion('stable');
+const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
+await driver.get('chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/automation.html?X-Env=staging');
+await driver.wait(() =&gt; driver.executeScript("return document.documentElement.dataset.status === 'ready'"), 10000);</code></pre>
+    <p>Java and C# take the same two settings (<code>setBrowserVersion("stable")</code> and the <code>--load-extension</code> argument). Headless works with <code>--headless=new</code>.</p>
+
+    <h2>Coming from ModHeader</h2>
+    <div class="table"><table>
+      <tr><th>ModHeader</th><th>Headerwise</th></tr>
+      <tr><td><code>webdriver.modheader.com/add?Name=Value</code></td><td><code>automation.html?Name=Value</code> (replaces instead of adding: put every header in one call)</td></tr>
+      <tr><td><code>webdriver.modheader.com/clear</code></td><td><code>automation.html?@clear</code></td></tr>
+      <tr><td><code>webdriver.modheader.com/load?profile=…</code></td><td><code>automation.html?@import=…</code>, same JSON</td></tr>
+      <tr><td><code>getExtension()</code> / the bundled .crx</td><td>the unzipped folder and <code>--load-extension</code></td></tr>
+    </table></div>
+    <p>The URL is <code>chrome-extension://mhlgmcieamjogdlnfjaoeophmdajkkek/</code> followed by the Headerwise column.</p>
+
+    <h2>Checked on every change</h2>
+    <p>CI loads this build into Playwright, Puppeteer and Selenium (JavaScript and Python) and checks what a server really receives: headers set, replaced, limited to URLs and cleared, response headers, and that a mistake in the URL is reported instead of guessed at. The scripts are in <a href="https://github.com/Protemir/headerwise/tree/main/scripts/automation-smoke">scripts/automation-smoke</a>. Something missing for your setup? <a href="https://github.com/Protemir/headerwise/issues">Open an issue</a>.</p>
+
+    <footer>
+      <a href="./">Headerwise</a> &nbsp; <a href="modheader-export.html">Get your ModHeader profiles back</a> &nbsp; <a href="privacy.html">Privacy</a>
+    </footer>
+  </main>
+</body>
+</html>
