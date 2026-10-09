@@ -29,3 +29,7 @@ footer { margin-top: 12px; font-size: 11px; opacity: .6; }
 .lines li.off, .lines li.empty { opacity: .55; }
 .dim { opacity: .75; margin: 2px 0; }
 .here h3 .host { text-transform: none; letter-spacing: 0; }
+.pasted { display: flex; gap: 6px; align-items: baseline; min-width: 0; }
+.pasted code { font: 12px ui-monospace, Consolas, monospace; white-space: nowrap; }
+.pasted .val { opacity: .75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+select.preset { border-color: transparent; color: var(--accent); flex: 0 0 auto; width: auto; }

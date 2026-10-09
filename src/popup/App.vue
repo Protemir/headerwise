@@ -5,6 +5,8 @@ import { importModHeader } from '../core/import-modheader.ts';
 import { loadState, saveState } from '../core/storage.ts';
 import type { RuleInfo } from '../core/dnr.ts';
 import { tabReport, type MatchedRule, type TabLine } from '../core/explain.ts';
+import { parsePasted } from '../core/paste.ts';
+import { addHeaders, applyPreset, PRESETS, REQUEST_HEADER_NAMES, RESPONSE_HEADER_NAMES } from '../core/presets.ts';
 
 const ALL_SITES = { origins: ['<all_urls>'] };
 
@@ -100,6 +102,36 @@ watch(state, () => {
 async function grantAccess() {
   hasAccess.value = await chrome.permissions.request(ALL_SITES);
   await refreshTab();
+}
+
+// Quick input: a request copied from DevTools, or a preset.
+const showPaste = ref(false);
+const pasteText = ref('');
+const pasted = computed(() => (pasteText.value.trim() ? parsePasted(pasteText.value) : null));
+const pastePicked = ref<boolean[]>([]);
+watch(pasted, r => { pastePicked.value = r ? r.headers.map(h => h.suggested) : []; });
+const pasteHost = computed(() => {
+  try { return pasted.value?.url ? new URL(pasted.value.url).hostname : ''; } catch { return ''; }
+});
+const pasteOnlyHost = ref(true);
+const canLimitToHost = computed(() => pasteHost.value !== '' && !profile.value.filters.some(f => f.kind === 'include'));
+
+function addPasted() {
+  const r = pasted.value;
+  if (!r) return;
+  addHeaders(profile.value.requestHeaders, r.headers.filter((_, i) => pastePicked.value[i]).map(h => ({ name: h.name, value: h.value })));
+  if (canLimitToHost.value && pasteOnlyHost.value) {
+    profile.value.filters.push({ id: newId(), enabled: true, kind: 'include', pattern: `||${pasteHost.value}^`, isRegex: false });
+  }
+  pasteText.value = '';
+  showPaste.value = false;
+}
+
+const presetChoice = ref('');
+function onPreset() {
+  const preset = PRESETS.find(x => x.id === presetChoice.value);
+  if (preset) applyPreset(profile.value, preset);
+  presetChoice.value = '';
 }
 
 function addHeader(list: HeaderMod[]) {
@@ -206,11 +238,31 @@ async function importFile(e: Event) {
           <option>append</option>
           <option>remove</option>
         </select>
-        <input v-model="h.name" placeholder="Name" />
+        <input v-model="h.name" placeholder="Name" list="request-names" />
         <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" placeholder="Value" />
         <button title="Remove" @click="removeAt(profile.requestHeaders, i)">×</button>
       </div>
-      <button class="link" @click="addHeader(profile.requestHeaders)">+ request header</button>
+      <div class="row">
+        <button class="link" @click="addHeader(profile.requestHeaders)">+ request header</button>
+        <button class="link" @click="showPaste = !showPaste">Paste from DevTools…</button>
+        <select class="preset" v-model="presetChoice" @change="onPreset" title="Add a ready-made set of headers">
+          <option value="">+ preset…</option>
+          <option v-for="x in PRESETS" :key="x.id" :value="x.id">{{ x.label }}</option>
+        </select>
+      </div>
+      <div v-if="showPaste" class="import">
+        <textarea v-model="pasteText" rows="4" placeholder="In DevTools → Network, right-click a request → Copy as cURL, fetch or PowerShell, and paste it here. Plain &quot;Name: value&quot; lines work too."></textarea>
+        <template v-if="pasted">
+          <p v-if="!pasted.headers.length" class="dim">No headers found in that text.</p>
+          <label v-for="(h, i) in pasted.headers" :key="h.name" class="pasted">
+            <input type="checkbox" v-model="pastePicked[i]" />
+            <code>{{ h.name }}</code>
+            <span class="val" :title="h.value">{{ h.value }}</span>
+          </label>
+          <label v-if="canLimitToHost" class="pasted"><input type="checkbox" v-model="pasteOnlyHost" /> only on {{ pasteHost }}</label>
+          <button :disabled="!pastePicked.some(Boolean)" @click="addPasted">Add {{ pastePicked.filter(Boolean).length }} header{{ pastePicked.filter(Boolean).length === 1 ? '' : 's' }}</button>
+        </template>
+      </div>
 
       <h3>Response headers</h3>
       <div v-for="(h, i) in profile.responseHeaders" :key="h.id" class="row">
@@ -220,7 +272,7 @@ async function importFile(e: Event) {
           <option>append</option>
           <option>remove</option>
         </select>
-        <input v-model="h.name" placeholder="Name" />
+        <input v-model="h.name" placeholder="Name" list="response-names" />
         <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" placeholder="Value" />
         <button title="Remove" @click="removeAt(profile.responseHeaders, i)">×</button>
       </div>
@@ -254,6 +306,9 @@ async function importFile(e: Event) {
     <ul v-if="warnings.length" class="warnings">
       <li v-for="(w, i) in warnings" :key="i">{{ w }}</li>
     </ul>
+
+    <datalist id="request-names"><option v-for="n in REQUEST_HEADER_NAMES" :key="n" :value="n" /></datalist>
+    <datalist id="response-names"><option v-for="n in RESPONSE_HEADER_NAMES" :key="n" :value="n" /></datalist>
 
     <footer>Runs locally. No account, no analytics, nothing is sent anywhere.</footer>
   </main>

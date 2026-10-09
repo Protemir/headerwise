@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os';
 import { gunzipSync } from 'node:zlib';
 import { join, resolve } from 'node:path';
 import { openTab, sleep } from './cdp.mjs';
-import { accessChecks, migrateChecks, noAccessChecks, tabChecks } from './checks.mjs';
+import { accessChecks, cspChecks, migrateChecks, noAccessChecks, quickInputChecks, tabChecks } from './checks.mjs';
 
 const args = process.argv.slice(2);
 const browser = args.includes('--browser') ? args[args.indexOf('--browser') + 1] : 'chrome';
@@ -31,7 +31,9 @@ const urls = { base: `http://localhost:${ECHO_PORT}`, ip: `http://127.0.0.1:${EC
 if (!existsSync(join(dist, 'manifest.json'))) throw new Error('dist/ not found, run npm run build first');
 if (!binary || !existsSync(binary)) throw new Error(`browser not found: ${binary}; set HW_BROWSER`);
 
+const requests = []; // every path the echo server saw, for the "sends nothing" checks
 const echo = createServer((req, res) => {
+  requests.push(req.url);
   res.setHeader('X-Server', 'echo');
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify({ url: req.url, headers: req.headers }));
@@ -116,13 +118,15 @@ const check = (name, ok, detail = '') => {
 const both = async (tabs, ctx, check) => {
   await accessChecks(tabs, ctx, check);
   await tabChecks(tabs, ctx, check);
+  await quickInputChecks(tabs, ctx, check);
+  await cspChecks(tabs, ctx, check);
   await migrateChecks(tabs, ctx, check);
 };
 for (const [name, grant, checks] of [['no-access', false, noAccessChecks], ['access', true, both]]) {
   const b = await launch(name, grant);
   console.log(`\n${b.version}, ${name === 'access' ? 'site access granted' : 'real manifest, no site access'}`);
   try {
-    await checks(b.tabs, { ...urls, extId: b.extId, fixtureDir }, check);
+    await checks(b.tabs, { ...urls, extId: b.extId, fixtureDir, requests, port: CDP_PORT }, check);
   } catch (e) {
     check(`${name}: finished without errors`, false, e.stack);
   } finally {

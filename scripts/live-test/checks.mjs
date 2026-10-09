@@ -241,3 +241,73 @@ async function openPopup(port, extId, tabId) {
   await sleep(1200);
   return t;
 }
+
+/** Paste from DevTools and presets, through the popup's own UI. */
+export async function quickInputChecks(tabs, { base, extId }, check) {
+  const { apply, xhr } = harness(tabs);
+  const { page, ctl } = tabs;
+  await apply(st([p('Profile 1', { requestHeaders: [h('', '')] })]));
+  await page.send('Page.navigate', { url: `chrome-extension://${extId}/src/popup/index.html` });
+  await sleep(1200);
+
+  // What "Copy as cURL (bash)" gives, continuation lines and all.
+  const curl = [
+    `curl --url '${base}/api/items'`,
+    `-H 'accept: application/json'`,
+    `-H 'authorization: Bearer live-test'`,
+    `-b 'session=abc'`,
+    "-H $'x-note: it\\'s ok'",
+    `-H 'user-agent: Mozilla/5.0'`,
+  ].join(' \\\n  ');
+  await page.evaluate(`(async () => {
+    [...document.querySelectorAll('button')].find(b => b.textContent.includes('Paste from DevTools')).click();
+    await new Promise(r => setTimeout(r, 200));
+    const ta = [...document.querySelectorAll('textarea')].find(t => t.placeholder.includes('Copy as cURL'));
+    ta.value = ${JSON.stringify(curl)};
+    ta.dispatchEvent(new Event('input'));
+  })()`);
+  await sleep(300);
+  const offered = await page.evaluate(`[...document.querySelectorAll('label.pasted')].map(l => (l.querySelector('input').checked ? '[x] ' : '[ ] ') + l.innerText.trim().split(String.fromCharCode(10)).join(' '))`);
+  check('paste: curl parsed, auth and custom headers pre-ticked, cookie/UA not',
+    offered.join(' | ') === '[ ] accept application/json | [x] authorization Bearer live-test | [ ] Cookie session=abc | [x] x-note it\'s ok | [ ] user-agent Mozilla/5.0 | [x] only on localhost',
+    JSON.stringify(offered));
+  await page.evaluate(`[...document.querySelectorAll('button')].find(b => /^Add [0-9]+ header/.test(b.textContent.trim())).click()`);
+  await sleep(800);
+  const saved = await ctl.evaluate(`chrome.storage.local.get('state').then(s => ({ h: s.state.profiles[0].requestHeaders.map(x => x.name + '=' + x.value), f: s.state.profiles[0].filters.map(x => x.kind + ' ' + x.pattern) }))`);
+  check('paste: headers added into the empty row, "only on" host filter added',
+    JSON.stringify(saved) === JSON.stringify({ h: ['authorization=Bearer live-test', "x-note=it's ok"], f: ['include ||localhost^'] }), JSON.stringify(saved));
+
+  await page.evaluate(`(() => { const s = document.querySelector('select.preset'); s.value = 'cors'; s.dispatchEvent(new Event('change')); })()`);
+  await sleep(1000);
+  // Requests from a web page (the popup itself is an extension page and may not fetch).
+  await page.send('Page.navigate', { url: `${base}/start` });
+  await sleep(800);
+  const y = await xhr(`${base}/api/items`);
+  check('paste + preset: pasted headers sent, CORS preset in the response',
+    y.seen.authorization === 'Bearer live-test' && y.seen['x-note'] === "it's ok" && y.res['access-control-allow-origin'] === '*', JSON.stringify({ seen: y.seen, res: y.res }));
+}
+
+/** connect-src 'none': neither extension pages nor the service worker can send anything. */
+export async function cspChecks(tabs, { base, extId, requests, port }, check) {
+  const { ctl } = tabs;
+  const before = requests.length;
+  const pageFetch = await ctl.evaluate(`fetch('${base}/csp-fetch').then(() => 'sent', e => 'blocked: ' + e.message)`);
+  await ctl.evaluate(`new Promise(r => { const i = new Image(); i.onload = i.onerror = () => r(); i.src = '${base}/csp-img'; })`);
+  await ctl.evaluate(`navigator.sendBeacon('${base}/csp-beacon', 'x')`).catch(() => {});
+  // wake the service worker, then try from there too
+  await ctl.evaluate(`chrome.storage.local.get('state').then(s => chrome.storage.local.set({ state: { ...s.state, paused: !s.state.paused } }))`);
+  await sleep(500);
+  const { connect } = await import('./cdp.mjs');
+  const sw = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find(t => t.type === 'service_worker' && t.url.includes(extId));
+  let swFetch = 'no service worker target';
+  if (sw) {
+    const c = await connect(sw.webSocketDebuggerUrl);
+    swFetch = await c.evaluate(`fetch('${base}/csp-sw').then(() => 'sent', e => 'blocked: ' + e.message)`);
+    c.close();
+  }
+  await sleep(500);
+  const leaked = requests.slice(before).filter(u => u.startsWith('/csp'));
+  check('no network: fetch from an extension page is blocked', pageFetch.startsWith('blocked'), pageFetch);
+  check('no network: fetch from the service worker is blocked', swFetch.startsWith('blocked'), swFetch);
+  check('no network: nothing reached the server (fetch, image, beacon, worker)', leaked.length === 0, JSON.stringify(leaked));
+}

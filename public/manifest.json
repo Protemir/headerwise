@@ -18,7 +18,19 @@
       "32": "icons/icon-32.png"
     }
   },
-  "background": { "service_worker": "background.js", "type": "module" },
-  "permissions": ["declarativeNetRequest", "storage", "activeTab"],
-  "optional_host_permissions": ["<all_urls>"]
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "declarativeNetRequest",
+    "storage",
+    "activeTab"
+  ],
+  "optional_host_permissions": [
+    "<all_urls>"
+  ],
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+  }
 }

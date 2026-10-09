@@ -8,6 +8,11 @@ It runs entirely in your browser. No account, no analytics, no network requests 
 its own. Rules are applied by Chrome itself through `declarativeNetRequest`, so the
 extension never reads the pages you visit.
 
+You don't have to take "no network requests" on trust: the manifest sets
+`connect-src 'none'` for every extension page and the background worker, so the
+browser itself blocks any request Headerwise might try to make. `npm run test:live`
+checks this (fetch, image, beacon, worker) in a real browser.
+
 ## Status
 
 Early work in progress, not in the stores yet.
