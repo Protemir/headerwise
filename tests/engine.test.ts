@@ -47,6 +47,7 @@ function fakeBrowser(initial: State, { origins = ['<all_urls>'] as string[], rej
     },
     now: () => clock,
     variables: () => ({ now: new Date(clock), uuid: () => `uuid-${++n}`, random: () => 0.5 }),
+    unsupportedResourceTypes: [],
   };
   return {
     api, badge, calls, alarms,

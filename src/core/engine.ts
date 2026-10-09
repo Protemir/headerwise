@@ -1,4 +1,4 @@
-import { dropUnsupportedRegexes, toDnrRules, type DnrRule } from './dnr.ts';
+import { dropUnsupportedRegexes, forBrowser, toDnrRules, type DnrRule } from './dnr.ts';
 import { activeHeaderCount, nextProfile, releaseTabs, statusTitle, type State } from './model.ts';
 import { fillRules, rulesHaveVariables, type VariableSource } from './variables.ts';
 
@@ -42,6 +42,8 @@ export interface EngineApi {
   };
   now(): number;
   variables(): VariableSource;
+  /** Resource types this browser rejects (Firefox: webtransport, webbundle). */
+  unsupportedResourceTypes: string[];
 }
 
 export const REFRESH_ALARM = 'refresh-variables';
@@ -52,7 +54,11 @@ export function createEngine(api: EngineApi) {
     const state = await api.loadState();
     const converted = toDnrRules(state);
     const warnings = converted.warnings;
-    const rules = await dropUnsupportedRegexes(converted, regex => api.dnr.isRegexSupported(regex));
+    const rules = forBrowser(
+      await dropUnsupportedRegexes(converted, regex => api.dnr.isRegexSupported(regex)),
+      api.unsupportedResourceTypes,
+      warnings,
+    );
 
     // Update the browser only when the rules really changed (not on a profile
     // rename, say). {{variables}} are filled in on a copy: a refresh of their

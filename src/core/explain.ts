@@ -70,6 +70,7 @@ export type TabLine =
   | { kind: 'other-tab'; host: string } // "only this tab", bound to a different tab
   | { kind: 'narrowed'; scope: string } // limited by type / method / initiator, and none of those seen
   | { kind: 'waiting' } // should apply, but no requests since the last change
+  | { kind: 'page-match' } // the browser can't say what matched (Firefox); the page URL fits the filters
   | { kind: 'off' }
   | { kind: 'empty' };
 
@@ -103,7 +104,8 @@ export function hasHeaders(p: Profile): boolean {
  * rules, so exclusions are judged from the page URL; allow matches are still
  * used if a browser does report them.
  */
-export function tabReport(state: State, url: string, matched: MatchedRule[], info: Record<number, RuleInfo>, since: number, tabId?: number): TabReportLine[] {
+/** exact: the browser reports matched rules (Chrome). Without that (Firefox), lines rest on the page URL alone. */
+export function tabReport(state: State, url: string, matched: MatchedRule[], info: Record<number, RuleInfo>, since: number, tabId?: number, exact = true): TabReportLine[] {
   const requests = new Map<string, number>();
   const allowed = new Map<string, string>();
   for (const m of matched) {
@@ -127,6 +129,6 @@ export function tabReport(state: State, url: string, matched: MatchedRule[], inf
     if (verdict.kind === 'not-included') return { ...base, line: { kind: 'not-included', patterns: verdict.patterns } };
     const scope = scopeSummary(p);
     if (scope) return { ...base, line: { kind: 'narrowed', scope } };
-    return { ...base, line: { kind: 'waiting' } };
+    return { ...base, line: { kind: exact ? 'waiting' : 'page-match' } };
   });
 }

@@ -11,6 +11,8 @@ type Browser = keyof typeof MODHEADER_IDS;
 const platform = navigator.platform;
 const os = /Mac/.test(platform) ? 'mac' : /Win/.test(platform) ? 'win' : 'linux';
 const browser = ref<Browser>(navigator.userAgent.includes('Edg/') ? 'edge' : 'chrome');
+// Firefox keeps extension data in its own format; this page reads Chrome's and Edge's.
+const inFirefox = navigator.userAgent.includes('Firefox/');
 
 const ROOTS: Record<typeof os, Record<Browser, string>> = {
   win: { chrome: '%LOCALAPPDATA%\\Google\\Chrome\\User Data', edge: '%LOCALAPPDATA%\\Microsoft\\Edge\\User Data' },
@@ -177,6 +179,7 @@ function headerCount(p: Profile): number {
     <template v-else>
       <section>
         <h2>1. Copy the path to ModHeader's folder</h2>
+        <p v-if="inFirefox" class="hint">This reads ModHeader's folder from Chrome or Edge on this computer. If you used ModHeader in Firefox and it still opens, use its Export button and "Import JSON" in the Headerwise popup instead.</p>
         <div class="row">
           <label><input type="radio" value="chrome" v-model="browser" /> Chrome (also Brave, Vivaldi, Opera…)</label>
           <label><input type="radio" value="edge" v-model="browser" /> Edge</label>

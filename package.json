@@ -13,7 +13,8 @@
     "test": "node --test tests/*.test.ts",
     "typecheck": "vue-tsc --noEmit",
     "test:live": "node scripts/live-test/run.mjs",
-    "store:shots": "node scripts/store/shots.mjs"
+    "store:shots": "node scripts/store/shots.mjs",
+    "build:firefox": "node scripts/firefox.mjs"
   },
   "dependencies": {
     "vue": "^3.5.39"

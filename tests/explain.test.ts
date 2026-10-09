@@ -99,3 +99,12 @@ describe('tabReport', () => {
     expect(lines[1].line).toEqual({ kind: 'applied', requests: 1, skippedBy: '/login' });
   });
 });
+
+describe('tabReport without matched rules (Firefox)', () => {
+  it('says "applies to this page" instead of asking for a reload', async () => {
+    const { tabReport } = await import('../src/core/explain.ts');
+    const s: State = { version: 1, paused: false, profiles: [p('Here'), p('Not here', { filters: [f('exclude', '/login', true)] })] };
+    const lines = tabReport(s, 'https://h.io/login', [], {}, 0, undefined, false);
+    expect(lines.map(l => l.line.kind)).toEqual(['page-match', 'excluded']);
+  });
+});

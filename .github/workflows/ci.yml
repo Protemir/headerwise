@@ -19,9 +19,19 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build
+      - run: npm run build:firefox
       - name: Package
         run: cd dist && zip -qr ../headerwise.zip .
       - uses: actions/upload-artifact@v4
         with:
           name: headerwise
           path: headerwise.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: headerwise-firefox
+          path: headerwise-firefox-*.zip
+      # The lockfile npm resolved here, so builds can be reproduced (AMO asks for it).
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-lock
+          path: package-lock.json

@@ -1,3 +1,4 @@
+import { FIREFOX_UNSUPPORTED_TYPES } from './core/dnr.ts';
 import { createEngine, REFRESH_ALARM } from './core/engine.ts';
 import { systemSource } from './core/variables.ts';
 import { loadState, saveState, STATE_KEY } from './core/storage.ts';
@@ -6,6 +7,8 @@ import { loadState, saveState, STATE_KEY } from './core/storage.ts';
 // network requests of its own; everything here talks to local browser APIs.
 
 const dnr = chrome.declarativeNetRequest;
+// The Firefox build runs this same file (as an event page instead of a service worker).
+const isFirefox = navigator.userAgent.includes('Firefox/');
 type Rules = chrome.declarativeNetRequest.Rule[];
 
 const engine = createEngine({
@@ -35,6 +38,7 @@ const engine = createEngine({
   },
   now: Date.now,
   variables: systemSource,
+  unsupportedResourceTypes: isFirefox ? FIREFOX_UNSUPPORTED_TYPES : [],
 });
 
 // Keyboard shortcuts (see "commands" in the manifest; people can change them at

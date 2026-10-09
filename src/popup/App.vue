@@ -47,6 +47,7 @@ const tab = ref<{ id: number; url: string; host: string } | null>(null);
 const tabNote = ref('');
 const tabAccess = ref(true);
 const matched = ref<MatchedRule[]>([]);
+const exact = ref(true);
 
 async function refreshTab() {
   const forced = Number(new URLSearchParams(location.search).get('tab'));
@@ -59,6 +60,12 @@ async function refreshTab() {
   }
   tab.value = { id: t.id, url: t.url, host: new URL(t.url).host };
   tabAccess.value = await chrome.permissions.contains({ origins: [`${new URL(t.url).origin}/*`] });
+  if (typeof chrome.declarativeNetRequest.getMatchedRules !== 'function') {
+    // Firefox doesn't report matched rules to extensions.
+    exact.value = false;
+    tabNote.value = "This browser doesn't tell extensions which rules matched, so this is based on the page address.";
+    return;
+  }
   try {
     const { rulesMatchedInfo } = await chrome.declarativeNetRequest.getMatchedRules({ tabId: t.id });
     matched.value = rulesMatchedInfo
@@ -72,7 +79,7 @@ async function refreshTab() {
 }
 
 const tabLines = computed(() => tab.value
-  ? tabReport(state.value, tab.value.url, matched.value, ruleInfo.value, rulesUpdatedAt.value, tab.value.id)
+  ? tabReport(state.value, tab.value.url, matched.value, ruleInfo.value, rulesUpdatedAt.value, tab.value.id, exact.value)
   : []);
 const needsReload = computed(() => tabLines.value.some(l => l.line.kind === 'waiting'));
 
@@ -86,6 +93,7 @@ function describe(line: TabLine): string {
     case 'empty': return 'no headers yet';
     case 'other-tab': return `only in another tab (${line.host})`;
     case 'narrowed': return `only ${line.scope}: none here since your last edit`;
+    case 'page-match': return 'applies to this page';
   }
 }
 

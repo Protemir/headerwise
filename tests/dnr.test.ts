@@ -167,3 +167,18 @@ describe('dropUnsupportedRegexes', () => {
     expect(converted.warnings[0]).toMatch(/^"bad": .*so this profile is off/);
   });
 });
+
+describe('forBrowser', () => {
+  it('strips resource types Firefox lacks, keeps the rest, and drops rules left with none', async () => {
+    const { forBrowser, FIREFOX_UNSUPPORTED_TYPES } = await import('../src/core/dnr.ts');
+    const { rules } = toDnrRules(s([p({ requestHeaders: [h('X-A')] })]));
+    const warnings: string[] = [];
+    const out = forBrowser(rules, FIREFOX_UNSUPPORTED_TYPES, warnings);
+    expect(out[0].condition.resourceTypes.includes('webtransport')).toBe(false);
+    expect(out[0].condition.resourceTypes.includes('main_frame')).toBe(true);
+    const only = [{ ...rules[0], condition: { ...rules[0].condition, resourceTypes: ['webbundle'] } }];
+    expect(forBrowser(only, FIREFOX_UNSUPPORTED_TYPES, warnings)).toEqual([]);
+    expect(warnings[0]).toMatch(/only for webbundle requests was skipped/);
+    expect(forBrowser(rules, [], warnings)).toBe(rules);
+  });
+});

@@ -284,3 +284,25 @@ function limitRules(rules: DnrRule[], warnings: string[]): void {
     warnings.push(`Too many regex filters (${regexCount}), Chrome allows ${MAX_REGEX_RULES}.`);
   }
 }
+
+// Resource types Firefox doesn't know: it rejects the whole batch on an unknown one.
+export const FIREFOX_UNSUPPORTED_TYPES = ['webtransport', 'webbundle'];
+
+/**
+ * Drops resource types the browser doesn't support. A rule left with none of
+ * its types (the user picked only unsupported ones) is dropped with a warning
+ * instead of becoming a rule for every type.
+ */
+export function forBrowser(rules: DnrRule[], unsupported: string[], warnings: string[]): DnrRule[] {
+  if (unsupported.length === 0) return rules;
+  const out: DnrRule[] = [];
+  for (const r of rules) {
+    const resourceTypes = r.condition.resourceTypes.filter(t => !unsupported.includes(t));
+    if (resourceTypes.length === 0) {
+      warnings.push(`A rule only for ${r.condition.resourceTypes.join(', ')} requests was skipped: this browser doesn't have that request type.`);
+      continue;
+    }
+    out.push(resourceTypes.length === r.condition.resourceTypes.length ? r : { ...r, condition: { ...r.condition, resourceTypes } });
+  }
+  return out;
+}
