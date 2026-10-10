@@ -28,9 +28,13 @@ export async function supportChecks({ ctl, port }, { extId }, check) {
   popup = await popupAt(port, extId);
   const shown = await popup.evaluate(`document.querySelector('.rate')?.innerText ?? ''`);
   await popup.evaluate(`[...document.querySelectorAll('.rate button')].find(b => b.textContent.includes('Rate it')).click()`);
-  await sleep(800);
-  const tabs = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
-  const store = tabs.find(t => t.url.includes('chromewebstore.google.com/detail/jedoaeaapdofoldmkacjbpojbnpapkna'));
+  // The tab opens once the setting is saved; its address shows up when it starts loading.
+  let store;
+  for (let i = 0; i < 25 && !store; i++) {
+    await sleep(200);
+    const tabs = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
+    store = tabs.find(t => t.url.includes('chromewebstore.google.com/detail/jedoaeaapdofoldmkacjbpojbnpapkna'));
+  }
   const done = await ctl.evaluate(`chrome.storage.local.get('meta').then(m => m.meta.rateDone)`);
   check('rate: shown after two weeks, opens the reviews, remembered', /Finding Headerwise useful/.test(shown) && !!store && done === true, JSON.stringify({ shown, store: store?.url, done }));
   if (store) await fetch(`http://127.0.0.1:${port}/json/close/${store.id}`).catch(() => {});
@@ -76,6 +80,40 @@ export async function supportChecks({ ctl, port }, { extId }, check) {
     };
   })()`);
   check('popup: bad regex marked on its row, warning above the editor, long tab name cut', ui.bad.join() === 'a(?=b)' && /Chrome can't use this regex/.test(ui.title) && ui.warningOnTop && ui.cut, JSON.stringify(ui));
+
+  // Changed elsewhere while the popup is open (a shortcut, a closed tab): the popup
+  // shows it, and its next edit doesn't undo it.
+  await save(ctl, [prof('Sync me', { requestHeaders: [hdr('X-A', '1')] })]);
+  await popup.send('Page.reload');
+  await sleep(1200);
+  await ctl.evaluate(`chrome.storage.local.get('state').then(s => { s.state.paused = true; return chrome.storage.local.set(s); })`);
+  await sleep(600);
+  const pauseShown = await popup.evaluate(`document.querySelector('.pause input').checked`);
+  await popup.evaluate(`(() => { const i = document.querySelector('input[aria-label="Profile name"]'); i.value = 'Renamed'; i.dispatchEvent(new Event('input')); })()`);
+  await sleep(700);
+  let stored = await ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state)`);
+  check('popup: takes in a change made elsewhere, its own edit keeps it', pauseShown && stored.paused === true && stored.profiles[0].title === 'Renamed', JSON.stringify({ pauseShown, paused: stored.paused, title: stored.profiles[0].title }));
+
+  // An edit right before the popup closes (Chrome closes it on any outside click) is kept.
+  await popup.evaluate(`(() => { const i = document.querySelector('input[aria-label="Profile name"]'); i.value = 'Closed fast'; i.dispatchEvent(new Event('input')); })()`);
+  await popup.send('Page.close').catch(() => {});
+  await sleep(800);
+  stored = await ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state)`);
+  check('popup: an edit made just before closing is saved', stored.profiles[0].title === 'Closed fast', stored.profiles[0].title);
+  await ctl.evaluate(`chrome.storage.local.get('state').then(s => { s.state.paused = false; return chrome.storage.local.set(s); })`);
+  popup = await popupAt(port, extId);
+
+  // Profile order (who wins a shared header) without a mouse: Alt+Left on a tab.
+  await save(ctl, [prof('First', { requestHeaders: [hdr('X-A', '1')] }), prof('Second', { requestHeaders: [hdr('X-A', '2')] })]);
+  await popup.send('Page.reload');
+  await sleep(1200);
+  await popup.evaluate(`document.querySelectorAll('.tabs button')[1].focus()`);
+  await popup.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'ArrowLeft', code: 'ArrowLeft', windowsVirtualKeyCode: 37, modifiers: 1 });
+  await popup.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowLeft', code: 'ArrowLeft', windowsVirtualKeyCode: 37, modifiers: 1 });
+  await sleep(700);
+  stored = await ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state)`);
+  const focused = await popup.evaluate(`document.activeElement?.textContent.trim()`);
+  check('popup: Alt+Left moves a profile tab, focus follows', stored.profiles.map(x => x.title).join() === 'Second,First' && focused === 'Second', JSON.stringify({ order: stored.profiles.map(x => x.title), focused }));
 
   // An empty profile says where to start.
   await save(ctl, [prof('Profile 1', { requestHeaders: [hdr('', '')] })]);

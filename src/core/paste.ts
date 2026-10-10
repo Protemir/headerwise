@@ -142,7 +142,8 @@ function fromFetch(text: string): PasteResult {
     // with keys quoted or not and any kind of JS string as the value.
     const block = /["']?headers["']?\s*:\s*\{([\s\S]*?)\}/.exec(text)?.[1] ?? '';
     options = { headers: {} };
-    const pair = new RegExp(String.raw`(${JS_STRING}|[A-Za-z_$][\w$-]*)\s*:\s*(${JS_STRING})`, 'g');
+    // A bare key only where a word starts: trying one at every letter of a long word is quadratic.
+    const pair = new RegExp(String.raw`(${JS_STRING}|(?<![\w$-])[A-Za-z_$][\w$-]*)\s*:\s*(${JS_STRING})`, 'g');
     for (const m of block.matchAll(pair)) {
       const key = /^["'`]/.test(m[1]) ? jsString(m[1]) : m[1];
       options.headers![key] = jsString(m[2]);
@@ -165,7 +166,7 @@ function psString(s: string): string {
   return s.slice(1, -1).replace(/\$\(\[char\](\d+)\)/g, (_, code) => String.fromCharCode(Number(code))).replace(/`([\s\S])/g, '$1');
 }
 
-const PS_STRING = String.raw`"(?:[^"` + '`' + String.raw`]|` + '`' + String.raw`[\s\S])*"|'(?:[^']|'')*'`;
+const PS_STRING = String.raw`"(?:[^"` + '`' + String.raw`]|` + '`' + String.raw`[\s\S])*"|(?<!')'(?:[^']|'')*'`; // a string never starts right after a quote ('' inside one is a quote)
 
 function fromPowerShell(text: string): PasteResult {
   const headers: PastedHeader[] = [];
@@ -178,7 +179,7 @@ function fromPowerShell(text: string): PasteResult {
   // DevTools writes the block over several lines and closes it on a line of its
   // own; by hand it is often one line: -Headers @{ Authorization = 'Bearer x'; "X-A" = "1" }
   const block = (/-Headers\s*@\{([\s\S]*?)\n\}/.exec(text) ?? /-Headers\s*@\{([\s\S]*?)\}/.exec(text))?.[1] ?? '';
-  const pair = new RegExp(String.raw`(${PS_STRING}|[A-Za-z_][\w-]*)\s*=\s*(${PS_STRING})`, 'g');
+  const pair = new RegExp(String.raw`(${PS_STRING}|(?<![\w-])[A-Za-z_][\w-]*)\s*=\s*(${PS_STRING})`, 'g');
   for (const m of block.matchAll(pair)) add(header(/^["']/.test(m[1]) ? psString(m[1]) : m[1], psString(m[2])));
   const url = new RegExp(`-Uri\\s+(${PS_STRING})`).exec(text)?.[1];
   return { url: url ? psString(url) : undefined, headers };

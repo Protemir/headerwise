@@ -29,6 +29,23 @@ describe('paste written by hand', () => {
   });
 });
 
+describe('paste of a huge text', () => {
+  it('stays fast: the paste box parses on every keystroke', () => {
+    const texts = [
+      `fetch('x', { headers: { ${'a-'.repeat(50000)} } })`,
+      `Invoke-WebRequest -Uri "x" -Headers @{ ${'a'.repeat(50000)} }`,
+      `Invoke-WebRequest -Uri "x" -Headers @{ ${"'".repeat(50000)} }`,
+      'X-A: 1\n'.repeat(15000),
+      `curl 'x' ${"-H 'a: b' ".repeat(10000)}`,
+    ];
+    for (const t of texts) {
+      const start = performance.now();
+      parsePasted(t);
+      expect(performance.now() - start < 300).toBe(true);
+    }
+  });
+});
+
 describe('ModHeader files from the wild', () => {
   it('does not crash on nulls, numbers and single values where lists belong', () => {
     const r = importModHeader(JSON.stringify({ profiles: [null, {
@@ -51,9 +68,8 @@ describe('ModHeader files from the wild', () => {
     expect(r.warnings.some(w => /can't append to X-Custom, so it is set instead/.test(w))).toBe(true);
   });
 
-  it('a URL replacement with nothing to replace with is kept but explained', () => {
+  it('a URL replacement with nothing to replace with cuts the text out', () => {
     const r = importModHeader(JSON.stringify([{ title: 'T', urlReplacements: [{ name: 'debug=1', value: '' }] }]));
-    expect(r.profiles[0].redirects?.length).toBe(1);
-    expect(r.warnings.some(w => /nothing to replace with/.test(w))).toBe(true);
+    expect(r.profiles[0].redirects?.map(x => [x.from, x.to, x.enabled])).toEqual([['debug=1', '', true]]);
   });
 });

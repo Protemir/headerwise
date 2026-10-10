@@ -53,8 +53,8 @@ export async function redirectChecks({ ctl, page, port }, { base, extId, request
     [...document.querySelectorAll('button')].find(b => b.textContent.trim() === '+ redirect').click();
     await new Promise(r => setTimeout(r, 200));
     const inputs = [...document.querySelectorAll('input[placeholder^="part of the URL"], input[placeholder^="e.g. api.staging"]')];
-    inputs[0].value = 'prod.example.com'; inputs[0].dispatchEvent(new Event('input'));
-    inputs[1].value = 'staging.example.com'; inputs[1].dispatchEvent(new Event('input'));
+    inputs[0].value = 'prod.example.com'; inputs[0].dispatchEvent(new Event('input')); inputs[0].dispatchEvent(new Event('change'));
+    inputs[1].value = 'staging.example.com'; inputs[1].dispatchEvent(new Event('input')); inputs[1].dispatchEvent(new Event('change')); // leaving the field switches the new redirect on
   })()`);
   await sleep(900);
   const saved = await ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state.profiles[0].redirects)`);

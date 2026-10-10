@@ -53,6 +53,15 @@ describe('input people type', () => {
     expect(pageVerdict(p({ filters: [f('exclude', 'logout')] }), 'https://x.com/logout').kind).toBe('excluded');
   });
 
+  it('international sites work in "never on" and in anchored patterns (punycode, as Chrome compares)', () => {
+    const r = toDnrRules(st(p({ filters: [f('exclude', 'пример.рф'), f('include', '|https://пример.рф/')] })));
+    expect(modify(r.rules)[0].condition.excludedRequestDomains).toEqual(['xn--e1afmkfd.xn--p1ai']);
+    expect(modify(r.rules)[0].condition.urlFilter).toBe('|https://xn--e1afmkfd.xn--p1ai/');
+    expect(pageVerdict(p({ filters: [f('exclude', 'пример.рф')] }), 'https://www.xn--e1afmkfd.xn--p1ai/').kind).toBe('excluded');
+    expect(normalizeDomain('.example.com')).toBe('example.com');
+    expect(normalizeDomain('*://example.com/*')).toBe('example.com');
+  });
+
   it('regexes match without regard to case, like Chrome', () => {
     expect(pageVerdict(p({ filters: [f('include', '/Api/', true)] }), 'https://x.com/api/v1').kind).toBe('applies');
     const loop = toDnrRules(st(p({ requestHeaders: [], redirects: [{ id: 'r', enabled: true, from: '/API/', to: '/api/', isRegex: false }] })));
@@ -60,9 +69,12 @@ describe('input people type', () => {
     expect(loop.warnings[0]).toMatch(/loop/);
   });
 
-  it('a redirect does nothing until both fields are filled in', () => {
-    const r = toDnrRules(st(p({ requestHeaders: [], redirects: [{ id: 'r', enabled: true, from: 'a', to: '', isRegex: false }] })));
-    expect([r.rules.length, r.warnings.length]).toEqual([0, 0]);
+  it('a redirect with an empty "to" cuts the text out of the address', () => {
+    const r = toDnrRules(st(p({ requestHeaders: [], redirects: [{ id: 'r', enabled: true, from: '?utm=1', to: '', isRegex: false }] })));
+    const rule = r.rules[0];
+    const sub = rule.action.type === 'redirect' ? rule.action.redirect.regexSubstitution : '';
+    const url = 'https://x.com/page?utm=1';
+    expect(url.replace(new RegExp(rule.condition.regexFilter!, 'i'), sub.replace(/\\(\d)/g, '$$$1'))).toBe('https://x.com/page');
   });
 
   it('counts regex groups like RE2: not in [...], named groups count', () => {

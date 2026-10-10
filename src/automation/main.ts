@@ -30,7 +30,10 @@ async function run() {
   list('warnings', [...result.warnings, ...warnings]);
   // "ready" only if the browser really took the headers: a test that goes on
   // without them would fail somewhere far from the cause.
-  const broken = warnings.find(w => (w.startsWith('"Automation"') && /skipped|is off/.test(w)) || /refused the rules|rejected the rules|could not apply/.test(w));
+  // Only about the test's own headers: a profile of the user's that the browser
+  // refused doesn't make this run fail.
+  const broken = warnings.find(w => (w.startsWith('"Automation"') && /skipped|is off/.test(w))
+    || /refused the rules of [^.]*"Automation"/.test(w) || /could not apply/.test(w));
   if (result.error) done(false, result.error);
   else if (broken) done(false, broken);
   else done(true, result.state ? 'Done. In effect now:' : 'Nothing changed. In effect now:');

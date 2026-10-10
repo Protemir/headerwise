@@ -1,4 +1,4 @@
-import { isDomainPattern, type RuleInfo } from './dnr.ts';
+import { excludedDomain, type RuleInfo } from './dnr.ts';
 import { activeRedirects, RESOURCE_TYPES, type Profile, type State } from './model.ts';
 
 /*
@@ -45,8 +45,9 @@ export function pageVerdict(p: Profile, url: string): PageVerdict {
   for (const f of p.filters) {
     const pattern = f.pattern.trim();
     if (!f.enabled || f.kind !== 'exclude' || pattern === '') continue;
-    const hit = !f.isRegex && isDomainPattern(pattern)
-      ? host === pattern.toLowerCase() || host.endsWith(`.${pattern.toLowerCase()}`)
+    const domain = f.isRegex ? undefined : excludedDomain(pattern);
+    const hit = domain
+      ? host === domain || host.endsWith(`.${domain}`)
       : matches(pattern, f.isRegex, url);
     if (hit) return { kind: 'excluded', pattern };
   }

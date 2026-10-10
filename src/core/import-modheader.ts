@@ -244,8 +244,6 @@ export function importModHeader(text: string, { active = 0 }: { active?: number 
     const requestHeaders = [...headers(p.headers, p, 'request', title, warnings), ...cookieAppends(p.reqCookieAppend), ...cookies.request];
     const responseHeaders = [...headers(p.respHeaders, p, 'response', title, warnings), ...cookies.response];
     const redirects = redirectsOf(p.urlReplacements);
-    const blankTargets = redirects.filter(r => r.to.trim() === '').length;
-    if (blankTargets) warnings.push(`"${title}": ${blankTargets} URL replacement${blankTargets === 1 ? ' has' : 's have'} nothing to replace with, so ${blankTargets === 1 ? 'it does' : 'they do'} nothing until you fill in where to go.`);
     const unknown = [...new Set([...requestHeaders, ...responseHeaders].flatMap(h => unknownVariables(h.value)))];
     if (unknown.length) {
       warnings.push(`"${title}": ${unknown.map(n => `{{${n}}}`).join(', ')} is not a Headerwise variable and will be sent as plain text.`);

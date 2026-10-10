@@ -65,10 +65,19 @@ export function createEngine(api: EngineApi) {
     // values keeps the rules' shape (structureKey), so it doesn't reset the
     // popup's "On this tab".
     const structureKey = JSON.stringify([rules, converted.info]);
-    const filled = fillRules(rules, api.variables());
+    const stored = await api.session.get(['rulesKey', 'structureKey', 'refused']);
+    // Profiles the browser refused last time, for these same rules: left out right
+    // away, instead of failing again and rebuilding one by one on every sync.
+    const before = stored.refused as { structureKey: string; profiles: string[]; warning: string } | undefined;
+    const known = before?.structureKey === structureKey ? before : undefined;
+    const filled = fillRules(rules, api.variables())
+      .filter(r => !known?.profiles.includes(converted.info[r.id]?.profileId ?? ''));
     const key = JSON.stringify(filled);
-    const stored = await api.session.get(['rulesKey', 'structureKey']);
     let rejected = false;
+    if (known) {
+      rejected = true;
+      warnings.push(known.warning);
+    }
     // "Only this tab" rules need tabIds, which are allowed in session rules only.
     // Old rules go and new ones come in one call per kind: Chrome applies such an
     // update as a whole, so no request slips through with no rules in between.
@@ -89,12 +98,14 @@ export function createEngine(api: EngineApi) {
           rulesKey: key,
           structureKey,
           ruleInfo: converted.info,
+          ...(known ? {} : { refused: null }),
           ...(stored.structureKey !== structureKey ? { rulesUpdatedAt: api.now() } : {}),
         });
-      } catch (e) {
+      } catch {
         // Everything Headerwise knows to check is checked above, so this is rare.
         // The browser rejects a whole batch for one bad rule; rather than lose every
-        // profile, add them one at a time and leave out the ones it refuses.
+        // profile, add them one at a time and leave out the ones it refuses. Each
+        // step replaces the lot in one update, so kept profiles never drop out.
         rejected = true;
         const byProfile = new Map<string, DnrRule[]>();
         for (const r of filled) {
@@ -102,22 +113,28 @@ export function createEngine(api: EngineApi) {
           byProfile.set(id, [...(byProfile.get(id) ?? []), r]);
         }
         const kept: DnrRule[] = [];
+        const refusedIds: string[] = [];
         const refused: string[] = [];
-        await replace([]);
-        for (const [, group] of byProfile) {
+        for (const [id, group] of byProfile) {
           try {
             await replace([...kept, ...group]);
             kept.push(...group);
           } catch (err) {
+            refusedIds.push(id);
             refused.push(`"${converted.titles[group[0].priority] ?? '?'}" (${err instanceof Error ? err.message : String(err)})`);
           }
         }
-        await replace(kept).catch(() => replace([]));
-        // An empty key makes the next sync try again.
-        await api.session.set({ rulesKey: '', structureKey: '', ruleInfo: converted.info, rulesUpdatedAt: api.now() });
-        warnings.push(refused.length
-          ? `The browser refused the rules of ${refused.join(', ')}, so ${refused.length === 1 ? 'that profile is' : 'those profiles are'} off.`
-          : `The browser rejected the rules at first: ${e instanceof Error ? e.message : String(e)}`);
+        if (kept.length === 0) await replace([]).catch(() => {});
+        rejected = refused.length > 0 || !!known;
+        const warning = `The browser refused the rules of ${refused.join(', ')}, so ${refused.length === 1 ? 'that profile is' : 'those profiles are'} off.`;
+        if (refused.length) warnings.push(warning);
+        await api.session.set({
+          rulesKey: JSON.stringify(kept),
+          structureKey,
+          ruleInfo: converted.info,
+          rulesUpdatedAt: api.now(),
+          refused: refused.length ? { structureKey, profiles: [...(known?.profiles ?? []), ...refusedIds], warning } : null,
+        });
       }
     } else if (stored.structureKey !== structureKey) {
       // Same rules, different profiles behind them (a duplicate switched on, the

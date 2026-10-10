@@ -78,10 +78,10 @@ const DOMAIN = /^(?:[a-z0-9-]+\.)*[a-z0-9-]+$/i;
  */
 export function normalizeDomain(raw: string): string | undefined {
   let d = raw.trim().toLowerCase()
-    .replace(/^[a-z][a-z0-9+.-]*:\/\//, '')
+    .replace(/^(?:[a-z][a-z0-9+.-]*|\*):\/\//, '')
     .replace(/[/?#].*$/, '')
     .replace(/:\d*$/, '')
-    .replace(/^\*\./, '')
+    .replace(/^\*?\./, '')
     .replace(/\.$/, '');
   if (/[^\x00-\x7f]/.test(d)) {
     try { d = new URL(`http://${d}`).hostname; } catch { return undefined; }
@@ -89,9 +89,14 @@ export function normalizeDomain(raw: string): string | undefined {
   return d !== '' && DOMAIN.test(d) ? d : undefined;
 }
 
-/** A plain "never on" pattern that means a site (and its subdomains), not part of a URL. */
-export function isDomainPattern(pattern: string): boolean {
-  return DOMAIN.test(pattern) && (pattern.includes('.') || pattern.toLowerCase() === 'localhost');
+/**
+ * A plain "never on" pattern that means a site (and its subdomains), not part of
+ * a URL: the domain as Chrome compares it (punycode for пример.рф), else undefined.
+ */
+export function excludedDomain(pattern: string): string | undefined {
+  const p = pattern.trim();
+  if (!/^[^\s/*^|:?#]+$/.test(p) || !(p.includes('.') || p.toLowerCase() === 'localhost')) return undefined;
+  return normalizeDomain(p);
 }
 
 /**
@@ -105,9 +110,11 @@ export function fixUrlFilter(pattern: string): string | undefined {
   if (p.startsWith('||*.')) p = `||${p.slice(4)}`;
   if (p.startsWith('||*')) return undefined;
   if (!/[^\x00-\x7f]/.test(p)) return p;
-  if (p.startsWith('||')) {
-    const host = /^[^/:?^*|]*/.exec(p.slice(2))![0];
-    try { p = `||${new URL(`http://${host}`).hostname}${p.slice(2 + host.length)}`; } catch { return undefined; }
+  // The host part, after "||" or "|https://", is matched in punycode.
+  const lead = /^(\|\||\|?[a-z][a-z0-9+.-]*:\/\/)/i.exec(p)?.[1];
+  if (lead) {
+    const host = /^[^/:?^*|]*/.exec(p.slice(lead.length))![0];
+    try { p = `${lead}${new URL(`http://${host}`).hostname}${p.slice(lead.length + host.length)}`; } catch { return undefined; }
   }
   return p.replace(/[^\x00-\x7f]+/g, s => encodeURIComponent(s));
 }
@@ -206,14 +213,13 @@ function convertRedirects(p: Profile, warnings: string[]): ProfileParts['redirec
       warnings.push(`${where}: too many groups in the pattern (Chrome allows 7), skipped.`);
       continue;
     }
+    // An empty "to" cuts the match out of the address (?utm=1 -> nothing). The
+    // popup starts a new redirect switched off, so a half-typed one does nothing.
     const to = r.to.trim();
-    // Both fields first: while "to" is still empty, a half-typed "from" would
-    // cut that text out of every address.
-    if (to === '') continue;
     let check: RegExp | undefined;
     // Chrome matches regexFilter case-insensitively.
     try { check = new RegExp(pattern, 'i'); } catch { /* left to Chrome's own regex check */ }
-    if (check && check.test(to)) {
+    if (check && to !== '' && check.test(to)) {
       warnings.push(`${where}: the new address would match again and redirect in a loop, skipped.`);
       continue;
     }
@@ -276,8 +282,9 @@ function profileConditions(p: Profile, warnings: string[], combineIncludes: bool
   for (const f of p.filters) {
     const pattern = f.pattern.trim();
     if (!f.enabled || f.kind !== 'exclude' || pattern === '') continue;
+    const domain = f.isRegex ? undefined : excludedDomain(pattern);
     if (f.isRegex) allowConditions.push({ regexFilter: pattern, ...scope });
-    else if (isDomainPattern(pattern)) excludedDomains.push(pattern.toLowerCase());
+    else if (domain) excludedDomains.push(domain);
     else {
       const urlFilter = fixUrlFilter(pattern);
       if (urlFilter === undefined) {

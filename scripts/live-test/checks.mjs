@@ -174,7 +174,8 @@ export async function migrateChecks(tabs, { base, extId, fixtureDir }, check) {
   await sleep(1000);
   const { result } = await page.send('Runtime.evaluate', { expression: `document.querySelector('input[type=file]')` });
   await page.send('DOM.setFileInputFiles', { objectId: result.objectId, files: [fixtureDir] });
-  await sleep(1500);
+  // Reading the folder takes longer on a slow disk: wait for the list, up to 8 s.
+  for (let i = 0; i < 40 && !(await page.evaluate(`document.querySelectorAll('.profiles li').length`)); i++) await sleep(200);
   const listed = await page.evaluate(`[...document.querySelectorAll('.profiles li')].map(li => li.innerText.split('\\n').join(' ').trim())`);
   check('migrate: lists the 3 ModHeader profiles', listed.length === 3 && /Staging/.test(listed[0]) && /Юникод ✓.*on/.test(listed[1]), JSON.stringify(listed) + ' page: ' + await page.evaluate(`document.body.innerText.slice(0, 600)`));
   if (listed.length === 0) return;

@@ -123,12 +123,23 @@ describe('engine', () => {
     expect(String((b.stored.warnings as string[])[0])).toMatch(/no access to sites/);
   });
 
-  it('clears everything and says so when the browser rejects the rules, then retries next time', async () => {
+  it('says so when the browser refuses a profile, and tries again only once the profiles change', async () => {
     const b = fakeBrowser(st([p('A')]), { rejectWith: 'Internal error' });
-    await createEngine(b.api).queueSync();
+    const e = createEngine(b.api);
+    await e.queueSync();
     expect([b.dynamic.length, b.session.length, b.badge.text]).toEqual([0, 0, '!']);
-    expect((b.stored.warnings as string[]).some(w => /refused the rules of "A" \(Internal error\), so that profile is off/.test(w))).toBe(true);
-    expect(b.stored.rulesKey).toBe('');
+    const refusedA = (w: string) => /refused the rules of "A" \(Internal error\), so that profile is off/.test(w);
+    expect((b.stored.warnings as string[]).some(refusedA)).toBe(true);
+    // the same profiles again (a variable refresh, a rename): no new attempt, same warning
+    b.calls.length = 0;
+    await e.queueSync();
+    expect(b.calls.filter(c => c.startsWith('update'))).toEqual([]);
+    expect((b.stored.warnings as string[]).some(refusedA)).toBe(true);
+    expect(b.badge.text).toBe('!');
+    // an edit: tried again
+    b.state = st([p('A', { requestHeaders: [h('X-A', '2')] })]);
+    await e.queueSync();
+    expect(b.calls.filter(c => c.startsWith('update')).length > 0).toBe(true);
   });
 
   it('when the browser refuses one profile, the others keep working', async () => {

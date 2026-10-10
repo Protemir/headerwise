@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, toRaw, watch } from 'vue';
-import { defaultState, duplicateProfile, emptyHeader, emptyProfile, isSecret, moveProfile, maskValue, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type State } from '../core/model.ts';
+import { computed, nextTick, onMounted, ref, toRaw, watch } from 'vue';
+import { defaultState, duplicateProfile, emptyHeader, emptyProfile, isSecret, moveProfile, maskValue, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type Redirect, type State } from '../core/model.ts';
 import { exportFileName, exportProfiles, importProfiles } from '../core/export.ts';
 import { VARIABLES } from '../core/variables.ts';
 import { loadMeta, loadState, saveMeta, saveState, STATE_KEY } from '../core/storage.ts';
@@ -25,6 +25,7 @@ onMounted(async () => {
   try {
     state.value = await loadState();
     lastSaved = JSON.stringify(state.value);
+    stateLoaded = true;
     hasAccess.value = await chrome.permissions.contains(ALL_SITES);
     await refreshWarnings();
     await refreshTab();
@@ -42,9 +43,13 @@ onMounted(async () => {
 // the popup closes (Chrome closes it on any click outside).
 let timer: ReturnType<typeof setTimeout> | undefined;
 let lastSaved = '';
+let stateLoaded = false;
 function saveNow() {
   clearTimeout(timer);
   timer = undefined;
+  // Until the profiles are loaded there is nothing of the user's here: saving
+  // the empty default would wipe theirs.
+  if (!stateLoaded) return Promise.resolve();
   const json = JSON.stringify(state.value);
   if (json === lastSaved) return Promise.resolve();
   lastSaved = json;
@@ -66,14 +71,15 @@ function onStateChanged(changes: Record<string, chrome.storage.StorageChange>) {
   if (!next || JSON.stringify(next) === lastSaved) return; // our own save
   const current = state.value.profiles[selected.value]?.id;
   // Typed here in the last 250 ms: that edit is newer, keep it (rare: it means a
-  // shortcut pressed mid-typing).
-  if (timer !== undefined) saveNow();
-  else {
-    lastSaved = JSON.stringify(next);
-    state.value = next;
-    const i = next.profiles.findIndex(p => p.id === current);
-    selected.value = i >= 0 ? i : Math.min(selected.value, next.profiles.length - 1);
-  }
+  // shortcut pressed mid-typing). A pending save with nothing typed (it follows a
+  // change taken in a moment ago) doesn't count: take this one in too.
+  if (timer !== undefined && JSON.stringify(state.value) !== lastSaved) { saveNow(); return; }
+  clearTimeout(timer);
+  timer = undefined;
+  lastSaved = JSON.stringify(next);
+  state.value = next;
+  const i = next.profiles.findIndex(p => p.id === current);
+  selected.value = i >= 0 ? i : Math.min(selected.value, next.profiles.length - 1);
 }
 
 // What the background script left for us: warnings, and which profile each rule belongs to.
@@ -269,8 +275,20 @@ const isBlank = computed(() => !!profile.value
   && [...profile.value.requestHeaders, ...profile.value.responseHeaders].every(h => h.name.trim() === '')
   && !profile.value.redirects?.length);
 
+// Only rows added here: one the user switched off stays off while they edit it.
+const fresh = new Set<string>();
+function arm(r: Redirect) {
+  if (fresh.has(r.id) && r.from.trim() && r.to.trim()) {
+    r.enabled = true;
+    fresh.delete(r.id);
+  }
+}
+
 function addRedirect() {
-  (profile.value.redirects ??= []).push({ id: newId(), enabled: true, from: '', to: '', isRegex: false });
+  // Off until filled in: a half-typed "from" would already rewrite every matching address.
+  const r = { id: newId(), enabled: false, from: '', to: '', isRegex: false };
+  fresh.add(r.id);
+  (profile.value.redirects ??= []).push(r);
 }
 
 function addHeader(list: HeaderMod[]) {
@@ -319,6 +337,17 @@ function dropOn(i: number) {
   moveProfile(state.value, dragFrom.value, i);
   selected.value = state.value.profiles.indexOf(current);
   dragFrom.value = -1;
+}
+
+// The same from the keyboard: Alt+Left / Alt+Right on a profile tab.
+async function moveBy(i: number, by: number) {
+  const to = i + by;
+  if (to < 0 || to >= state.value.profiles.length) return;
+  const moved = state.value.profiles[i];
+  moveProfile(state.value, i, to);
+  selected.value = state.value.profiles.indexOf(moved);
+  await nextTick();
+  (document.querySelectorAll<HTMLButtonElement>('.tabs button')[selected.value])?.focus();
 }
 
 // The shortcuts as actually assigned (people can change them in the browser).
@@ -454,11 +483,13 @@ async function importFile(e: Event) {
         :key="p.id"
         :class="{ on: i === selected, off: !p.enabled }"
         draggable="true"
-        :title="`${p.title || 'Untitled'}. Drag to reorder: the leftmost profile wins when two set the same header`"
+        :title="`${p.title || 'Untitled'}. Drag (or Alt+←/→) to reorder: the leftmost profile wins when two set the same header`"
         :aria-pressed="i === selected"
         @click="selected = i"
         @dragstart="dragFrom = i"
         @dragend="dragFrom = -1"
+        @keydown.alt.left.prevent="moveBy(i, -1)"
+        @keydown.alt.right.prevent="moveBy(i, 1)"
         @dragover.prevent
         @drop.prevent="dropOn(i)"
       >
@@ -539,14 +570,14 @@ async function importFile(e: Event) {
       <h3>Redirects</h3>
       <div v-for="(r, i) in profile.redirects ?? []" :key="r.id" class="row">
         <input type="checkbox" v-model="r.enabled" aria-label="Redirect on or off" />
-        <input class="grow" v-model="r.from" aria-label="Replace this part of the address" :class="{ bad: badRegex[r.id] }" :title="badRegex[r.id] ?? ''" :placeholder="r.isRegex ? 'regex, e.g. /v(\\d+)/' : 'part of the URL, e.g. api.example.com'" spellcheck="false" />
+        <input class="grow" v-model="r.from" @change="arm(r)" aria-label="Replace this part of the address" :class="{ bad: badRegex[r.id] }" :title="badRegex[r.id] ?? ''" :placeholder="r.isRegex ? 'regex, e.g. /v(\\d+)/' : 'part of the URL, e.g. api.example.com'" spellcheck="false" />
         <span class="arrow" aria-hidden="true">→</span>
-        <input class="grow" v-model="r.to" aria-label="With this" :placeholder="r.isRegex ? 'e.g. /v$1-beta/' : 'e.g. api.staging.example.com'" spellcheck="false" />
+        <input class="grow" v-model="r.to" @change="arm(r)" aria-label="With this" :placeholder="r.isRegex ? 'e.g. /v$1-beta/' : 'e.g. api.staging.example.com'" spellcheck="false" />
         <label class="small"><input type="checkbox" v-model="r.isRegex" /> regex</label>
         <button title="Remove" aria-label="Remove" @click="removeAt(profile.redirects!, i)">×</button>
       </div>
       <button class="link" @click="addRedirect">+ redirect</button>
-      <p v-if="profile.redirects?.length" class="dim small-hint">Replaces the first match in the address of a request and sends it there. "Only on" filters don't apply to redirects; "never on" and the other limits do.</p>
+      <p v-if="profile.redirects?.length" class="dim small-hint">Replaces the first match in the address of a request and sends it there. A new redirect switches on once both fields are filled; to cut text out, leave the second empty and tick it yourself. "Only on" filters don't apply to redirects; "never on" and the other limits do.</p>
 
       <h3>Only on / never on</h3>
       <div v-for="(f, i) in profile.filters" :key="f.id" class="row">
