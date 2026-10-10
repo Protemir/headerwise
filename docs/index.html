@@ -110,6 +110,7 @@
 
     /* DevTools comparison */
     .compare { margin-top: 32px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
     .row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 16px; padding: 16px 24px; }
     .row + .row { border-top: 1px solid var(--line); }
     .row.head { background: var(--tint); font-weight: 650; }
@@ -287,7 +288,7 @@
         <h2>Why not just DevTools?</h2>
         <p class="muted" style="margin-top: 16px; max-width: 60ch; font-size: 18px">DevTools is the right tool for looking at headers. For changing them day to day, it falls short.</p>
         <div class="compare" role="table" aria-label="DevTools compared with Headerwise">
-          <div class="row head" role="row"><span role="columnheader"></span><span role="columnheader">DevTools</span><span role="columnheader">Headerwise</span></div>
+          <div class="row head" role="row"><span role="columnheader"><span class="sr-only">What you need</span></span><span role="columnheader">DevTools</span><span role="columnheader">Headerwise</span></div>
           <div class="row" role="row"><span role="cell">Add request headers like Authorization</span><span role="cell">Only User-Agent and language</span><span role="cell">Any header</span></div>
           <div class="row" role="row"><span role="cell">Change response headers</span><span role="cell">With local overrides, per tab</span><span role="cell">Yes</span></div>
           <div class="row" role="row"><span role="cell">Works with DevTools closed</span><span role="cell">No</span><span role="cell">Yes</span></div>

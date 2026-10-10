@@ -57,7 +57,7 @@
     <p class="lead">ModHeader's test packages (<code>chrome-modheader</code>, <code>modheader_selenium</code>) shipped an old extension that modern Chrome won't run, and ModHeader itself is gone from the stores. Headerwise has a build for tests: load it, open one URL with the headers you want, and the page tells you when they're in effect. Tests written for ModHeader <a href="#modheader">keep their URLs</a>.</p>
 
     <h2>Get it</h2>
-    <pre><code>curl -L -o headerwise-automation.zip https://github.com/Protemir/headerwise/releases/latest/download/headerwise-automation.zip
+    <pre tabindex="0"><code>curl -L -o headerwise-automation.zip https://github.com/Protemir/headerwise/releases/latest/download/headerwise-automation.zip
 unzip headerwise-automation.zip -d headerwise-automation</code></pre>
     <p>For Selenium's <code>addExtensions</code> and cloud grids there is a signed <code>.crx</code> with the same id: <code>…/releases/latest/download/headerwise-automation.crx</code>.</p>
     <p>The automation build is the regular extension with three differences: a fixed id, <code>ogjbgamdhnjnagcdgboifgmhlgddcdce</code>, so your tests know its URL; access to all sites from the start, since nobody is there to click "Allow"; and no welcome tab. Free and MIT licensed, <a href="https://github.com/Protemir/headerwise">source on GitHub</a>.</p>
@@ -65,7 +65,7 @@ unzip headerwise-automation.zip -d headerwise-automation</code></pre>
     <div class="warn"><b>Chrome 137 and newer ignore <code>--load-extension</code>.</b> Google Chrome dropped the flag; Chrome for Testing and Chromium still have it. Playwright's Chromium and Puppeteer's Chrome for Testing work as they are; Selenium needs <code>browser_version</code> set so it downloads Chrome for Testing (below).</div>
 
     <h2>Set headers with a URL</h2>
-    <pre><code>chrome-extension://ogjbgamdhnjnagcdgboifgmhlgddcdce/automation.html?X-Env=staging&amp;Authorization=Bearer%20abc</code></pre>
+    <pre tabindex="0"><code>chrome-extension://ogjbgamdhnjnagcdgboifgmhlgddcdce/automation.html?X-Env=staging&amp;Authorization=Bearer%20abc</code></pre>
     <div class="table"><table>
       <tr><th>In the query</th><th>What it does</th></tr>
       <tr><td><code>Name=Value</code></td><td>Set a request header. An empty value removes the header.</td></tr>
@@ -80,7 +80,7 @@ unzip headerwise-automation.zip -d headerwise-automation</code></pre>
 
     <h2>Playwright</h2>
     <h3>Node.js</h3>
-    <pre><code>import { chromium } from 'playwright';
+    <pre tabindex="0"><code>import { chromium } from 'playwright';
 const ext = '/path/to/headerwise-automation';
 const context = await chromium.launchPersistentContext('', {
   channel: 'chromium', // full Chromium: the headless shell has no extensions
@@ -91,7 +91,7 @@ await page.goto('chrome-extension://ogjbgamdhnjnagcdgboifgmhlgddcdce/automation.
 await page.waitForFunction(() =&gt; document.documentElement.dataset.status === 'ready');
 await page.goto('https://example.com'); // sent with X-Env: staging</code></pre>
     <h3>Python</h3>
-    <pre><code>from playwright.sync_api import sync_playwright
+    <pre tabindex="0"><code>from playwright.sync_api import sync_playwright
 ext = '/path/to/headerwise-automation'
 with sync_playwright() as p:
     context = p.chromium.launch_persistent_context('', channel='chromium',
@@ -103,7 +103,7 @@ with sync_playwright() as p:
     <p>Playwright's own <code>extraHTTPHeaders</code> is simpler when all you need is request headers on every request. Use Headerwise for response headers, removing headers, headers on some URLs only, or a setup shared with people who use the extension by hand.</p>
 
     <h2>Puppeteer</h2>
-    <pre><code>import puppeteer from 'puppeteer';
+    <pre tabindex="0"><code>import puppeteer from 'puppeteer';
 const browser = await puppeteer.launch({ pipe: true, enableExtensions: ['/path/to/headerwise-automation'] });
 // the extension installs after launch() returns
 await browser.waitForTarget(t =&gt; t.type() === 'service_worker' &amp;&amp; t.url().includes('ogjbgamdhnjnagcdgboifgmhlgddcdce'));
@@ -114,7 +114,7 @@ await page.goto('https://example.com');</code></pre>
 
     <h2>Selenium</h2>
     <h3>Python</h3>
-    <pre><code>from selenium import webdriver
+    <pre tabindex="0"><code>from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 
 options = webdriver.ChromeOptions()
@@ -127,7 +127,7 @@ WebDriverWait(driver, 10).until(lambda d: d.execute_script(
     "return document.documentElement.dataset.status === 'ready'"))
 driver.get('https://example.com')</code></pre>
     <h3>JavaScript</h3>
-    <pre><code>import { Builder } from 'selenium-webdriver';
+    <pre tabindex="0"><code>import { Builder } from 'selenium-webdriver';
 import chrome from 'selenium-webdriver/chrome.js';
 const options = new chrome.Options().addArguments('--load-extension=/path/to/headerwise-automation');
 options.setBrowserVersion('stable');
@@ -148,7 +148,7 @@ await driver.wait(() =&gt; driver.executeScript("return document.documentElement
       <tr><td><code>webdriver.modheader.com/load?profile=…</code></td><td><code>automation.html?@import=…</code>, same JSON</td></tr>
     </table></div>
     <p>What you change is the extension: pass <code>headerwise-automation.crx</code> where you passed <code>getExtension()</code>, and ask for Chrome for Testing (<code>setBrowserVersion('stable')</code>), since Google Chrome no longer loads extensions from ChromeDriver. Waits for the title "Done" keep working: that is the page's title when it was opened through ModHeader's addresses. One difference: <code>/add</code> with a header name that's already set replaces the value instead of sending the header twice.</p>
-    <pre><code>// before: new chrome.Options().addExtensions(getExtension())
+    <pre tabindex="0"><code>// before: new chrome.Options().addExtensions(getExtension())
 const options = new chrome.Options().addExtensions('headerwise-automation.crx');
 options.setBrowserVersion('stable');
 // unchanged:

@@ -17,7 +17,7 @@ import { join, resolve } from 'node:path';
 import { openTab, sleep } from './cdp.mjs';
 import { accessChecks, cspChecks, migrateChecks, noAccessChecks, quickInputChecks, tabChecks } from './checks.mjs';
 import { secretChecks, tabOnlyChecks } from './checks-tabs.mjs';
-import { exportChecks, filterChecks } from './checks-filters.mjs';
+import { exportChecks, filterChecks, otherImportChecks } from './checks-filters.mjs';
 import { listChecks, variableChecks, welcomeChecks } from './checks-ux.mjs';
 import { redirectChecks } from './checks-redirects.mjs';
 import { supportChecks } from './checks-support.mjs';
@@ -179,6 +179,7 @@ const both = async (tabs, ctx, check) => {
   await secretChecks(tabs, ctx, check);
   await filterChecks(tabs, ctx, check);
   await exportChecks(tabs, ctx, check);
+  await otherImportChecks(tabs, ctx, check);
   await variableChecks(tabs, ctx, check);
   await listChecks(tabs, ctx, check);
   await redirectChecks(tabs, ctx, check);

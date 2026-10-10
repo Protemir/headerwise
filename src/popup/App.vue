@@ -474,7 +474,7 @@ async function importFile(e: Event) {
 <template>
   <main v-if="loaded">
     <header class="bar">
-      <strong>Headerwise</strong>
+      <h1>Headerwise</h1>
       <button v-if="!inTab" class="link open-tab" title="The same editor in a browser tab, with more room" @click="openInTab">Open in a tab</button>
       <label class="pause"><input type="checkbox" v-model="state.paused" /> Pause all</label>
     </header>
@@ -565,7 +565,7 @@ async function importFile(e: Event) {
       <div class="row">
         <button class="link" @click="addHeader(profile.requestHeaders)">+ request header</button>
         <button class="link" @click="showPaste = !showPaste">Paste from DevTools…</button>
-        <select class="preset" v-model="presetChoice" @change="onPreset" title="Add a ready-made set of headers">
+        <select class="preset" v-model="presetChoice" @change="onPreset" title="Add a ready-made set of headers" aria-label="Add a preset">
           <option value="">+ preset…</option>
           <option v-for="x in PRESETS" :key="x.id" :value="x.id">{{ x.label }}</option>
         </select>

@@ -126,3 +126,37 @@ export async function exportChecks({ ctl, port }, { extId, root }, check) {
   await popup.send('Page.close').catch(() => {});
   browser.close();
 }
+
+// Requestly and Simple Modify Headers exports, through the popup's import box,
+// and what the server then receives.
+export async function otherImportChecks({ ctl, page, port }, { base, saw, extId }, check) {
+  await save(ctl, [prof('Profile 1', { requestHeaders: [hdr('', '')] })]);
+  const popup = await openTab(port, `chrome-extension://${extId}/src/popup/index.html`);
+  await sleep(1200);
+  const importText = async text => {
+    await popup.evaluate(`(async () => {
+      if (!document.querySelector('.import textarea')) [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Import JSON').click();
+      await new Promise(r => setTimeout(r, 200));
+      const ta = document.querySelector('.import textarea');
+      ta.value = ${JSON.stringify(text)};
+      ta.dispatchEvent(new Event('input'));
+      await new Promise(r => setTimeout(r, 100));
+      [...document.querySelectorAll('.import button')].find(b => b.textContent.trim() === 'Import').click();
+    })()`);
+    await sleep(1200);
+  };
+  const requestly = [
+    { id: 'Headers_1', objectType: 'rule', ruleType: 'Headers', name: 'RQ', status: 'Active', groupId: '', version: 2,
+      pairs: [{ source: { key: 'Url', operator: 'Contains', value: '/rq-', filters: [] }, modifications: { Request: [{ header: 'X-Rq', type: 'Modify', value: 'yes' }], Response: [] } }] },
+  ];
+  await importText(JSON.stringify(requestly));
+  const smh = { format_version: '1.2', target_page: '', use_url_contains: true, headers: [{ url_contains: '/smh-', action: 'add', header_name: 'X-Smh', header_value: 'yes', comment: '', apply_on: 'req', status: 'on' }] };
+  await importText(JSON.stringify(smh));
+  await go(page, `${base}/start`);
+  for (const path of ['/rq-1', '/smh-1', '/plain-1']) await send(page, `${base}${path}`);
+  await sleep(300);
+  const got = Object.fromEntries(['/rq-1', '/smh-1', '/plain-1'].map(p => [p, [saw(p)?.['x-rq'] ?? '-', saw(p)?.['x-smh'] ?? '-'].join(',')]));
+  check('import: Requestly and Simple Modify Headers exports work, each only where it did before',
+    JSON.stringify(got) === JSON.stringify({ '/rq-1': 'yes,-', '/smh-1': '-,yes', '/plain-1': '-,-' }), JSON.stringify(got));
+  await popup.send('Page.close').catch(() => {});
+}
