@@ -446,6 +446,17 @@ function doImport() {
     : res.warnings;
 }
 
+// The editor in a tab, for long profiles: "On this tab" keeps reporting on the page
+// the popup was opened over (?tab=<id>; the popup's activeTab grant covers it).
+const inTab = new URLSearchParams(location.search).get('view') === 'tab';
+if (inTab) document.documentElement.classList.add('in-tab');
+async function openInTab() {
+  await saveNow();
+  const url = chrome.runtime.getURL(`src/popup/index.html?view=tab${tab.value ? `&tab=${tab.value.id}` : ''}`);
+  await chrome.tabs.create({ url });
+  window.close();
+}
+
 async function openMigrate() {
   await saveNow();
   chrome.tabs.create({ url: chrome.runtime.getURL('src/migrate/index.html') });
@@ -464,6 +475,7 @@ async function importFile(e: Event) {
   <main v-if="loaded">
     <header class="bar">
       <strong>Headerwise</strong>
+      <button v-if="!inTab" class="link open-tab" title="The same editor in a browser tab, with more room" @click="openInTab">Open in a tab</button>
       <label class="pause"><input type="checkbox" v-model="state.paused" /> Pause all</label>
     </header>
 

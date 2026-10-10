@@ -70,3 +70,6 @@ section.paused { opacity: .6; }
 .notice button { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
 /* "On for…": as small as the buttons next to it. */
 select.timer { flex: 0 0 auto; width: auto; }
+/* Opened in a tab: use the room, keep lines readable. */
+html.in-tab body { width: auto; max-width: 880px; margin: 0 auto; padding: 16px 24px; }
+.bar .open-tab { margin-left: auto; margin-right: 12px; }

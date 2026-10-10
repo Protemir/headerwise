@@ -15,7 +15,7 @@ const popupAt = async (port, extId) => {
   return t;
 };
 
-export async function supportChecks({ ctl, port }, { extId }, check) {
+export async function supportChecks({ ctl, port }, { extId, base }, check) {
   // Install time is recorded; no rating link in the first two weeks.
   const meta = await ctl.evaluate(`chrome.storage.local.get('meta').then(m => m.meta ?? null)`);
   check('rate: install time recorded', typeof meta?.installedAt === 'number' && Date.now() - meta.installedAt < 3600e3, JSON.stringify(meta));
@@ -140,6 +140,32 @@ export async function supportChecks({ ctl, port }, { extId }, check) {
   await sleep(700);
   const rulesLeft = await ctl.evaluate(`chrome.declarativeNetRequest.getDynamicRules().then(r => r.length)`);
   check('timer: switches itself off when the time is up, rules gone', expired && rulesLeft === 0, JSON.stringify({ expired, rulesLeft }));
+
+  // "Open in a tab": the same editor with more room, still reporting on the page
+  // the popup was opened over.
+  const site = await openTab(port, `${base}/in-a-tab`);
+  await sleep(800);
+  const siteId = await ctl.evaluate(`chrome.tabs.query({ url: '${base}/in-a-tab' }).then(t => t[0].id)`);
+  const pop = await openTab(port, `chrome-extension://${extId}/src/popup/index.html?tab=${siteId}`);
+  await sleep(1200);
+  await pop.evaluate(`document.querySelector('button.open-tab').click()`);
+  let editorTab;
+  for (let i = 0; i < 20 && !editorTab; i++) {
+    await sleep(250);
+    editorTab = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find(t => t.url.includes(`view=tab&tab=${siteId}`));
+  }
+  let here = '';
+  if (editorTab) {
+    const { connect } = await import('./cdp.mjs');
+    const ed = await connect(editorTab.webSocketDebuggerUrl);
+    await sleep(1200);
+    here = await ed.evaluate(`document.querySelector('.here h3')?.innerText + ' | wide: ' + (document.body.getBoundingClientRect().width > 560) + ' | button: ' + !!document.querySelector('button.open-tab')`);
+    ed.close();
+    await fetch(`http://127.0.0.1:${port}/json/close/${editorTab.id}`).catch(() => {});
+  }
+  check('open in a tab: reports on the page it came from, wider, no second button', /localhost:\d+/i.test(here) && /wide: true/.test(here) && /button: false/.test(here), here || 'no editor tab');
+  await site.send('Page.close').catch(() => {});
+  pop.close(); // the popup closed itself (window.close), so no Page.close: it would never answer
 
   // An empty profile says where to start.
   await save(ctl, [prof('Profile 1', { requestHeaders: [hdr('', '')] })]);
