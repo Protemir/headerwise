@@ -159,7 +159,7 @@ export async function supportChecks({ ctl, port }, { extId, base }, check) {
     const { connect } = await import('./cdp.mjs');
     const ed = await connect(editorTab.webSocketDebuggerUrl);
     await sleep(1200);
-    here = await ed.evaluate(`document.querySelector('.here h3')?.innerText + ' | wide: ' + (document.body.getBoundingClientRect().width > 560) + ' | button: ' + !!document.querySelector('button.open-tab')`);
+    here = await ed.evaluate(`document.querySelector('.here h2')?.innerText + ' | wide: ' + (document.body.getBoundingClientRect().width > 560) + ' | button: ' + !!document.querySelector('button.open-tab')`);
     ed.close();
     await fetch(`http://127.0.0.1:${port}/json/close/${editorTab.id}`).catch(() => {});
   }

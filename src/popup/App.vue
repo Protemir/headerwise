@@ -485,7 +485,7 @@ async function importFile(e: Event) {
     </p>
 
     <section v-if="tab || tabNote" class="here">
-      <h3>On this tab<template v-if="tab"> · <span class="host">{{ tab.host }}</span></template></h3>
+      <h2>On this tab<template v-if="tab"> · <span class="host">{{ tab.host }}</span></template></h2>
       <p v-if="state.paused" class="dim">Paused: nothing is changed anywhere.</p>
       <template v-else-if="tab">
         <p v-if="hasAccess && !tabAccess" class="dim">Headerwise has no access to this site, so nothing is changed here.</p>
@@ -546,7 +546,7 @@ async function importFile(e: Event) {
         <button :disabled="state.profiles.length === 1" title="Delete profile" @click="deleteProfile">Delete</button>
       </div>
 
-      <h3>Request headers</h3>
+      <h2>Request headers</h2>
       <div v-for="(h, i) in profile.requestHeaders" :key="h.id" class="row">
         <input type="checkbox" v-model="h.enabled" aria-label="Header on or off" />
         <select v-model="h.op" aria-label="What to do with the header">
@@ -585,7 +585,7 @@ async function importFile(e: Event) {
         </template>
       </div>
 
-      <h3>Response headers</h3>
+      <h2>Response headers</h2>
       <div v-for="(h, i) in profile.responseHeaders" :key="h.id" class="row">
         <input type="checkbox" v-model="h.enabled" aria-label="Header on or off" />
         <select v-model="h.op" aria-label="What to do with the header">
@@ -602,7 +602,7 @@ async function importFile(e: Event) {
       </div>
       <button class="link" @click="addHeader(profile.responseHeaders)">+ response header</button>
 
-      <h3>Redirects</h3>
+      <h2>Redirects</h2>
       <div v-for="(r, i) in profile.redirects ?? []" :key="r.id" class="row">
         <input type="checkbox" v-model="r.enabled" aria-label="Redirect on or off" />
         <input class="grow" v-model="r.from" @change="arm(r)" aria-label="Replace this part of the address" :class="{ bad: badRegex[r.id] }" :title="badRegex[r.id] ?? ''" :placeholder="r.isRegex ? 'regex, e.g. /v(\\d+)/' : 'part of the URL, e.g. api.example.com'" spellcheck="false" />
@@ -614,7 +614,7 @@ async function importFile(e: Event) {
       <button class="link" @click="addRedirect">+ redirect</button>
       <p v-if="profile.redirects?.length" class="dim small-hint">Replaces the first match in the address of a request and sends it there. A new redirect switches on once both fields are filled; to cut text out, leave the second empty and tick it yourself. "Only on" filters don't apply to redirects; "never on" and the other limits do.</p>
 
-      <h3>Only on / never on</h3>
+      <h2>Only on / never on</h2>
       <div v-for="(f, i) in profile.filters" :key="f.id" class="row">
         <input type="checkbox" v-model="f.enabled" aria-label="Filter on or off" />
         <select v-model="f.kind" aria-label="Only on or never on">

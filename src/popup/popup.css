@@ -12,7 +12,7 @@ main { padding: 10px 12px; }
 .row { display: flex; gap: 6px; align-items: center; margin: 4px 0; }
 .row input { min-width: 0; }
 .grow { flex: 1; }
-h3 { font-size: 12px; margin: 12px 0 4px; text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
+h2 { font-size: 12px; margin: 12px 0 4px; text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
 button { font: inherit; padding: 2px 8px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: inherit; cursor: pointer; }
 button.link { border: 0; color: var(--accent); padding: 2px 4px; }
 button:disabled { opacity: .4; cursor: default; }
@@ -23,7 +23,7 @@ input, select, textarea { font: inherit; padding: 2px 4px; border: 1px solid var
 .small { font-size: 11px; white-space: nowrap; }
 footer { margin-top: 12px; font-size: 11px; color: var(--muted); }
 .here { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
-.here h3 { margin: 0 0 4px; }
+.here h2 { margin: 0 0 4px; }
 .lines { list-style: none; padding: 0; margin: 0 0 4px; }
 .lines li { padding: 1px 0; }
 .lines li::before { content: '•'; display: inline-block; width: 14px; opacity: .5; }
@@ -32,7 +32,7 @@ footer { margin-top: 12px; font-size: 11px; color: var(--muted); }
 .lines li.waiting::before { content: '!'; color: var(--warn); opacity: 1; font-weight: 700; }
 .lines li.off, .lines li.empty { color: var(--muted); }
 .dim { opacity: .75; margin: 2px 0; }
-.here h3 .host { text-transform: none; letter-spacing: 0; }
+.here h2 .host { text-transform: none; letter-spacing: 0; }
 .pasted { display: flex; gap: 6px; align-items: baseline; min-width: 0; }
 .pasted code { font: 12px ui-monospace, Consolas, monospace; white-space: nowrap; }
 .pasted .val { opacity: .75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
