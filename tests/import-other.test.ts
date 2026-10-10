@@ -31,9 +31,20 @@ describe('Simple Modify Headers', () => {
   it('page list as match patterns', () => {
     const { profiles } = importProfiles(JSON.stringify({ format_version: '1.1', target_page: 'https://*.example.com/*;https://api.test.io/v2/*', headers: [{ action: 'modify', header_name: 'User-Agent', header_value: 'Bot/1.0', apply_on: 'req', status: 'on' }] }));
     const p = profiles[0];
-    expect(p.filters.map(f => f.pattern)).toEqual(['||example.com^', '||api.test.io/v2/*']);
-    expect(['https://a.example.com/x', 'https://api.test.io/v2/u', 'https://api.test.io/v1/u', 'https://other.io/'].map(u => applies(p, u))).toEqual([true, true, false, false]);
+    expect(p.filters.every(f => f.isRegex)).toBe(true);
+    expect(['https://a.example.com/x', 'https://example.com/', 'https://api.test.io/v2/u', 'https://api.test.io/v1/u', 'https://other.io/', 'http://a.example.com/x'].map(u => applies(p, u)))
+      .toEqual([true, true, true, false, false, false]);
     expect(p.enabled).toBe(true);
+  });
+
+  it('match patterns keep their reach: root only, any host with a path, ports', () => {
+    const reach = (target: string, urls: string[]) => {
+      const p = importProfiles(JSON.stringify({ format_version: '1.1', target_page: target, headers: [{ action: 'add', header_name: 'X', header_value: '1', apply_on: 'req', status: 'on' }] })).profiles[0];
+      return urls.map(u => applies(p, u));
+    };
+    expect(reach('https://example.com/', ['https://example.com/', 'https://example.com/a'])).toEqual([true, false]);
+    expect(reach('*://*/api/*', ['https://x.io/api/v1', 'http://y.io/api/', 'https://x.io/v1/api/x', 'https://x.io/?u=/api/'])).toEqual([true, true, false, false]);
+    expect(reach('http://localhost:8080/*', ['http://localhost:8080/x', 'http://localhost:3000/x'])).toEqual([true, false]);
   });
 
   it('page list and "URL contains" together come in off, with a note', () => {
@@ -86,6 +97,17 @@ describe('Requestly', () => {
     expect(heads(profiles[1].responseHeaders)).toEqual([['X-R', '1', 'append', true]]);
     expect(applies(profiles[1], 'https://b.io/q')).toBe(true);
     expect(warnings[0]).toMatch(/"Old \(3\)": page URL filter can't be imported, so this rule comes in switched off/);
+  });
+
+  it('host regexes: unanchored like Requestly, and their | stays inside the host', () => {
+    const rule = (value: string) => importProfiles(JSON.stringify([{ objectType: 'rule', ruleType: 'Headers', name: 'H', status: 'Active', groupId: '', version: 2,
+      pairs: [{ source: { key: 'host', operator: 'Matches', value, filters: [] }, modifications: { Request: [{ header: 'X', type: 'Modify', value: '1' }], Response: [] } }] }])).profiles[0];
+    const alt = rule('/api\\.(dev|qa)\\.example\\.com|localhost/');
+    expect(['https://api.dev.example.com/x', 'http://localhost:3000/', 'https://shop.com/?next=http://localhost/'].map(u => applies(alt, u))).toEqual([true, true, false]);
+    const loose = rule('/example\\.com/');
+    expect(['https://www.example.com/', 'https://example.com/', 'https://other.io/?example.com'].map(u => applies(loose, u))).toEqual([true, true, false]);
+    const exact = rule('/^example\\.com$/');
+    expect(['https://example.com/', 'https://www.example.com/', 'https://example.com:8443/'].map(u => applies(exact, u))).toEqual([true, false, true]);
   });
 
   it('ModHeader and Headerwise files are still told apart', () => {

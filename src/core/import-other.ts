@@ -34,17 +34,20 @@ export function isRequestly(data: unknown): boolean {
 // --- Simple Modify Headers
 
 /**
- * A Chrome match pattern ("https://*.example.com/*") as an "only on" urlFilter.
- * "*.host" and "host" both become ||host (that host and its subdomains): a match
- * pattern for a bare host leaves subdomains out, so that is a little wider.
+ * A Chrome match pattern ("https://*.example.com/api/*") as an "only on" regex
+ * with the same reach: scheme ("*" is http or https), host ("*." also the bare
+ * domain), any port, and the path matched whole. "" for all URLs.
  */
 function matchPatternFilter(pattern: string): string | undefined {
-  const m = /^(\*|[a-z][a-z0-9+.-]*):\/\/(\*|\*\.[^/]+|[^/*]+)(\/.*)?$/i.exec(pattern.trim());
+  const m = /^(\*|https?|wss?|ftp):\/\/(\*|\*\.[^/:]+|[^/*:]+)(?::(\d+|\*))?(\/.*)$/i.exec(pattern.trim());
   if (!m) return undefined;
-  const [, , host, path = '/*'] = m;
-  if (host === '*') return path === '/*' ? '' : path;
-  const site = `||${host.replace(/^\*\./, '')}`;
-  return path === '/*' ? `${site}^` : `${site}${path}`;
+  const [, scheme, host, port, path] = m;
+  if (scheme === '*' && host === '*' && !port && path === '/*') return '';
+  const schemeRe = scheme === '*' ? 'https?' : escapeRe(scheme.toLowerCase());
+  const hostRe = host === '*' ? '[^/?#:]+' : host.startsWith('*.') ? `(?:[^/?#:]*\\.)?${escapeRe(host.slice(2))}` : escapeRe(host);
+  const portRe = port && port !== '*' ? `:${port}` : '(?::\\d+)?';
+  const pathRe = path.split('*').map(escapeRe).join('.*');
+  return `^${schemeRe}://${hostRe}${portRe}${pathRe}$`;
 }
 
 export function importSimpleModifyHeaders(data: unknown): ImportResult {
@@ -67,7 +70,7 @@ export function importSimpleModifyHeaders(data: unknown): ImportResult {
   for (const t of targets) {
     const f = matchPatternFilter(t);
     if (f === undefined) { warnings.push(`"${t}" in the page list isn't a match pattern Headerwise can read.`); siteLost = true; }
-    else if (f) siteFilters.push(filter('include', f, false));
+    else if (f) siteFilters.push(filter('include', f, true));
   }
 
   // Rows can have their own "URL contains" list, so each list gets its own profile.
@@ -124,11 +127,20 @@ function requestlyScope(source: Json, title: string, warnings: string[]): Scope 
     const wildcardRe = (v: string) => v.split('*').map(escapeRe).join('.*');
     let f: UrlFilter | undefined;
     if (key === 'host') {
-      const hostRe = operator === 'matches' ? regexBody(value).replace(/^\^/, '').replace(/\$$/, '')
-        : operator === 'contains' ? `[^/]*${escapeRe(value)}[^/]*`
-        : operator === 'wildcard_matches' ? wildcardRe(value).replace(/\.\*/g, '[^/]*')
-        : escapeRe(value);
-      f = filter('include', `^[a-z][a-z0-9+.-]*://${hostRe}(?::\\d+)?(?:[/?#]|$)`, true);
+      // The host is what lies between "://" and the next / ? or #. Requestly tests
+      // a host regex unanchored, so it may match part of the host unless it says
+      // ^ or $; the user's regex goes in a group so its | can't escape the rest.
+      const HOST = '[^/?#]*';
+      let hostRe: string;
+      if (operator === 'matches') {
+        const body = regexBody(value);
+        const start = body.startsWith('^') ? '' : HOST;
+        const end = body.endsWith('$') && !body.endsWith('\\$') ? '(?::\\d+)?' : HOST;
+        hostRe = `${start}(?:${body.replace(/^\^/, '').replace(/(?<!\\)\$$/, '')})${end}`;
+      } else if (operator === 'contains') hostRe = `${HOST}${escapeRe(value)}${HOST}`;
+      else if (operator === 'wildcard_matches') hostRe = `(?:${wildcardRe(value).replace(/\.\*/g, '[^/?#]*')})(?::\\d+)?`;
+      else hostRe = `${escapeRe(value)}(?::\\d+)?`;
+      f = filter('include', `^[a-z][a-z0-9+.-]*://${hostRe}(?:[/?#]|$)`, true);
     } else {
       // Url, and the legacy "path" (Requestly itself reads it as "Url contains").
       if (operator === 'matches') f = filter('include', regexBody(value), true);

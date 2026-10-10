@@ -117,6 +117,7 @@ export function releaseTabs(state: State, tabId?: number): boolean {
   for (const p of state.profiles) {
     if (!p.tab || (tabId !== undefined && p.tab.id !== tabId)) continue;
     delete p.tab;
+    delete p.offAt;
     p.enabled = false;
     changed = true;
   }
@@ -179,7 +180,8 @@ export function nextProfile(state: State): string | undefined {
   if (n === 0) return undefined;
   const current = state.profiles.findIndex(p => p.enabled);
   const next = (current + 1) % n;
-  state.profiles.forEach((p, i) => { p.enabled = i === next; });
+  // A switch by hand: no profile keeps a timer it had (it would switch the new one off later).
+  state.profiles.forEach((p, i) => { p.enabled = i === next; delete p.offAt; });
   state.paused = false;
   return state.profiles[next].title;
 }

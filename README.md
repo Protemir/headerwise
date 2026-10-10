@@ -23,9 +23,10 @@ and a URL to set headers from your test.
 
 ## Status
 
-Free, and staying free. In review at the Chrome Web Store (Edge installs it from
-there too). Until it's live, take the zip from the
-[latest release](https://github.com/Protemir/headerwise/releases/latest), unzip it and
+Free, and staying free. Install it from the
+[Chrome Web Store](https://chromewebstore.google.com/detail/jedoaeaapdofoldmkacjbpojbnpapkna)
+(Edge, Brave and Vivaldi install it from there too). The newest build is also in the
+[latest release](https://github.com/Protemir/headerwise/releases/latest): unzip it and
 "Load unpacked" in `chrome://extensions` with Developer mode on, or build it yourself
 (below). Bugs and requests: GitHub Issues.
 

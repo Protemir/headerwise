@@ -373,10 +373,32 @@ onMounted(async () => {
   shortcuts.value = all.filter(c => c.shortcut && c.name && label[c.name]).map(c => ({ key: c.shortcut!.replace('Period', '.').replace('Comma', ','), what: label[c.name!] }));
 });
 
+// Deleting is one click, so it can be taken back for a while (until the popup closes).
+const undo = ref<{ profile: Profile; index: number } | null>(null);
+let undoTimer: ReturnType<typeof setTimeout> | undefined;
 function deleteProfile() {
   if (state.value.profiles.length === 1) return;
-  state.value.profiles.splice(selected.value, 1);
+  const [gone] = state.value.profiles.splice(selected.value, 1);
+  undo.value = { profile: gone, index: selected.value };
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(() => { undo.value = null; }, 15000);
   selected.value = Math.max(0, selected.value - 1);
+}
+async function undoDelete() {
+  if (!undo.value) return;
+  const { profile: back, index } = undo.value;
+  undo.value = null;
+  // Already back (another Headerwise window saved it again): nothing to restore.
+  if (state.value.profiles.some(p => p.id === back.id)) return;
+  // Its "only this tab" tab may have closed meanwhile: then it comes back off, unbound.
+  if (back.tab && !(await chrome.tabs.get(back.tab.id).catch(() => null))) {
+    delete back.tab;
+    back.enabled = false;
+  }
+  const at = Math.min(index, state.value.profiles.length);
+  state.value.profiles.splice(at, 0, back);
+  selected.value = at;
+  undo.value = null;
 }
 
 function addFilter(kind: 'include' | 'exclude') {
@@ -524,6 +546,11 @@ async function importFile(e: Event) {
       </button>
       <button title="Add profile" @click="addProfile">+</button>
     </nav>
+
+    <p v-if="undo" class="undo" role="status">
+      Deleted “{{ undo.profile.title || 'Untitled' }}”.
+      <button class="link" @click="undoDelete">Undo</button>
+    </p>
 
     <section v-if="profile" :class="{ paused: state.paused }">
       <div class="row">

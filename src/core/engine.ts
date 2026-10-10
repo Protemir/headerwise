@@ -62,7 +62,7 @@ export function createEngine(api: EngineApi) {
       void edit(async () => {
         const s = await api.loadState();
         if (expireProfiles(s, api.now())) await api.saveState(s);
-      });
+      }).catch(() => {}); // the next sync expires them again
     }
     const converted = toDnrRules(state);
     const warnings = converted.warnings;

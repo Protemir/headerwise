@@ -87,6 +87,18 @@ describe('profile list helpers', () => {
     expect(nextProfile(s)).toBe('A');
   });
 
+  it('switching by hand (hotkey, closed tab) drops timers, so none fires on the wrong profile later', () => {
+    const s = state();
+    s.profiles[0].offAt = 5000;
+    s.profiles[0].tab = { id: 3, host: 'a.io' };
+    nextProfile(s);
+    expect(s.profiles.map(x => x.offAt ?? null)).toEqual([null, null, null]);
+    s.profiles[1].offAt = 9000;
+    s.profiles[1].tab = { id: 4, host: 'b.io' };
+    releaseTabs(s, 4);
+    expect([s.profiles[1].enabled, s.profiles[1].offAt ?? null]).toEqual([false, null]);
+  });
+
   it('describes the state for the toolbar tooltip', () => {
     const s = state();
     expect(statusTitle(s)).toBe('Headerwise: paused');

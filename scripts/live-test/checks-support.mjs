@@ -167,6 +167,19 @@ export async function supportChecks({ ctl, port }, { extId, base }, check) {
   await site.send('Page.close').catch(() => {});
   pop.close(); // the popup closed itself (window.close), so no Page.close: it would never answer
 
+  // Delete is one click, so it can be undone.
+  await save(ctl, [prof('Keep', { requestHeaders: [hdr('X-K', '1')] }), prof('Oops', { requestHeaders: [hdr('X-O', '1'), hdr('X-O2', '2')] })]);
+  popup = await popupAt(port, extId);
+  await popup.evaluate(`document.querySelectorAll('.tabs button')[1].click()`);
+  await sleep(200);
+  await popup.evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Delete').click()`);
+  await sleep(700);
+  const afterDelete = await ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state.profiles.map(p => p.title))`);
+  await popup.evaluate(`[...document.querySelectorAll('.undo button')].find(b => b.textContent.trim() === 'Undo').click()`);
+  await sleep(700);
+  const afterUndo = await ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state.profiles.map(p => p.title + ':' + p.requestHeaders.length))`);
+  check('delete: undo brings the profile back where it was, headers and all', afterDelete.join() === 'Keep' && afterUndo.join() === 'Keep:1,Oops:2', JSON.stringify({ afterDelete, afterUndo }));
+
   // An empty profile says where to start.
   await save(ctl, [prof('Profile 1', { requestHeaders: [hdr('', '')] })]);
   await popup.send('Page.reload');

@@ -1,7 +1,7 @@
 // What the live test checks. `ctl` is a tab with an extension page (same chrome.*
 // APIs as the service worker, which MV3 puts to sleep), `page` is a tab that
 // visits the echo server, which answers with the request headers it received.
-import { sleep } from './cdp.mjs';
+import { openTab, sleep } from './cdp.mjs';
 
 let n = 0;
 const id = () => `t${++n}`;
@@ -170,20 +170,27 @@ export async function migrateChecks(tabs, { base, extId, fixtureDir }, check) {
   const { page } = tabs;
   await apply(st([p('Profile 1', { requestHeaders: [h('', '')] })])); // fresh install: one empty profile
 
-  await page.send('Page.navigate', { url: `chrome-extension://${extId}/src/migrate/index.html` });
-  await sleep(1000);
-  const { result } = await page.send('Runtime.evaluate', { expression: `document.querySelector('input[type=file]')` });
-  await page.send('DOM.setFileInputFiles', { objectId: result.objectId, files: [fixtureDir] });
+  // A fresh tab: after all the earlier checks the shared one sometimes dropped the picked files.
+  const mig = await openTab(tabs.port, `chrome-extension://${extId}/src/migrate/index.html`);
+  for (let i = 0; i < 50; i++) {
+    await sleep(200);
+    const ready = await mig.evaluate(`location.pathname.endsWith('/src/migrate/index.html') && document.readyState === 'complete' && !!document.querySelector('input[type=file]')`).catch(() => false);
+    if (ready) break;
+  }
+  await sleep(300);
+  const { result } = await mig.send('Runtime.evaluate', { expression: `document.querySelector('input[type=file]')` });
+  await mig.send('DOM.setFileInputFiles', { objectId: result.objectId, files: [fixtureDir] });
   // Reading the folder takes longer on a slow disk: wait for the list, up to 8 s.
-  for (let i = 0; i < 40 && !(await page.evaluate(`document.querySelectorAll('.profiles li').length`)); i++) await sleep(200);
-  const listed = await page.evaluate(`[...document.querySelectorAll('.profiles li')].map(li => li.innerText.split('\\n').join(' ').trim())`);
-  check('migrate: lists the 3 ModHeader profiles', listed.length === 3 && /Staging/.test(listed[0]) && /Юникод ✓.*on/.test(listed[1]), JSON.stringify(listed) + ' page: ' + await page.evaluate(`document.body.innerText.slice(0, 600)`));
+  for (let i = 0; i < 40 && !(await mig.evaluate(`document.querySelectorAll('.profiles li').length`)); i++) await sleep(200);
+  const listed = await mig.evaluate(`[...document.querySelectorAll('.profiles li')].map(li => li.innerText.split('\\n').join(' ').trim())`);
+  check('migrate: lists the 3 ModHeader profiles', listed.length === 3 && /Staging/.test(listed[0]) && /Юникод ✓.*on/.test(listed[1]), JSON.stringify(listed) + ' page end: ' + await mig.evaluate(`document.body.innerText.slice(-500)`));
   if (listed.length === 0) return;
 
-  await page.evaluate(`document.querySelector('button.primary').click()`);
+  await mig.evaluate(`document.querySelector('button.primary').click()`);
   await sleep(1000);
-  const done = await page.evaluate(`document.querySelector('.done h2')?.innerText ?? ''`);
+  const done = await mig.evaluate(`document.querySelector('.done h2')?.innerText ?? ''`);
   check('migrate: import done', /3 profiles added/.test(done), done);
+  await mig.send('Page.close').catch(() => {});
   const saved = await tabs.ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state.profiles.map(p => [p.title, p.enabled]))`);
   check('migrate: replaces the empty starter profile, keeps ModHeader\'s selection', JSON.stringify(saved) === JSON.stringify([['Staging', false], ['Юникод ✓', true], ['Legacy', false]]), JSON.stringify(saved));
 
