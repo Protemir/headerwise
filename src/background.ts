@@ -1,5 +1,5 @@
 import { FIREFOX_UNSUPPORTED_TYPES } from './core/dnr.ts';
-import { createEngine, REFRESH_ALARM } from './core/engine.ts';
+import { createEngine, REFRESH_ALARM, TIMER_ALARM } from './core/engine.ts';
 import { systemSource } from './core/variables.ts';
 import { loadMeta, loadState, saveMeta, saveState, STATE_KEY } from './core/storage.ts';
 
@@ -36,6 +36,7 @@ const engine = createEngine({
   alarms: {
     exists: async name => !!(await chrome.alarms.get(name)),
     create: async (name, periodInMinutes) => { await chrome.alarms.create(name, { periodInMinutes }); },
+    at: async (name, when) => { await chrome.alarms.create(name, { when }); },
     clear: async name => { await chrome.alarms.clear(name); },
   },
   now: Date.now,
@@ -67,4 +68,4 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 chrome.permissions.onAdded.addListener(() => { engine.queueSync(); });
 chrome.permissions.onRemoved.addListener(() => { engine.queueSync(); });
-chrome.alarms.onAlarm.addListener(a => { if (a.name === REFRESH_ALARM) engine.queueSync(); });
+chrome.alarms.onAlarm.addListener(a => { if (a.name === REFRESH_ALARM || a.name === TIMER_ALARM) engine.queueSync(); });

@@ -12,6 +12,7 @@ CE QUE VOUS POUVEZ FAIRE
 • Préréglages : CORS, supprimer Content-Security-Policy, autoriser un site dans une iframe, jeton Bearer, sans cache, User-Agent iPhone ou Googlebot, et plus.
 • Variables : {{uuid}}, {{timestamp}}, {{date}} et d'autres, remplies à chaque modification et renouvelées chaque minute.
 • Les secrets restent cachés : jetons et cookies s'affichent en points jusqu'à ce que vous cliquiez sur l'œil, pratique lors d'un partage d'écran.
+• Activé pour un moment : activez un profil de 15 minutes à 8 heures et il se désactive tout seul, pour qu'un jeton ou un en-tête de production ne reste pas actif par erreur.
 • Exportez et importez des profils en JSON. Les valeurs secrètes sont exclues, sauf si vous les demandez.
 • Tests automatisés : une version à part pour Selenium, Playwright et Puppeteer définit les en-têtes depuis votre test et fait tourner les tests écrits pour ModHeader en changeant seulement l'extension. Téléchargement et mise en place : https://protemir.github.io/headerwise/automation.html
 • Thème clair et sombre.

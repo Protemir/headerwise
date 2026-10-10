@@ -1,5 +1,5 @@
 import { dropUnsupportedRegexes, forBrowser, toDnrRules, type DnrRule } from './dnr.ts';
-import { activeHeaderCount, nextProfile, releaseTabs, statusTitle, type State } from './model.ts';
+import { activeHeaderCount, expireProfiles, nextOffAt, nextProfile, releaseTabs, statusTitle, type State } from './model.ts';
 import { fillRules, rulesHaveVariables, type VariableSource } from './variables.ts';
 
 /*
@@ -38,6 +38,8 @@ export interface EngineApi {
   alarms: {
     exists(name: string): Promise<boolean>;
     create(name: string, periodInMinutes: number): Promise<void>;
+    /** A one-off alarm at this time (ms since 1970). */
+    at(name: string, when: number): Promise<void>;
     clear(name: string): Promise<void>;
   };
   now(): number;
@@ -47,11 +49,21 @@ export interface EngineApi {
 }
 
 export const REFRESH_ALARM = 'refresh-variables';
+/** "On for an hour": wakes the background when the next profile's time is up. */
+export const TIMER_ALARM = 'profile-timer';
 const RED = '#c2410c';
 
 export function createEngine(api: EngineApi) {
   async function apply(): Promise<void> {
     const state = await api.loadState();
+    // Profiles whose time is up count as off right away; saving that goes through
+    // the edit queue (and the storage change brings another sync).
+    if (expireProfiles(state, api.now())) {
+      void edit(async () => {
+        const s = await api.loadState();
+        if (expireProfiles(s, api.now())) await api.saveState(s);
+      });
+    }
     const converted = toDnrRules(state);
     const warnings = converted.warnings;
     const rules = forBrowser(
@@ -147,6 +159,9 @@ export function createEngine(api: EngineApi) {
     const hasRefresh = await api.alarms.exists(REFRESH_ALARM);
     if (wantRefresh && !hasRefresh) await api.alarms.create(REFRESH_ALARM, 1);
     if (!wantRefresh && hasRefresh) await api.alarms.clear(REFRESH_ALARM);
+    const offAt = nextOffAt(state);
+    if (offAt !== undefined) await api.alarms.at(TIMER_ALARM, offAt);
+    else if (await api.alarms.exists(TIMER_ALARM)) await api.alarms.clear(TIMER_ALARM);
 
     // Without host access the browser keeps the rules but changes nothing.
     const noAccess = (await api.grantedOrigins()).length === 0;

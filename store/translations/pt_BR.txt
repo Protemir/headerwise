@@ -12,6 +12,7 @@ O QUE VOCÊ PODE FAZER
 • Atalhos prontos: CORS, remover Content-Security-Policy, permitir um site em iframe, token Bearer, sem cache, User-Agent de iPhone ou Googlebot e mais.
 • Variáveis: {{uuid}}, {{timestamp}}, {{date}} e outras, preenchidas a cada edição e renovadas a cada minuto.
 • Segredos ficam ocultos: tokens e cookies aparecem como pontos até você clicar no olho, útil ao compartilhar a tela.
+• Ligado por um tempo: ative um perfil de 15 minutos a 8 horas e ele se desliga sozinho, para que um token ou um cabeçalho de produção não fique ligado por engano.
 • Exporte e importe perfis em JSON. Valores secretos ficam de fora, a menos que você peça.
 • Testes automatizados: uma versão separada para Selenium, Playwright e Puppeteer define cabeçalhos a partir do seu teste e roda testes escritos para o ModHeader trocando só a extensão. Download e configuração: https://protemir.github.io/headerwise/automation.html
 • Tema claro e escuro.

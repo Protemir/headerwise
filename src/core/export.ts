@@ -13,7 +13,7 @@ export const EXPORT_FORMAT = 'headerwise';
 
 export function exportProfiles(profiles: Profile[], { includeSecrets = false, now = new Date() } = {}): string {
   const clean = profiles.map(p => {
-    const { tab: _tab, ...rest } = p;
+    const { tab: _tab, offAt: _offAt, ...rest } = p;
     const strip = (h: HeaderMod): HeaderMod => (includeSecrets || !isSecret(h) ? h : { ...h, value: '', secret: true });
     return { ...rest, requestHeaders: p.requestHeaders.map(strip), responseHeaders: p.responseHeaders.map(strip) };
   });

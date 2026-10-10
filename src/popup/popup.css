@@ -68,3 +68,5 @@ kbd { font: 10px ui-monospace, Consolas, monospace; border: 1px solid var(--line
 section.paused { opacity: .6; }
 /* The one thing to do before anything works: make it look like it. */
 .notice button { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+/* "On for…": as small as the buttons next to it. */
+select.timer { flex: 0 0 auto; width: auto; }

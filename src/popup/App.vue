@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, toRaw, watch } from 'vue';
-import { defaultState, duplicateProfile, emptyHeader, emptyProfile, isSecret, moveProfile, maskValue, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type Redirect, type State } from '../core/model.ts';
+import { clockTime, defaultState, duplicateProfile, emptyHeader, emptyProfile, isSecret, moveProfile, maskValue, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type Redirect, type State } from '../core/model.ts';
 import { exportFileName, exportProfiles, importProfiles } from '../core/export.ts';
 import { VARIABLES } from '../core/variables.ts';
 import { loadMeta, loadState, saveMeta, saveState, STATE_KEY } from '../core/storage.ts';
@@ -295,6 +295,21 @@ function addHeader(list: HeaderMod[]) {
   list.push(emptyHeader());
 }
 
+// "On for an hour": the background switches the profile off when the time is up.
+const TIMER_MINUTES = [15, 60, 240, 480];
+function setTimer(e: Event) {
+  const select = e.target as HTMLSelectElement;
+  const minutes = Number(select.value);
+  select.value = '';
+  if (!minutes) return;
+  profile.value.enabled = true;
+  profile.value.offAt = Date.now() + minutes * 60_000;
+}
+// Ticking the profile on or off by hand, or the chip's ×: no timer any more.
+function clearTimer() {
+  delete profile.value.offAt;
+}
+
 // "Only this tab": bind the profile to the tab the popup was opened on.
 function bindToTab() {
   if (tab.value) profile.value.tab = { id: tab.value.id, host: tab.value.host };
@@ -500,8 +515,16 @@ async function importFile(e: Event) {
 
     <section v-if="profile" :class="{ paused: state.paused }">
       <div class="row">
-        <input type="checkbox" v-model="profile.enabled" title="Profile on/off" aria-label="Profile on or off" />
+        <input type="checkbox" v-model="profile.enabled" title="Profile on/off" aria-label="Profile on or off" @change="clearTimer" />
         <input class="grow" v-model="profile.title" placeholder="Profile name" aria-label="Profile name" />
+        <span v-if="profile.enabled && profile.offAt" class="chip timer" :title="`Switches itself off at ${clockTime(profile.offAt)}`">
+          until {{ clockTime(profile.offAt) }}
+          <button class="x" title="Keep it on" aria-label="Keep it on" @click="clearTimer">×</button>
+        </span>
+        <select v-else class="timer" value="" title="Switch this profile on, and off again after a while" aria-label="Switch on for a while" @change="setTimer">
+          <option value="">On for…</option>
+          <option v-for="m in TIMER_MINUTES" :key="m" :value="m">{{ m < 60 ? `${m} min` : `${m / 60} hour${m === 60 ? '' : 's'}` }}</option>
+        </select>
         <span v-if="profile.tab" class="chip" :title="profile.tab.id === tab?.id ? 'Applies only in this tab' : 'Applies only in another tab'">
           only in {{ profile.tab.id === tab?.id ? 'this tab' : 'another tab' }} · {{ profile.tab.host }}
           <button class="x" title="Apply in all tabs again" @click="unbindTab">×</button>

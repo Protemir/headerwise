@@ -32,6 +32,7 @@ WHAT YOU CAN DO
 • Presets: CORS, remove Content-Security-Policy, allow a site in an iframe, Bearer token, no cache, iPhone or Googlebot User-Agent, and more.
 • Variables: {{uuid}}, {{timestamp}}, {{date}} and others, filled in on every edit and refreshed every minute.
 • Secrets stay hidden: tokens and cookies show as dots until you click the eye, handy when you share your screen.
+• On for a while: switch a profile on for 15 minutes up to 8 hours and it switches itself off, so a token or a production header isn't left on by accident.
 • Export and import profiles as JSON. Secret values are left out unless you ask for them.
 • Automated tests: a separate build for Selenium, Playwright and Puppeteer sets headers from your test, and runs tests written for ModHeader with only the extension swapped. Download and setup: https://protemir.github.io/headerwise/automation.html
 • Light and dark theme.

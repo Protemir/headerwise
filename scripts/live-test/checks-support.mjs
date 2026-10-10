@@ -115,6 +115,32 @@ export async function supportChecks({ ctl, port }, { extId }, check) {
   const focused = await popup.evaluate(`document.activeElement?.textContent.trim()`);
   check('popup: Alt+Left moves a profile tab, focus follows', stored.profiles.map(x => x.title).join() === 'Second,First' && focused === 'Second', JSON.stringify({ order: stored.profiles.map(x => x.title), focused }));
 
+  // "On for…": switches the profile on now and off later; × keeps it on.
+  await save(ctl, [{ ...prof('Timed', { requestHeaders: [hdr('X-Timed', '1')] }), enabled: false }]);
+  await popup.send('Page.reload');
+  await sleep(1200);
+  await popup.evaluate(`(() => { const s = document.querySelector('select.timer'); s.value = '60'; s.dispatchEvent(new Event('change')); })()`);
+  await sleep(700);
+  stored = await ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state)`);
+  const chip = await popup.evaluate(`document.querySelector('.chip.timer')?.innerText ?? ''`);
+  const inAnHour = Math.abs(stored.profiles[0].offAt - Date.now() - 3600e3) < 60e3;
+  check('timer: "1 hour" switches the profile on until then, shown in the popup', stored.profiles[0].enabled && inAnHour && /until/.test(chip), JSON.stringify({ enabled: stored.profiles[0].enabled, offAt: stored.profiles[0].offAt, chip }));
+  await popup.evaluate(`document.querySelector('.chip.timer button').click()`);
+  await sleep(700);
+  stored = await ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state)`);
+  check('timer: × keeps it on with no timer', stored.profiles[0].enabled && stored.profiles[0].offAt === undefined, JSON.stringify(stored.profiles[0]));
+
+  // When the time is up the background switches it off, and its rule goes.
+  await ctl.evaluate(`chrome.storage.local.get('state').then(s => { s.state.profiles[0].offAt = Date.now() + 2000; return chrome.storage.local.set(s); })`);
+  let expired = false;
+  for (let i = 0; i < 40 && !expired; i++) {
+    await sleep(500);
+    expired = await ctl.evaluate(`chrome.storage.local.get('state').then(s => !s.state.profiles[0].enabled && s.state.profiles[0].offAt === undefined)`);
+  }
+  await sleep(700);
+  const rulesLeft = await ctl.evaluate(`chrome.declarativeNetRequest.getDynamicRules().then(r => r.length)`);
+  check('timer: switches itself off when the time is up, rules gone', expired && rulesLeft === 0, JSON.stringify({ expired, rulesLeft }));
+
   // An empty profile says where to start.
   await save(ctl, [prof('Profile 1', { requestHeaders: [hdr('', '')] })]);
   await popup.send('Page.reload');

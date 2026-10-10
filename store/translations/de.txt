@@ -12,6 +12,7 @@ WAS DU DAMIT MACHEN KANNST
 • Vorlagen: CORS, Content-Security-Policy entfernen, Seite im iframe erlauben, Bearer-Token, kein Cache, iPhone- oder Googlebot-User-Agent und mehr.
 • Variablen: {{uuid}}, {{timestamp}}, {{date}} und weitere, bei jeder Änderung ausgefüllt und jede Minute erneuert.
 • Geheimnisse bleiben verborgen: Tokens und Cookies erscheinen als Punkte, bis du auf das Auge klickst, praktisch bei der Bildschirmfreigabe.
+• Für eine Weile an: Schalte ein Profil für 15 Minuten bis 8 Stunden ein, danach schaltet es sich selbst aus. So bleibt kein Token und kein Produktions-Header versehentlich aktiv.
 • Profile als JSON exportieren und importieren. Geheime Werte bleiben draußen, außer du willst sie mitnehmen.
 • Automatisierte Tests: Ein eigener Build für Selenium, Playwright und Puppeteer setzt Header direkt aus dem Test und führt für ModHeader geschriebene Tests aus, nur die Erweiterung wird getauscht. Download und Einrichtung: https://protemir.github.io/headerwise/automation.html
 • Helles und dunkles Design.

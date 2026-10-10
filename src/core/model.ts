@@ -50,6 +50,11 @@ export interface Profile {
   requestMethods?: string[];
   /** Rewrite part of the URL (ModHeader's "URL replacements"). */
   redirects?: Redirect[];
+  /**
+   * Switch the profile off at this time (ms since 1970): "on for an hour", so a
+   * token or a prod header isn't left on by accident. Not exported.
+   */
+  offAt?: number;
 }
 
 /**
@@ -122,6 +127,7 @@ export function releaseTabs(state: State, tabId?: number): boolean {
 export function duplicateProfile(p: Profile): Profile {
   const copy: Profile = JSON.parse(JSON.stringify(p));
   delete copy.tab;
+  delete copy.offAt;
   return {
     ...copy,
     id: newId(),
@@ -130,7 +136,31 @@ export function duplicateProfile(p: Profile): Profile {
     requestHeaders: copy.requestHeaders.map(h => ({ ...h, id: newId() })),
     responseHeaders: copy.responseHeaders.map(h => ({ ...h, id: newId() })),
     filters: copy.filters.map(f => ({ ...f, id: newId() })),
+    ...(copy.redirects ? { redirects: copy.redirects.map(r => ({ ...r, id: newId() })) } : {}),
   };
+}
+
+/** Switches off the profiles whose time is up (see Profile.offAt). Returns whether anything changed. */
+export function expireProfiles(state: State, now: number): boolean {
+  let changed = false;
+  for (const p of state.profiles) {
+    if (p.offAt === undefined || p.offAt > now) continue;
+    delete p.offAt;
+    p.enabled = false;
+    changed = true;
+  }
+  return changed;
+}
+
+/** When the next profile switches itself off, if any is set to. */
+export function nextOffAt(state: State): number | undefined {
+  const times = state.profiles.filter(p => p.enabled && p.offAt !== undefined).map(p => p.offAt!);
+  return times.length ? Math.min(...times) : undefined;
+}
+
+/** "14:30" in the user's own format, for "on until ...". */
+export function clockTime(at: number): string {
+  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 /** Order matters: the first profile wins when two set the same header. */
@@ -157,7 +187,7 @@ export function nextProfile(state: State): string | undefined {
 /** For the toolbar button's tooltip. */
 export function statusTitle(state: State): string {
   if (state.paused) return 'Headerwise: paused';
-  const on = state.profiles.filter(p => p.enabled).map(p => p.title || 'Untitled');
+  const on = state.profiles.filter(p => p.enabled).map(p => `${p.title || 'Untitled'}${p.offAt ? ` (until ${clockTime(p.offAt)})` : ''}`);
   return on.length ? `Headerwise: ${on.join(', ')}` : 'Headerwise: all profiles off';
 }
 

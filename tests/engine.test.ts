@@ -45,6 +45,7 @@ function fakeBrowser(initial: State, { origins = ['<all_urls>'] as string[], rej
     alarms: {
       exists: async name => alarms.has(name),
       create: async name => { alarms.add(name); calls.push('alarm+'); },
+      at: async name => { alarms.add(name); calls.push('alarm@'); },
       clear: async name => { alarms.delete(name); calls.push('alarm-'); },
     },
     now: () => clock,
@@ -169,6 +170,21 @@ describe('engine', () => {
     await e.queueSync();
     const info = b.stored.ruleInfo as Record<number, { profileId: string }>;
     expect(Object.values(info).map(i => i.profileId)).toEqual(['Copy']);
+  });
+
+  it('"on for an hour": an alarm for the time, then the profile switches itself off', async () => {
+    const b = fakeBrowser(st([p('Timed', { offAt: 3500 }), p('Always', { requestHeaders: [h('X-B')] })]));
+    const e = createEngine(b.api);
+    await e.queueSync();
+    expect([b.dynamic.length, b.alarms.has('profile-timer')]).toEqual([2, true]);
+    expect(b.badge.title).toMatch(/^Headerwise: Timed \(until .+\), Always$/);
+    b.tick(); b.tick(); b.tick(); // clock 4000: time is up
+    await e.queueSync();
+    await e.release(-1); // waits for the edit queue
+    expect(b.dynamic.map(valueOf)).toEqual(['1']);
+    expect(b.state.profiles.map(x => [x.title, x.enabled, x.offAt ?? null])).toEqual([['Timed', false, null], ['Always', true, null]]);
+    await e.queueSync();
+    expect(b.alarms.has('profile-timer')).toBe(false);
   });
 
   it('closing a window with two bound tabs releases both', async () => {
