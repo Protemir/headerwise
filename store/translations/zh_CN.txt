@@ -13,7 +13,7 @@ Headerwise 可以在 Chrome 和 Edge 中修改 HTTP 请求头和响应头。设�
 • 变量：{{uuid}}、{{timestamp}}、{{date}} 等，每次修改时填入，并每分钟更新一次。
 • 敏感信息自动隐藏：令牌和 Cookie 显示为圆点，点击眼睛图标才会显示，共享屏幕时更安心。
 • 限时开启：将配置文件开启 15 分钟到 8 小时，到时自动关闭，避免令牌或生产环境请求头被遗忘而一直生效。
-• 以 JSON 导出和导入配置文件。除非你主动选择，否则不包含敏感值。
+• 以 JSON 导出和导入配置文件。除非你主动选择，否则不包含敏感值。也可导入 Requestly 和 Simple Modify Headers 的导出文件。
 • 自动化测试：为 Selenium、Playwright 和 Puppeteer 准备的独立版本，可在测试中直接设置请求头；为 ModHeader 编写的测试只需替换扩展即可运行。下载与设置：https://protemir.github.io/headerwise/automation.html
 • 浅色和深色主题。
 

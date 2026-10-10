@@ -1,4 +1,5 @@
 import { importModHeader, type ImportResult } from './import-modheader.ts';
+import { importRequestly, importSimpleModifyHeaders, isRequestly, isSimpleModifyHeaders } from './import-other.ts';
 import { isSecret, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type HeaderOp, type Profile, type Redirect, type UrlFilter } from './model.ts';
 
 /*
@@ -82,10 +83,12 @@ function profile(raw: unknown, i: number): Profile | null {
   };
 }
 
-/** Reads a Headerwise export, or falls back to the ModHeader formats. */
+/** Reads a Headerwise export, a Requestly or Simple Modify Headers export, or falls back to the ModHeader formats. */
 export function importProfiles(text: string): ImportResult {
   let data: unknown;
   try { data = JSON.parse(text.trim()); } catch { /* not JSON: let the ModHeader importer explain */ }
+  if (isRequestly(data)) return importRequestly(data);
+  if (isSimpleModifyHeaders(data)) return importSimpleModifyHeaders(data);
   if (!data || typeof data !== 'object' || (data as { format?: unknown }).format !== EXPORT_FORMAT) return importModHeader(text);
 
   const d = data as { version?: unknown; profiles?: unknown };

@@ -660,7 +660,7 @@ async function importFile(e: Event) {
       <button class="link" @click="showExport = !showExport; showImport = false; exportDone = ''">Export…</button>
       <div v-if="showImport" class="import">
         <input type="file" accept=".json,application/json" @change="importFile" />
-        <textarea v-model="importText" rows="5" placeholder="…or paste a Headerwise or ModHeader export here"></textarea>
+        <textarea v-model="importText" rows="5" placeholder="…or paste an export from Headerwise, ModHeader, Requestly or Simple Modify Headers"></textarea>
         <button :disabled="!importText.trim()" @click="doImport">Import</button>
       </div>
       <ul v-if="importNotes.length" class="warnings notes">
