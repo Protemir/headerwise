@@ -33,6 +33,7 @@ WHAT YOU CAN DO
 • Variables: {{uuid}}, {{timestamp}}, {{date}} and others, filled in on every edit and refreshed every minute.
 • Secrets stay hidden: tokens and cookies show as dots until you click the eye, handy when you share your screen.
 • Export and import profiles as JSON. Secret values are left out unless you ask for them.
+• Automated tests: a separate build for Selenium, Playwright and Puppeteer sets headers from your test, and runs tests written for ModHeader with only the extension swapped. Download and setup: https://protemir.github.io/headerwise/automation.html
 • Light and dark theme.
 
 COMING FROM MODHEADER?

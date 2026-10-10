@@ -13,6 +13,7 @@ O QUE VOCÊ PODE FAZER
 • Variáveis: {{uuid}}, {{timestamp}}, {{date}} e outras, preenchidas a cada edição e renovadas a cada minuto.
 • Segredos ficam ocultos: tokens e cookies aparecem como pontos até você clicar no olho, útil ao compartilhar a tela.
 • Exporte e importe perfis em JSON. Valores secretos ficam de fora, a menos que você peça.
+• Testes automatizados: uma versão separada para Selenium, Playwright e Puppeteer define cabeçalhos a partir do seu teste e roda testes escritos para o ModHeader trocando só a extensão. Download e configuração: https://protemir.github.io/headerwise/automation.html
 • Tema claro e escuro.
 
 VEIO DO MODHEADER?
