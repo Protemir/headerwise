@@ -17,7 +17,7 @@
     "@type": "TechArticle",
     "headline": "How to get your ModHeader profiles back after it was removed",
     "datePublished": "2026-10-09",
-    "dateModified": "2026-10-09",
+    "dateModified": "2026-10-12",
     "author": { "@type": "Organization", "name": "Headerwise", "url": "https://protemir.github.io/headerwise/" },
     "about": "Recovering ModHeader profiles from Chrome and Edge extension storage"
   }
@@ -70,7 +70,7 @@
     <p>Several Chrome profiles? Open <code>chrome://version</code> in the one where you used ModHeader and use its "Profile Path" instead of <code>…/Default</code>. Copy the folder somewhere safe before anything else.</p>
 
     <h2>Option 1: read it in the browser</h2>
-    <p>This is why I added a "Move from ModHeader" page to <a href="./">Headerwise</a>, a free and open source header editor. You pick that folder and the page reads the LevelDB files right there, with nothing uploaded. Headers, URL filters and site, type and method filters come over, and the profile you had selected stays on. The extension can't make network requests at all, which you can check in its manifest.</p>
+    <p>This is why I added a "Move from ModHeader" page to <a href="./">Headerwise</a>, a free and open source header editor. You pick that folder and the page reads the LevelDB files right there, with nothing uploaded. Headers, URL filters, site, type and method filters, URL replacements and cookie rules come over, and the profile you had selected stays on. The extension can't make network requests at all, which you can check in its manifest.</p>
 
     <h2>Option 2: a command line tool</h2>
     <p>Requestly published a small CLI that finds the folder and writes the same JSON file ModHeader's own export would have. It needs Node.js 20 or newer:</p>
