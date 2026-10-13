@@ -275,6 +275,19 @@ const isBlank = computed(() => !!profile.value
   && [...profile.value.requestHeaders, ...profile.value.responseHeaders].every(h => h.name.trim() === '')
   && !profile.value.redirects?.length);
 
+// A token or cookie with no limit goes to every site the page talks to: fonts,
+// analytics, other people's APIs. Said once, with a one-click fix for this tab's site.
+const secretsEverywhere = computed(() => {
+  const p = profile.value;
+  if (!p || !p.enabled || p.tab || p.initiatorDomains?.length) return [];
+  if (p.filters.some(f => f.enabled && f.kind === 'include' && f.pattern.trim())) return [];
+  return p.requestHeaders.filter(h => h.enabled && h.op !== 'remove' && h.name.trim() && h.value.trim() && isSecret(h)).map(h => h.name.trim());
+});
+const tabSite = computed(() => (tab.value ? new URL(tab.value.url).hostname : ''));
+function limitToThisSite() {
+  if (tabSite.value) profile.value.filters.push({ id: newId(), enabled: true, kind: 'include', pattern: `||${tabSite.value}^`, isRegex: false });
+}
+
 // Only rows added here: one the user switched off stays off while they edit it.
 const fresh = new Set<string>();
 function arm(r: Redirect) {
@@ -589,6 +602,11 @@ async function importFile(e: Event) {
         <button title="Remove" aria-label="Remove" @click="removeAt(profile.requestHeaders, i)">×</button>
       </div>
       <p v-if="isBlank" class="dim small-hint">Start here: type a header name and value above, paste a request copied in DevTools, or pick a preset.</p>
+      <p v-if="secretsEverywhere.length" class="small-hint secret-hint">
+        {{ secretsEverywhere.join(', ') }} {{ secretsEverywhere.length === 1 ? 'goes' : 'go' }} to every site your pages talk to, third-party scripts and fonts included.
+        <button v-if="tabSite" class="link" @click="limitToThisSite">Only on {{ tabSite }}</button>
+        <template v-else>Add an "only on" filter below to keep {{ secretsEverywhere.length === 1 ? 'it' : 'them' }} to your own sites.</template>
+      </p>
       <div class="row">
         <button class="link" @click="addHeader(profile.requestHeaders)">+ request header</button>
         <button class="link" @click="showPaste = !showPaste">Paste from DevTools…</button>

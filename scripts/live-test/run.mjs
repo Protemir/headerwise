@@ -17,7 +17,7 @@ import { join, resolve } from 'node:path';
 import { openTab, sleep } from './cdp.mjs';
 import { accessChecks, cspChecks, migrateChecks, noAccessChecks, quickInputChecks, tabChecks } from './checks.mjs';
 import { secretChecks, tabOnlyChecks } from './checks-tabs.mjs';
-import { exportChecks, filterChecks, otherImportChecks } from './checks-filters.mjs';
+import { corsAndSecretChecks, exportChecks, filterChecks, otherImportChecks } from './checks-filters.mjs';
 import { listChecks, variableChecks, welcomeChecks } from './checks-ux.mjs';
 import { redirectChecks } from './checks-redirects.mjs';
 import { supportChecks } from './checks-support.mjs';
@@ -42,7 +42,7 @@ const requests = []; // every path the echo server saw, for the "sends nothing" 
 const headersByPath = new Map(); // what each path got, for requests whose answer a page can't read
 const echo = createServer((req, res) => {
   requests.push(req.url);
-  headersByPath.set(req.url, req.headers);
+  headersByPath.set(req.url, { ...req.headers, ':method': req.method });
   res.setHeader('X-Server', 'echo');
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify({ url: req.url, headers: req.headers }));
@@ -180,6 +180,7 @@ const both = async (tabs, ctx, check) => {
   await filterChecks(tabs, ctx, check);
   await exportChecks(tabs, ctx, check);
   await otherImportChecks(tabs, ctx, check);
+  await corsAndSecretChecks(tabs, ctx, check);
   await variableChecks(tabs, ctx, check);
   await listChecks(tabs, ctx, check);
   await redirectChecks(tabs, ctx, check);

@@ -160,3 +160,29 @@ export async function otherImportChecks({ ctl, page, port }, { base, saw, extId 
     JSON.stringify(got) === JSON.stringify({ '/rq-1': 'yes,-', '/smh-1': '-,yes', '/plain-1': '-,-' }), JSON.stringify(got));
   await popup.send('Page.close').catch(() => {});
 }
+
+// Headers Headerwise adds don't make cross-origin requests "non-simple": no CORS
+// preflight, so third-party fonts and scripts keep loading (headers a page or
+// CDP's setExtraHTTPHeaders adds do trigger one). And a secret header with no
+// site limit gets a warning with a one-click fix.
+export async function corsAndSecretChecks({ ctl, page, port }, { base, ip, saw, extId }, check) {
+  await save(ctl, [prof('Everywhere', { requestHeaders: [hdr('X-Cors-Test', '1'), hdr('Authorization', 'Bearer t')] })]);
+  await go(page, `${base}/cors-page`);
+  await send(page, `${ip}/cors-third-party`);
+  await sleep(300);
+  const got = saw('/cors-third-party') ?? {};
+  check('cors: an added header causes no preflight, the third-party request goes through as is',
+    got[':method'] === 'GET' && got['x-cors-test'] === '1', JSON.stringify({ method: got[':method'], header: got['x-cors-test'] }));
+
+  const siteId = await ctl.evaluate(`chrome.tabs.query({ url: '${base}/cors-page' }).then(t => t[0].id)`);
+  const popup = await openTab(port, `chrome-extension://${extId}/src/popup/index.html?tab=${siteId}`);
+  await sleep(1200);
+  const hint = await popup.evaluate(`document.querySelector('.secret-hint')?.innerText ?? ''`);
+  await popup.evaluate(`document.querySelector('.secret-hint button')?.click()`);
+  await sleep(800);
+  const filters = await ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state.profiles[0].filters.map(f => f.pattern))`);
+  const gone = await popup.evaluate(`!document.querySelector('.secret-hint')`);
+  check('secret everywhere: warned, "Only on <site>" limits it in one click',
+    /^Authorization goes to every site/.test(hint) && filters.join() === '||localhost^' && gone, JSON.stringify({ hint, filters, gone }));
+  await popup.send('Page.close').catch(() => {});
+}
