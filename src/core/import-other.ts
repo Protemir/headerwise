@@ -116,6 +116,86 @@ export function importSimpleModifyHeaders(data: unknown): ImportResult {
 
 interface Scope { filters: UrlFilter[]; initiatorDomains: string[]; resourceTypes: string[]; requestMethods: string[]; narrowingLost: string[] }
 
+/**
+ * Requestly's source as one regex for the whole URL, for redirects (a Headerwise
+ * redirect replaces what its pattern matches, so this makes it the whole URL).
+ * Wildcards become groups, as Requestly's $1, $2 refer to what * matched.
+ */
+function sourceUrlRegex(source: Json): string | undefined {
+  const key = str(source.key).toLowerCase();
+  const operator = str(source.operator).toLowerCase();
+  const value = str(source.value).trim();
+  if (!value) return undefined;
+  const wild = (v: string) => v.split('*').map(escapeRe).join('(.*)');
+  const body = /^\/(.*)\/[a-z]*$/s.exec(value)?.[1] ?? value;
+  if (key === 'host') {
+    const host = operator === 'matches' ? `[^/?#]*(?:${body.replace(/^\^/, '').replace(/(?<!\\)\$$/, '')})[^/?#]*`
+      : operator === 'contains' ? `[^/?#]*${escapeRe(value)}[^/?#]*`
+      : operator === 'wildcard_matches' ? wild(value)
+      : escapeRe(value);
+    return `^[a-z][a-z0-9+.-]*://${host}(?:[/?#].*)?$`;
+  }
+  if (operator === 'equals') return `^${escapeRe(value)}$`;
+  if (operator === 'matches') return `^.*?(?:${body}).*$`;
+  if (operator === 'wildcard_matches') return `^${wild(value)}$`;
+  return `^.*${escapeRe(value)}.*$`; // contains
+}
+
+/** Requestly Redirect (whole URL to a destination) and Replace (part of the URL) rules as a profile of redirects. */
+function requestlyRedirects(rule: Json, type: 'Redirect' | 'Replace', title: string, active: boolean, warnings: string[]): Profile | undefined {
+  const redirects: NonNullable<Profile['redirects']> = [];
+  let narrowed = false;
+  let skipped = 0;
+  const scope: Scope = { filters: [], initiatorDomains: [], resourceTypes: [], requestMethods: [], narrowingLost: [] };
+  for (const pair of objs(rule.pairs)) {
+    const source = obj(pair.source) ? pair.source : {};
+    const s = requestlyScope({ ...source, value: '' }, title, warnings); // only its filters: the URL part goes into the pattern
+    scope.initiatorDomains.push(...s.initiatorDomains);
+    scope.resourceTypes.push(...s.resourceTypes);
+    scope.requestMethods.push(...s.requestMethods);
+    scope.narrowingLost.push(...s.narrowingLost);
+    if (type === 'Redirect') {
+      const destination = str(pair.destination).trim();
+      const kind = str(pair.destinationType) || 'url';
+      const from = sourceUrlRegex(source);
+      if (kind !== 'url' || !destination || destination.startsWith('file://') || !from) { skipped++; continue; }
+      redirects.push({ id: newId(), enabled: true, from, to: destination, isRegex: true });
+    } else {
+      const fromRaw = str(pair.from);
+      if (!fromRaw) { skipped++; continue; }
+      const regex = /^\/(.*)\/[a-z]*$/s.exec(fromRaw)?.[1];
+      const to = str(pair.to);
+      const value = str(source.value).trim();
+      const op = str(source.operator).toLowerCase();
+      if (!value) redirects.push({ id: newId(), enabled: true, from: regex ?? fromRaw, to, isRegex: regex !== undefined });
+      else if (regex === undefined && str(source.key).toLowerCase() === 'url' && (op === 'contains' || op === 'equals') && value.includes(fromRaw)) {
+        // Requestly's own common case: "from" lies inside the URL condition, so
+        // replacing the condition's text with itself-with-the-change is the same.
+        redirects.push({ id: newId(), enabled: true, from: value, to: value.replace(fromRaw, to), isRegex: false });
+      } else {
+        // Only where the URL condition holds, which a Headerwise redirect can't say.
+        redirects.push({ id: newId(), enabled: true, from: regex ?? fromRaw, to, isRegex: regex !== undefined });
+        narrowed = true;
+      }
+    }
+  }
+  if (skipped) warnings.push(`"${title}": ${skipped} ${type === 'Redirect' ? 'redirect to a local file or mock' : 'replacement'}${skipped === 1 ? '' : 's'} skipped: Headerwise can only send requests to another URL.`);
+  if (narrowed) warnings.push(`"${title}": Requestly replaced the text only on URLs matching its condition; Headerwise replaces it wherever it appears, so this rule comes in switched off. Check it before switching it on.`);
+  if (!redirects.length) return undefined;
+  return {
+    id: newId(),
+    title,
+    enabled: active && !narrowed && scope.narrowingLost.length === 0,
+    requestHeaders: [],
+    responseHeaders: [],
+    filters: [],
+    redirects,
+    ...(scope.initiatorDomains.length ? { initiatorDomains: [...new Set(scope.initiatorDomains)] } : {}),
+    ...(scope.resourceTypes.length ? { resourceTypes: [...new Set(scope.resourceTypes)] } : {}),
+    ...(scope.requestMethods.length ? { requestMethods: [...new Set(scope.requestMethods)] } : {}),
+  };
+}
+
 /** Requestly's source { key, operator, value, filters } as Headerwise filters. */
 function requestlyScope(source: Json, title: string, warnings: string[]): Scope {
   const scope: Scope = { filters: [], initiatorDomains: [], resourceTypes: [], requestMethods: [], narrowingLost: [] };
@@ -188,11 +268,16 @@ export function importRequestly(data: unknown): ImportResult {
 
   for (const rule of items.filter(x => x.objectType === 'rule')) {
     const type = str(rule.ruleType);
-    if (type !== 'Headers') { skippedTypes.set(type || 'unknown', (skippedTypes.get(type || 'unknown') ?? 0) + 1); continue; }
     const group = groups.get(str(rule.groupId));
     const active = rule.status === 'Active' && (!group || group.status === 'Active');
     const name = str(rule.name).trim() || 'Requestly rule';
     const title = group && str(group.name).trim() ? `${str(group.name).trim()} / ${name}` : name;
+    if (type === 'Redirect' || type === 'Replace') {
+      const p = requestlyRedirects(rule, type, title, active, warnings);
+      if (p) profiles.push(p);
+      continue;
+    }
+    if (type !== 'Headers') { skippedTypes.set(type || 'unknown', (skippedTypes.get(type || 'unknown') ?? 0) + 1); continue; }
     const pairs = objs(rule.pairs);
     pairs.forEach((pair, i) => {
       const pairTitle = pairs.length > 1 ? `${title} (${i + 1})` : title;

@@ -67,7 +67,7 @@ describe('Requestly', () => {
         modifications: { Request: [{ id: 'm1', header: 'X-Debug', type: 'Add', value: '1' }, { id: 'm2', header: 'Accept-Language', type: 'Add', value: 'de' }], Response: [{ id: 'm3', header: 'Server', type: 'Remove', value: '' }] } }] },
     { id: 'Headers_zz', objectType: 'rule', ruleType: 'Headers', name: 'Ungrouped', status: 'Active', groupId: '', version: 2,
       pairs: [{ source: { key: 'host', operator: 'Wildcard_Matches', value: '*.example.com', filters: [] }, modifications: { Request: [{ header: 'X-B', type: 'Modify', value: '2' }], Response: [] } }] },
-    { id: 'Redirect_1', objectType: 'rule', ruleType: 'Redirect', name: 'R', status: 'Active', pairs: [] },
+    { id: 'QueryParam_1', objectType: 'rule', ruleType: 'QueryParam', name: 'Q', status: 'Active', pairs: [] },
     { id: 'Group_ab12c', objectType: 'group', name: 'Staging', status: 'Inactive', children: [] },
   ];
 
@@ -80,7 +80,7 @@ describe('Requestly', () => {
     expect([debug.requestMethods, debug.resourceTypes, debug.initiatorDomains]).toEqual([['get', 'post'], ['xmlhttprequest'], ['app.example.com']]);
     expect([applies(debug, 'https://api.example.com/x'), applies(debug, 'https://other.io/')]).toEqual([true, false]);
     expect(['https://a.example.com/', 'https://example.com/', 'https://a.example.com.evil.io/', 'https://evil.io/?a.example.com'].map(u => applies(ungrouped, u))).toEqual([true, false, false, false]);
-    expect(warnings).toEqual(['Skipped Requestly rules that aren\'t about headers: 1 Redirect.']);
+    expect(warnings).toEqual(['Skipped Requestly rules that aren\'t about headers: 1 QueryParam.']);
     expect(toDnrRules({ version: 1, paused: false, profiles }).warnings).toEqual([]);
   });
 
@@ -108,6 +108,52 @@ describe('Requestly', () => {
     expect(['https://www.example.com/', 'https://example.com/', 'https://other.io/?example.com'].map(u => applies(loose, u))).toEqual([true, true, false]);
     const exact = rule('/^example\\.com$/');
     expect(['https://example.com/', 'https://www.example.com/', 'https://example.com:8443/'].map(u => applies(exact, u))).toEqual([true, false, true]);
+  });
+
+  // Where a request ends up: the rules Chrome would get, applied in JS.
+  const goesTo = (profiles: Profile[], url: string) => {
+    for (const r of toDnrRules({ version: 1, paused: false, profiles }).rules) {
+      if (r.action.type !== 'redirect') continue;
+      const re = new RegExp(r.condition.regexFilter!, 'i');
+      if (re.test(url)) return url.replace(re, r.action.redirect.regexSubstitution.replace(/\\(\d)/g, '$$$1'));
+    }
+    return url;
+  };
+  const rq = (ruleType: string, pairs: unknown[]) => importProfiles(JSON.stringify([{ objectType: 'rule', ruleType, name: ruleType, status: 'Active', groupId: '', pairs }]));
+
+  it('Redirect rules: the whole URL goes to the destination, wildcards and $1 included', () => {
+    const { profiles, warnings } = rq('Redirect', [
+      { destinationType: 'url', destination: 'https://staging.example.com/app', source: { key: 'Url', operator: 'Equals', value: 'https://example.com/app', filters: [] } },
+      { destinationType: 'url', destination: 'http://localhost:3000/$1', source: { key: 'Url', operator: 'Wildcard_Matches', value: 'https://cdn.example.com/*', filters: [] } },
+      { destinationType: 'map_local', destination: 'file:///tmp/x.js', source: { key: 'Url', operator: 'Contains', value: 'x.js', filters: [] } },
+    ]);
+    expect(profiles[0].enabled).toBe(true);
+    expect([
+      goesTo(profiles, 'https://example.com/app'),
+      goesTo(profiles, 'https://example.com/app/other'),
+      goesTo(profiles, 'https://cdn.example.com/lib/a.js'),
+    ]).toEqual(['https://staging.example.com/app', 'https://example.com/app/other', 'http://localhost:3000/lib/a.js']);
+    expect(warnings[0]).toMatch(/1 redirect to a local file or mock skipped/);
+  });
+
+  it('Replace rules: text in the URL, scoped like Requestly when the condition contains it', () => {
+    const { profiles, warnings } = rq('Replace', [
+      { from: 'api.example.com', to: 'api.staging.example.com', source: { key: 'Url', operator: 'Contains', value: '', filters: [] } },
+      { from: 'v1', to: 'v2', source: { key: 'Url', operator: 'Contains', value: 'shop.io/v1/', filters: [] } },
+    ]);
+    expect(profiles[0].enabled).toBe(true);
+    expect([
+      goesTo(profiles, 'https://api.example.com/x'),
+      goesTo(profiles, 'https://shop.io/v1/cart'),
+      goesTo(profiles, 'https://other.io/v1/cart'),
+    ]).toEqual(['https://api.staging.example.com/x', 'https://shop.io/v2/cart', 'https://other.io/v1/cart']);
+    expect(warnings).toEqual([]);
+  });
+
+  it('a Replace limited by a condition Headerwise can\'t keep comes in off, with a note', () => {
+    const { profiles, warnings } = rq('Replace', [{ from: '/v1/', to: '/v2/', source: { key: 'host', operator: 'Equals', value: 'shop.io', filters: [] } }]);
+    expect(profiles[0].enabled).toBe(false);
+    expect(warnings[0]).toMatch(/comes in switched off/);
   });
 
   it('ModHeader and Headerwise files are still told apart', () => {
