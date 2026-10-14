@@ -208,6 +208,7 @@ export function createEngine(api: EngineApi) {
 
   return {
     queueSync,
+    edit,
 
     /** Tab ids are per browser session: "only this tab" bindings end with the tab (no id: browser start). */
     release(tabId?: number): Promise<void> {

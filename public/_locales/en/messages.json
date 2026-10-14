@@ -300,5 +300,12 @@
   "sharedOff": { "message": "Profiles from a link come in switched off: check their headers and redirects, then switch them on." },
   "share": { "message": "Share…" },
   "shareTitle": { "message": "A link with this profile for a teammate, secret values left out" },
-  "shareTooBig": { "message": "These profiles are too big for a link. Use Download and send the file instead." }
+  "shareTooBig": { "message": "These profiles are too big for a link. Use Download and send the file instead." },
+
+  "w_secretEmpty": { "message": "{where}: its secret value isn't filled in on this computer, so the header isn't sent." },
+  "syncLabel": { "message": "Sync profiles across my computers" },
+  "syncTitle": { "message": "Through the browser's own sync (your Google or Microsoft account; sync must be on in the browser). Headerwise has no server. Secret values, and which profiles are on, stay on each computer." },
+  "syncedAt": { "message": "synced at {time}" },
+  "syncTooBig": { "message": "too big to sync (8 KB per profile): {profiles}" },
+  "syncFailed": { "message": "sync failed: {error}" }
 }

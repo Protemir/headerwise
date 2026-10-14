@@ -708,5 +708,12 @@
   "sharedOff": { "message": "Profile aus einem Link kommen ausgeschaltet an: prüfe ihre Header und Weiterleitungen und schalte sie dann ein." },
   "share": { "message": "Teilen…" },
   "shareTitle": { "message": "Ein Link mit diesem Profil für Kollegen, ohne geheime Werte" },
-  "shareTooBig": { "message": "Diese Profile sind zu groß für einen Link. Lade sie herunter und schicke die Datei." }
+  "shareTooBig": { "message": "Diese Profile sind zu groß für einen Link. Lade sie herunter und schicke die Datei." },
+
+  "w_secretEmpty": { "message": "{where}: Der geheime Wert ist auf diesem Rechner nicht ausgefüllt, daher wird der Header nicht gesendet." },
+  "syncLabel": { "message": "Profile zwischen meinen Rechnern synchronisieren" },
+  "syncTitle": { "message": "Über die Synchronisierung des Browsers (dein Google- oder Microsoft-Konto; sie muss im Browser eingeschaltet sein). Headerwise hat keinen Server. Geheime Werte und welche Profile eingeschaltet sind bleiben auf jedem Rechner für sich." },
+  "syncedAt": { "message": "synchronisiert um {time}" },
+  "syncTooBig": { "message": "zu groß zum Synchronisieren (8 KB pro Profil): {profiles}" },
+  "syncFailed": { "message": "Synchronisierung fehlgeschlagen: {error}" }
 }

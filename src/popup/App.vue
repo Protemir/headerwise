@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, toRaw, watch } from 'vue';
 import { clockTime, defaultState, duplicateProfile, emptyHeader, emptyProfile, isSecret, moveProfile, maskValue, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type Redirect, type State } from '../core/model.ts';
 import { exportFileName, exportProfiles, importProfiles } from '../core/export.ts';
 import { importShareLink, shareLink } from '../core/share.ts';
+import type { SyncStatus } from '../core/sync.ts';
 import { VARIABLES } from '../core/variables.ts';
 import { loadMeta, loadState, saveMeta, saveState, STATE_KEY } from '../core/storage.ts';
 import type { RuleInfo } from '../core/dnr.ts';
@@ -91,8 +92,9 @@ const ruleInfo = ref<Record<number, RuleInfo>>({});
 const rulesUpdatedAt = ref(0);
 
 async function refreshWarnings() {
-  const got = await chrome.storage.session.get(['warnings', 'ruleInfo', 'rulesUpdatedAt']);
+  const got = await chrome.storage.session.get(['warnings', 'ruleInfo', 'rulesUpdatedAt', 'syncStatus']);
   warnings.value = (got.warnings as string[] | undefined) ?? [];
+  syncStatus.value = (got.syncStatus as SyncStatus | undefined) ?? null;
   ruleInfo.value = (got.ruleInfo as Record<number, RuleInfo> | undefined) ?? {};
   rulesUpdatedAt.value = (got.rulesUpdatedAt as number | undefined) ?? 0;
 }
@@ -484,6 +486,22 @@ async function shareCurrent() {
   await copyShareLink();
 }
 
+// Sync through the browser's account (src/core/sync.ts; background.ts does the work).
+const syncOn = ref(false);
+const syncStatus = ref<SyncStatus | null>(null);
+loadMeta().then(m => { syncOn.value = m.sync === true; }).catch(() => {});
+async function setSync(on: boolean) {
+  syncOn.value = on;
+  await saveMeta({ sync: on });
+}
+const syncLine = computed(() => {
+  const s = syncStatus.value;
+  if (!s) return '';
+  if (s.error) return t('syncFailed', { error: s.error });
+  if (s.tooBig?.length) return t('syncTooBig', { profiles: s.tooBig.join(', ') });
+  return t('syncedAt', { time: clockTime(s.at) });
+});
+
 // Opened by the share page's "Add to Headerwise" button (see background.ts).
 async function openShared(key: string) {
   const { [key]: sharedLink } = await chrome.storage.session.get(key) as Record<string, string | undefined>;
@@ -767,6 +785,11 @@ async function importFile(e: Event) {
         </div>
         <input v-if="shareUrl" class="share-url" readonly :value="shareUrl" :aria-label="t('shareLinkLabel')" @focus="($event.target as HTMLInputElement).select()" />
       </div>
+      <label class="sync" :title="t('syncTitle')">
+        <input type="checkbox" :checked="syncOn" @change="setSync(($event.target as HTMLInputElement).checked)" />
+        {{ t('syncLabel') }}
+        <span v-if="syncOn && syncLine" class="dim" :class="{ bad: syncStatus?.error || syncStatus?.tooBig?.length }">· {{ syncLine }}</span>
+      </label>
     </section>
 
     <datalist id="request-names"><option v-for="n in REQUEST_HEADER_NAMES" :key="n" :value="n" /></datalist>

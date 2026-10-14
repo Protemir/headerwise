@@ -747,5 +747,12 @@
   "sharedOff": { "message": "Les profils venus d’un lien arrivent désactivés : vérifiez leurs en-têtes et redirections, puis activez-les." },
   "share": { "message": "Partager…" },
   "shareTitle": { "message": "Un lien avec ce profil pour un collègue, sans les valeurs secrètes" },
-  "shareTooBig": { "message": "Ces profils sont trop gros pour un lien. Téléchargez-les et envoyez le fichier." }
+  "shareTooBig": { "message": "Ces profils sont trop gros pour un lien. Téléchargez-les et envoyez le fichier." },
+
+  "w_secretEmpty": { "message": "{where} : sa valeur secrète n’est pas remplie sur cet ordinateur, l’en-tête n’est donc pas envoyé." },
+  "syncLabel": { "message": "Synchroniser les profils entre mes ordinateurs" },
+  "syncTitle": { "message": "Par la synchronisation du navigateur lui-même (votre compte Google ou Microsoft ; elle doit être activée dans le navigateur). Headerwise n’a pas de serveur. Les valeurs secrètes, et les profils activés, restent propres à chaque ordinateur." },
+  "syncedAt": { "message": "synchronisé à {time}" },
+  "syncTooBig": { "message": "trop gros pour être synchronisés (8 Ko par profil) : {profiles}" },
+  "syncFailed": { "message": "échec de la synchronisation : {error}" }
 }

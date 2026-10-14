@@ -670,5 +670,12 @@
   "sharedOff": { "message": "来自链接的配置文件已添加但处于关闭状态：请先检查其中的请求头和重定向，再开启。" },
   "share": { "message": "分享…" },
   "shareTitle": { "message": "包含此配置文件的链接，可发给同事（不含机密值）" },
-  "shareTooBig": { "message": "这些配置文件太大，无法放进链接。请下载后发送文件。" }
+  "shareTooBig": { "message": "这些配置文件太大，无法放进链接。请下载后发送文件。" },
+
+  "w_secretEmpty": { "message": "{where}：此电脑上未填写其机密值，因此不发送该头。" },
+  "syncLabel": { "message": "在我的电脑之间同步配置文件" },
+  "syncTitle": { "message": "通过浏览器自带的同步（你的 Google 或 Microsoft 账户；需在浏览器中开启同步）。Headerwise 没有服务器。机密值以及哪些配置文件处于开启状态，在每台电脑上各自保留。" },
+  "syncedAt": { "message": "已于 {time} 同步" },
+  "syncTooBig": { "message": "太大，无法同步（每个配置文件 8 KB）：{profiles}" },
+  "syncFailed": { "message": "同步失败：{error}" }
 }

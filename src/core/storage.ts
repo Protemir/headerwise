@@ -19,6 +19,10 @@ export const STATE_KEY = KEY;
 export interface Meta {
   installedAt?: number;
   rateDone?: boolean;
+  /** Profiles synced through the browser's account (src/core/sync.ts), set per computer. */
+  sync?: boolean;
+  /** Profile ids last seen in sync, to tell "deleted elsewhere" from "new here". */
+  syncKnown?: string[];
 }
 
 export async function loadMeta(): Promise<Meta> {

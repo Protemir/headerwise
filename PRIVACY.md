@@ -3,6 +3,11 @@
 Headerwise does not collect, store or send any personal data.
 
 - Your profiles are stored with `chrome.storage.local` on your computer.
+- If you tick "Sync profiles across my computers", they are also handed to the
+  browser's own sync (`chrome.storage.sync`), which the browser keeps in the
+  Google or Microsoft account it is signed in to. Headerwise has no server of its
+  own. Secret values, and which profiles are switched on, are never synced. It is
+  off unless you switch it on, on each computer.
 - The extension makes no network requests, and can't: its manifest sets
   `connect-src 'none'` for all its pages and its background worker, so the
   browser blocks any attempt (see `content_security_policy` in `manifest.json`).

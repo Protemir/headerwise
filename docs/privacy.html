@@ -28,7 +28,8 @@
     <p class="updated">Last updated 15 October 2026</p>
     <p><strong>Headerwise does not collect, store or send any personal data.</strong></p>
     <ul>
-      <li>Your profiles are stored with <code>chrome.storage.local</code> on your computer. They are not synced or sent anywhere.</li>
+      <li>Your profiles are stored with <code>chrome.storage.local</code> on your computer. They are not sent anywhere.</li>
+      <li>If you tick "Sync profiles across my computers", they are also handed to the browser's own sync (<code>chrome.storage.sync</code>), which the browser keeps in the Google or Microsoft account it is signed in to. Headerwise has no server of its own. Secret values, and which profiles are switched on, are never synced. It is off unless you switch it on, on each computer.</li>
       <li>The extension makes no network requests, and can't: its manifest sets <code>connect-src 'none'</code> for all its pages and its background worker, so the browser blocks any attempt.</li>
       <li>Header changes are applied by the browser through the <code>declarativeNetRequest</code> API, so Headerwise never sees page content or request bodies.</li>
       <li>When you open the popup, it reads the address of the current tab and asks the browser which Headerwise rules matched there, to show "On this tab". This is only shown in the popup and is not stored.</li>

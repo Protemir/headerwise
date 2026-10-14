@@ -747,5 +747,12 @@
   "sharedOff": { "message": "Los perfiles de un enlace llegan desactivados: revisa sus encabezados y redirecciones y luego actívalos." },
   "share": { "message": "Compartir…" },
   "shareTitle": { "message": "Un enlace con este perfil para un compañero, sin los valores secretos" },
-  "shareTooBig": { "message": "Estos perfiles son demasiado grandes para un enlace. Descárgalos y envía el archivo." }
+  "shareTooBig": { "message": "Estos perfiles son demasiado grandes para un enlace. Descárgalos y envía el archivo." },
+
+  "w_secretEmpty": { "message": "{where}: su valor secreto no está rellenado en este equipo, así que el encabezado no se envía." },
+  "syncLabel": { "message": "Sincronizar los perfiles entre mis equipos" },
+  "syncTitle": { "message": "Con la sincronización del propio navegador (tu cuenta de Google o Microsoft; debe estar activada en el navegador). Headerwise no tiene servidor. Los valores secretos, y qué perfiles están activados, se quedan en cada equipo." },
+  "syncedAt": { "message": "sincronizado a las {time}" },
+  "syncTooBig": { "message": "demasiado grandes para sincronizar (8 KB por perfil): {profiles}" },
+  "syncFailed": { "message": "error de sincronización: {error}" }
 }

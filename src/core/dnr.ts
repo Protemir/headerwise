@@ -154,6 +154,12 @@ function convertHeaders(
       lose(notes, profile.id, t('w_lineBreak', { where }));
       continue;
     }
+    // A secret value left out of an export or sync and not filled in here yet: an
+    // empty Authorization or Cookie would log the user out wherever it went.
+    if (h.op !== 'remove' && h.secret === true && h.value === '') {
+      notes.warnings.push(t('w_secretEmpty', { where }));
+      continue;
+    }
     const unknown = h.op === 'remove' ? [] : unknownVariables(h.value);
     if (unknown.length) notes.warnings.push(t('w_unknownVariable', { where, variables: unknown.map(n => `{{${n}}}`).join(', ') }));
     if (h.op === 'append' && direction === 'request' && !APPENDABLE_REQUEST_HEADERS.has(name.toLowerCase())) {

@@ -2,7 +2,8 @@ import { FIREFOX_UNSUPPORTED_TYPES } from './core/dnr.ts';
 import { createEngine, REFRESH_ALARM, TIMER_ALARM } from './core/engine.ts';
 import { systemSource } from './core/variables.ts';
 import { isShareLink, MAX_LINK } from './core/share.ts';
-import { loadMeta, loadState, saveMeta, saveState, STATE_KEY } from './core/storage.ts';
+import { createSync, type SyncStatus } from './core/sync.ts';
+import { loadMeta, loadState, saveMeta, saveState, STATE_KEY, type Meta } from './core/storage.ts';
 
 // Wires the engine (src/core/engine.ts) to the browser. Headerwise makes no
 // network requests of its own; everything here talks to local browser APIs.
@@ -78,10 +79,46 @@ if (!isFirefox) chrome.runtime.onMessageExternal.addListener((message, _sender, 
     .then(() => reply(true), () => reply(false));
   return true;
 });
-chrome.runtime.onStartup.addListener(() => { engine.release(); });
+chrome.runtime.onStartup.addListener(() => { engine.release(); sync.start().catch(() => {}); });
 chrome.tabs.onRemoved.addListener(tabId => { engine.release(tabId); });
+// Sync through the browser's account, when switched on (src/core/sync.ts). Edits
+// go out a moment after the last one, so typing doesn't spend the browser's
+// write quota; changes from other computers come in as they arrive.
+const sync = createSync({
+  enabled: async () => (await loadMeta()).sync === true,
+  known: async () => (await loadMeta()).syncKnown ?? [],
+  setKnown: async ids => {
+    if (JSON.stringify((await loadMeta()).syncKnown) !== JSON.stringify(ids)) await saveMeta({ syncKnown: ids });
+  },
+  remote: {
+    get: () => chrome.storage.sync.get(null),
+    set: items => chrome.storage.sync.set(items),
+    remove: keys => chrome.storage.sync.remove(keys),
+  },
+  loadState,
+  saveState,
+  status: (s: SyncStatus | null) => (s ? chrome.storage.session.set({ syncStatus: s }) : chrome.storage.session.remove('syncStatus')),
+  edit: fn => engine.edit(fn),
+  now: Date.now,
+});
+const timers: Record<string, ReturnType<typeof setTimeout>> = {};
+const soon = (name: string, ms: number, fn: () => Promise<void>) => {
+  clearTimeout(timers[name]);
+  timers[name] = setTimeout(() => { fn().catch(() => {}); }, ms);
+};
+
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes[STATE_KEY]) engine.queueSync();
+  if (area === 'local' && changes[STATE_KEY]) {
+    engine.queueSync();
+    soon('push', 1500, sync.push);
+  }
+  if (area === 'local' && changes.meta) {
+    const was = (changes.meta.oldValue as Meta | undefined)?.sync === true;
+    const now = (changes.meta.newValue as Meta | undefined)?.sync === true;
+    if (!was && now) sync.start(true).catch(() => {});
+    if (was && !now) chrome.storage.session.remove('syncStatus').catch(() => {});
+  }
+  if (area === 'sync') soon('pull', 300, () => sync.pull());
 });
 chrome.permissions.onAdded.addListener(() => { engine.queueSync(); });
 chrome.permissions.onRemoved.addListener(() => { engine.queueSync(); });

@@ -24,6 +24,7 @@ import { redirectChecks } from './checks-redirects.mjs';
 import { supportChecks } from './checks-support.mjs';
 import { automationChecks } from './checks-automation.mjs';
 import { shareChecks } from './checks-share.mjs';
+import { syncChecks } from './checks-sync.mjs';
 
 const args = process.argv.slice(2);
 const browser = args.includes('--browser') ? args[args.indexOf('--browser') + 1] : 'chrome';
@@ -201,6 +202,7 @@ const both = async (tabs, ctx, check) => {
   await filterChecks(tabs, ctx, check);
   await exportChecks(tabs, ctx, check);
   await shareChecks(tabs, ctx, check);
+  await syncChecks(tabs, ctx, check);
   await otherImportChecks(tabs, ctx, check);
   await corsAndSecretChecks(tabs, ctx, check);
   await websocketChecks(tabs, ctx, check);
