@@ -186,3 +186,13 @@ export async function corsAndSecretChecks({ ctl, page, port }, { base, ip, saw, 
     /^Authorization goes to every site/.test(hint) && filters.join() === '||localhost^' && gone, JSON.stringify({ hint, filters, gone }));
   await popup.send('Page.close').catch(() => {});
 }
+
+// A page can't put headers on a WebSocket handshake (new WebSocket() takes none);
+// the extension's rules do, which is what header-routed dev tools need.
+export async function websocketChecks({ ctl, page }, { base, ip, saw }, check) {
+  await save(ctl, [prof('Sandbox', { requestHeaders: [hdr('X-Sandbox-ID', 'sandbox-example')], filters: [{ id: 'f', enabled: true, kind: 'include', pattern: '||127.0.0.1^', isRegex: false }] })]);
+  await go(page, `${base}/ws-page`);
+  const state = await page.evaluate(`new Promise(ok => { const ws = new WebSocket('${ip.replace('http', 'ws')}/terminal'); ws.onopen = () => ok('open'); ws.onerror = () => ok('error'); setTimeout(() => ok('timeout'), 3000); })`);
+  const got = saw('/terminal') ?? {};
+  check('websocket: the handshake carries the header', state === 'open' && got[':method'] === 'UPGRADE' && got['x-sandbox-id'] === 'sandbox-example', JSON.stringify({ state, got: { method: got[':method'], header: got['x-sandbox-id'] } }));
+}

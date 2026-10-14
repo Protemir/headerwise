@@ -5,6 +5,7 @@ import type { DbFile } from '../core/leveldb.ts';
 import type { Profile, State } from '../core/model.ts';
 import { MODHEADER_IDS, readModHeaderStore } from '../core/modheader-store.ts';
 import { loadState, saveState } from '../core/storage.ts';
+import { t, tn } from '../core/i18n.ts';
 
 type Browser = keyof typeof MODHEADER_IDS;
 
@@ -21,11 +22,7 @@ const ROOTS: Record<typeof os, Record<Browser, string>> = {
 };
 const sep = os === 'win' ? '\\' : '/';
 const folder = computed(() => [ROOTS[os][browser.value], 'Default', 'Local Extension Settings', MODHEADER_IDS[browser.value]].join(sep));
-const howToPaste = {
-  win: 'In the folder picker, paste it into the address bar at the top and press Enter.',
-  mac: 'In the folder picker, press ⌘ Shift G, paste it and press Enter.',
-  linux: 'In the folder picker, press Ctrl+L, paste it and press Enter.',
-}[os];
+const howToPaste = { win: t('m_pasteWin'), mac: t('m_pasteMac'), linux: t('m_pasteLinux') }[os];
 
 const copied = ref(false);
 async function copyPath() {
@@ -48,7 +45,7 @@ const added = ref(0);
 
 // Opened right after install as ?welcome=1: first steps, then the ModHeader move.
 const welcome = new URLSearchParams(location.search).has('welcome');
-if (welcome) document.title = 'Welcome to Headerwise';
+document.title = welcome ? t('m_titleWelcome') : t('m_titleMove');
 const ALL_SITES = { origins: ['<all_urls>'] };
 const hasAccess = ref(false);
 chrome.permissions.contains(ALL_SITES).then(v => (hasAccess.value = v));
@@ -83,17 +80,17 @@ async function readFiles(list: { path: string; file: File }[]) {
       if (!result) continue;
       const { profiles, warnings } = importModHeader(JSON.stringify(result.profiles), { active: result.selected });
       // A damaged file can hide newer profiles: say so instead of quietly showing older ones.
-      if (errors.length) warnings.unshift(`Some files in the folder could not be read, so these may not be your latest profiles: ${errors.join('; ')}`);
+      if (errors.length) warnings.unshift(t('m_someUnreadable', { errors: errors.join('; ') }));
       found.value = { profiles, warnings, source: result.source, picked: profiles.map(() => true) };
       return;
     }
     error.value = list.length === 0
-      ? 'That folder is empty.'
+      ? t('m_folderEmpty')
       : unreadable.length
-        ? `Could not read ModHeader's files: ${unreadable.join('; ')}. Copy the folder somewhere else and pick the copy, or close the browser that uses it and try again.`
-        : 'No ModHeader profiles in that folder. Check the path below, or try the same path with "Sync Extension Settings" instead of "Local Extension Settings".';
+        ? t('m_cantReadFiles', { errors: unreadable.join('; ') })
+        : t('m_noProfiles');
   } catch (e) {
-    error.value = `Could not read the folder: ${e instanceof Error ? e.message : String(e)}`;
+    error.value = t('m_cantReadFolder', { error: e instanceof Error ? e.message : String(e) });
   } finally {
     busy.value = false;
   }
@@ -133,7 +130,7 @@ async function onDrop(e: DragEvent) {
 // A fresh install has one empty "Profile 1"; replace it instead of keeping it around.
 function isUntouched(s: State): boolean {
   const p = s.profiles[0];
-  return s.profiles.length === 1 && p.title === 'Profile 1' && p.filters.length === 0
+  return s.profiles.length === 1 && (p.title === 'Profile 1' || p.title === t('profileN', { n: 1 })) && p.filters.length === 0
     && !p.redirects?.length && !p.initiatorDomains?.length && !p.excludedInitiatorDomains?.length
     && !p.resourceTypes?.length && !p.requestMethods?.length && !p.tab
     && [...p.requestHeaders, ...p.responseHeaders].every(h => h.name.trim() === '');
@@ -154,84 +151,83 @@ async function doImport() {
 function headerCount(p: Profile): number {
   return p.requestHeaders.length + p.responseHeaders.length;
 }
+
+// "backup from 2026-07-01" comes from the store reader in English.
+const backupDate = (source: string) => source.replace(/^backup from /, '');
+const profilesHint = computed(() => t('m_profilesHint', {
+  version: `${browser.value === 'edge' ? 'edge' : 'chrome'}://version`,
+  path: `${ROOTS[os][browser.value]}${sep}Default`,
+}));
 </script>
 
 <template>
   <main @dragover.prevent="dragging = true" @dragleave="dragging = false" @drop.prevent="onDrop" :class="{ dragging }">
     <template v-if="welcome">
-      <h1>Headerwise is installed</h1>
+      <h1>{{ t('m_installed') }}</h1>
       <section class="steps">
-        <h2>Two quick steps</h2>
+        <h2>{{ t('m_twoSteps') }}</h2>
         <ol>
           <li>
-            Let Headerwise change headers on sites. Chrome applies the changes itself; Headerwise never reads your pages.
-            <span v-if="hasAccess" class="ok-text">Done.</span>
-            <button v-else class="primary" @click="grantAccess">Allow on all sites</button>
+            {{ t('m_stepAccess') }}
+            <span v-if="hasAccess" class="ok-text">{{ t('m_done') }}</span>
+            <button v-else class="primary" @click="grantAccess">{{ t('allowAllSites') }}</button>
           </li>
-          <li>Pin the icon: click the puzzle piece in the toolbar, then the pin next to Headerwise. Click the icon to add headers.</li>
+          <li>{{ t('m_stepPin') }}</li>
         </ol>
       </section>
-      <h2 class="from">Coming from ModHeader?</h2>
+      <h2 class="from">{{ t('m_comingFrom') }}</h2>
     </template>
-    <h1 v-else>Move your profiles from ModHeader</h1>
-    <p>
-      Chrome and Edge turned ModHeader off in July 2026, so its Export button is gone.
-      Your profiles are still in its folder on your disk. Headerwise reads them right here,
-      in this page. Nothing is uploaded or sent anywhere.
-    </p>
+    <h1 v-else>{{ t('m_moveTitle') }}</h1>
+    <p>{{ t('m_intro') }}</p>
 
     <section v-if="added" class="done">
-      <h2>Done: {{ added }} profile{{ added === 1 ? '' : 's' }} added</h2>
-      <p>Click the Headerwise icon in the toolbar to see them. Once you are happy, you can remove ModHeader from the extensions page.</p>
+      <h2>{{ tn('m_added', added) }}</h2>
+      <p>{{ t('m_addedHint') }}</p>
     </section>
 
     <template v-else>
       <section>
-        <h2>1. Copy the path to ModHeader's folder</h2>
-        <p v-if="inFirefox" class="hint">This reads ModHeader's folder from Chrome or Edge on this computer. If you used ModHeader in Firefox and it still opens, use its Export button and "Import JSON" in the Headerwise popup instead.</p>
+        <h2>{{ t('m_step1') }}</h2>
+        <p v-if="inFirefox" class="hint">{{ t('m_firefoxHint') }}</p>
         <div class="row">
-          <label><input type="radio" value="chrome" v-model="browser" /> Chrome (also Brave, Vivaldi, Opera…)</label>
+          <label><input type="radio" value="chrome" v-model="browser" /> {{ t('m_chromeAlso') }}</label>
           <label><input type="radio" value="edge" v-model="browser" /> Edge</label>
         </div>
         <div class="row">
           <code class="grow">{{ folder }}</code>
-          <button @click="copyPath">{{ copied ? 'Copied' : 'Copy' }}</button>
+          <button @click="copyPath">{{ copied ? t('copied') : t('copy') }}</button>
         </div>
-        <p class="hint">
-          If you use several browser profiles, ModHeader may be in another one: open
-          <code>{{ browser === 'edge' ? 'edge' : 'chrome' }}://version</code> in the profile where you used it and replace
-          <code>{{ ROOTS[os][browser] }}{{ sep }}Default</code> with its "Profile Path".
-        </p>
+        <p class="hint">{{ profilesHint }}</p>
       </section>
 
       <section>
-        <h2>2. Pick that folder</h2>
-        <p class="hint">{{ howToPaste }} The browser will ask whether to "upload" the files to this page: that only lets Headerwise read them here.</p>
+        <h2>{{ t('m_step2') }}</h2>
+        <p class="hint">{{ howToPaste }} {{ t('m_uploadHint') }}</p>
         <label class="pick">
           <input type="file" webkitdirectory multiple @change="onPick" :disabled="busy" />
-          <span>{{ busy ? 'Reading…' : 'Choose folder' }}</span>
+          <span>{{ busy ? t('m_reading') : t('m_chooseFolder') }}</span>
         </label>
-        <span class="hint">or drag the folder onto this page</span>
+        <span class="hint">{{ t('m_orDrag') }}</span>
         <p v-if="error" class="error">{{ error }}</p>
       </section>
 
       <section v-if="found">
-        <h2>3. Import</h2>
-        <p class="hint" v-if="found.source !== 'profiles'">Restored from ModHeader's {{ found.source }}.</p>
+        <h2>{{ t('m_step3') }}</h2>
+        <p class="hint" v-if="found.source !== 'profiles'">{{ t('m_restoredBackup', { date: backupDate(found.source) }) }}</p>
         <ul class="profiles">
           <li v-for="(p, i) in found.profiles" :key="p.id">
             <label>
               <input type="checkbox" v-model="found.picked[i]" />
               <strong>{{ p.title }}</strong>
-              <span class="hint">{{ headerCount(p) }} header{{ headerCount(p) === 1 ? '' : 's' }}<template v-if="p.filters.length">, {{ p.filters.length }} URL filter{{ p.filters.length === 1 ? '' : 's' }}</template><template v-if="p.enabled">, on</template></span>
+              <span class="hint">{{ tn('m_headers', headerCount(p)) }}<template v-if="p.filters.length">, {{ tn('m_urlFilters', p.filters.length) }}</template><template v-if="p.enabled">, {{ t('m_on') }}</template></span>
             </label>
           </li>
         </ul>
         <ul v-if="found.warnings.length" class="warnings">
           <li v-for="(w, i) in found.warnings" :key="i">{{ w }}</li>
         </ul>
-        <p class="hint">Profiles often hold tokens and cookies. They stay in this browser only.</p>
-        <button class="primary" :disabled="pickedCount === 0" @click="doImport">Import {{ pickedCount }} profile{{ pickedCount === 1 ? '' : 's' }}</button>
+        <p class="hint">{{ t('m_tokensHint') }}</p>
+        <button class="primary" :disabled="pickedCount === 0" @click="doImport">{{ tn('m_import', pickedCount) }}</button>
       </section>
     </template>
   </main>

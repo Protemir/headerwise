@@ -8,6 +8,7 @@ import type { RuleInfo } from '../core/dnr.ts';
 import { tabReport, type MatchedRule, type TabLine } from '../core/explain.ts';
 import { parsePasted } from '../core/paste.ts';
 import { addHeaders, applyPreset, PRESETS, REQUEST_HEADER_NAMES, RESPONSE_HEADER_NAMES } from '../core/presets.ts';
+import { t, tn, type MessageKey } from '../core/i18n.ts';
 
 const ALL_SITES = { origins: ['<all_urls>'] };
 
@@ -31,7 +32,7 @@ onMounted(async () => {
     await refreshTab();
   } catch (e) {
     // Show the editor anyway: a blank popup helps nobody.
-    tabNote.value = `Headerwise couldn't check this tab (${e instanceof Error ? e.message : String(e)}).`;
+    tabNote.value = t('cantCheckTab', { error: e instanceof Error ? e.message : String(e) });
   } finally {
     loaded.value = true;
   }
@@ -106,7 +107,7 @@ watch(() => (profile.value ? [
   const bad: Record<string, string> = {};
   for (const [id, regex] of patterns) {
     const r = await chrome.declarativeNetRequest.isRegexSupported({ regex }).catch(() => ({ isSupported: true, reason: undefined }));
-    if (!r.isSupported) bad[id] = `Chrome can't use this regex (${r.reason ?? 'not supported'})`;
+    if (!r.isSupported) bad[id] = t('badRegex', { reason: r.reason ?? t('notSupported') });
   }
   if (run === regexRun) badRegex.value = bad; // a newer edit may have started a newer check
 }, { deep: true, immediate: true });
@@ -121,32 +122,32 @@ const exact = ref(true);
 
 async function refreshTab() {
   const forced = Number(new URLSearchParams(location.search).get('tab'));
-  const t = forced ? await chrome.tabs.get(forced) : (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
-  if (!t?.id || !t.url) return;
-  if (!/^https?:/.test(t.url)) {
+  const current = forced ? await chrome.tabs.get(forced) : (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+  if (!current?.id || !current.url) return;
+  if (!/^https?:/.test(current.url)) {
     tab.value = null;
-    tabNote.value = "Browsers don't let extensions change headers on this page.";
+    tabNote.value = t('cantChangeThisPage');
     return;
   }
-  tab.value = { id: t.id, url: t.url, host: new URL(t.url).host };
+  tab.value = { id: current.id, url: current.url, host: new URL(current.url).host };
   // No port in the pattern: Chrome's patterns cover all ports anyway, Firefox rejects one.
-  const u = new URL(t.url);
+  const u = new URL(current.url);
   tabAccess.value = await chrome.permissions.contains({ origins: [`${u.protocol}//${u.hostname}/*`] });
   if (typeof chrome.declarativeNetRequest.getMatchedRules !== 'function') {
     // Firefox doesn't report matched rules to extensions.
     exact.value = false;
-    tabNote.value = "This browser doesn't tell extensions which rules matched, so this is based on the page address.";
+    tabNote.value = t('noMatchedRulesApi');
     return;
   }
   try {
-    const { rulesMatchedInfo } = await chrome.declarativeNetRequest.getMatchedRules({ tabId: t.id });
+    const { rulesMatchedInfo } = await chrome.declarativeNetRequest.getMatchedRules({ tabId: current.id });
     matched.value = rulesMatchedInfo
       .filter(m => m.rule.rulesetId === chrome.declarativeNetRequest.DYNAMIC_RULESET_ID || m.rule.rulesetId === chrome.declarativeNetRequest.SESSION_RULESET_ID)
       .map(m => ({ ruleId: m.rule.ruleId, timeStamp: m.timeStamp }));
     tabNote.value = '';
   } catch (e) {
     // e.g. Chrome's limit on how often this can be asked
-    tabNote.value = `Chrome can't say right now which rules matched here (${e instanceof Error ? e.message : String(e)}).`;
+    tabNote.value = t('matchedRulesError', { error: e instanceof Error ? e.message : String(e) });
   }
 }
 
@@ -157,15 +158,15 @@ const needsReload = computed(() => tabLines.value.some(l => l.line.kind === 'wai
 
 function describe(line: TabLine): string {
   switch (line.kind) {
-    case 'applied': return `changed ${line.requests} request${line.requests === 1 ? '' : 's'}${line.skippedBy ? `; skipped where never on ${line.skippedBy} matches` : ''}`;
-    case 'excluded': return `skipped here: never on ${line.pattern} matches this page`;
-    case 'not-included': return `only on ${line.patterns.join(', ')}: this page doesn't match (its requests to other sites still can)`;
-    case 'waiting': return 'nothing changed here since your last edit: reload the tab';
-    case 'off': return 'turned off';
-    case 'empty': return 'no headers yet';
-    case 'other-tab': return `only in another tab (${line.host})`;
-    case 'narrowed': return `only ${line.scope}: none here since your last edit`;
-    case 'page-match': return 'applies to this page';
+    case 'applied': return tn('line_applied', line.requests) + (line.skippedBy ? t('line_skippedWhere', { pattern: line.skippedBy }) : '');
+    case 'excluded': return t('line_excluded', { pattern: line.pattern });
+    case 'not-included': return t('line_notIncluded', { patterns: line.patterns.join(', ') });
+    case 'waiting': return t('line_waiting');
+    case 'off': return t('line_off');
+    case 'empty': return t('line_empty');
+    case 'other-tab': return t('line_otherTab', { host: line.host });
+    case 'narrowed': return t('line_narrowed', { scope: line.scope });
+    case 'page-match': return t('line_pageMatch');
   }
 }
 
@@ -182,7 +183,7 @@ async function grantAccess() {
 
 // Shown once a value uses {{...}}. Built here: braces in the template would be Vue syntax.
 const usesVariables = computed(() => [...(profile.value?.requestHeaders ?? []), ...(profile.value?.responseHeaders ?? [])].some(h => h.value.includes('{{')));
-const variablesHint = `Variables: ${VARIABLES.map(v => `{{${v.name}}}`).join(', ')}. Chrome sends fixed values, so Headerwise fills them in on every edit and once a minute: requests within that minute share one value.`;
+const variablesHint = t('variablesHint', { list: VARIABLES.map(v => `{{${v.name}}}`).join(', ') });
 
 // Quick input: a request copied from DevTools, or a preset.
 const showPaste = ref(false);
@@ -264,7 +265,7 @@ async function copyDiagnostics() {
     ...(warnings.value.length ? warnings.value.map(w => `  ${w}`) : ['  none']),
   ].join('\n');
   await navigator.clipboard.writeText(text);
-  diagnosticsDone.value = 'Copied. Warnings are included as they are: check them before posting.';
+  diagnosticsDone.value = t('diagnosticsCopied');
 }
 function reportProblem() {
   chrome.tabs.create({ url: ISSUES_URL });
@@ -348,7 +349,7 @@ function removeAt<T>(list: T[], i: number) {
 }
 
 function addProfile() {
-  state.value.profiles.push(emptyProfile(`Profile ${state.value.profiles.length + 1}`));
+  state.value.profiles.push(emptyProfile(t('profileN', { n: state.value.profiles.length + 1 })));
   selected.value = state.value.profiles.length - 1;
 }
 
@@ -382,7 +383,7 @@ async function moveBy(i: number, by: number) {
 const shortcuts = ref<{ key: string; what: string }[]>([]);
 onMounted(async () => {
   const all = await chrome.commands.getAll();
-  const label: Record<string, string> = { _execute_action: 'open', 'toggle-pause': 'pause', 'next-profile': 'next profile' };
+  const label: Record<string, string> = { _execute_action: t('shortcutOpen'), 'toggle-pause': t('shortcutPause'), 'next-profile': t('shortcutNext') };
   shortcuts.value = all.filter(c => c.shortcut && c.name && label[c.name]).map(c => ({ key: c.shortcut!.replace('Period', '.').replace('Comma', ','), what: label[c.name!] }));
 });
 
@@ -419,8 +420,8 @@ function addFilter(kind: 'include' | 'exclude') {
 }
 
 function filterPlaceholder(kind: 'include' | 'exclude', isRegex: boolean): string {
-  if (isRegex) return kind === 'exclude' ? 'regex, e.g. /login' : 'regex, e.g. ^https://api\\.example\\.com/';
-  return kind === 'exclude' ? 'example.com or *login*' : '||example.com^';
+  if (isRegex) return kind === 'exclude' ? t('filterRegexExcludePlaceholder') : t('filterRegexIncludePlaceholder');
+  return kind === 'exclude' ? t('filterExcludePlaceholder') : '||example.com^';
 }
 
 // Sites / request types / methods. Lists are left out of the profile when empty.
@@ -452,11 +453,11 @@ function downloadExport() {
   a.download = exportFileName();
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
-  exportDone.value = `Saved ${a.download}`;
+  exportDone.value = t('saved', { file: a.download });
 }
 async function copyExport() {
   await navigator.clipboard.writeText(exportText());
-  exportDone.value = 'Copied';
+  exportDone.value = t('copied');
 }
 
 // Kept apart from the background script's warnings, which are refreshed on every save.
@@ -467,7 +468,7 @@ function doImport() {
   try {
     res = importProfiles(importText.value);
   } catch (e) {
-    importNotes.value = [`Couldn't read that: ${e instanceof Error ? e.message : String(e)}`];
+    importNotes.value = [t('cantRead', { error: e instanceof Error ? e.message : String(e) })];
     return;
   }
   if (res.profiles.length) {
@@ -477,7 +478,7 @@ function doImport() {
     showImport.value = false;
   }
   importNotes.value = res.profiles.length
-    ? [`Imported ${res.profiles.length} profile${res.profiles.length === 1 ? '' : 's'}.`, ...res.warnings]
+    ? [tn('imported', res.profiles.length), ...res.warnings]
     : res.warnings;
 }
 
@@ -498,6 +499,12 @@ async function openMigrate() {
   window.close();
 }
 
+// Labels kept in the model in English (they also name things in exports): shown translated.
+const typeLabel = (id: string) => t(`type_${id}` as MessageKey);
+const presetLabel = (id: string) => t(`preset_${id.replace(/-/g, '_')}` as MessageKey);
+const untitled = (title: string) => title || t('untitled');
+const duration = (m: number) => (m < 60 ? tn('minutes', m) : tn('hours', m / 60));
+
 async function importFile(e: Event) {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0];
@@ -510,26 +517,26 @@ async function importFile(e: Event) {
   <main v-if="loaded">
     <header class="bar">
       <h1>Headerwise</h1>
-      <button v-if="!inTab" class="link open-tab" title="The same editor in a browser tab, with more room" @click="openInTab">Open in a tab</button>
-      <label class="pause"><input type="checkbox" v-model="state.paused" /> Pause all</label>
+      <button v-if="!inTab" class="link open-tab" :title="t('openInTabTitle')" @click="openInTab">{{ t('openInTab') }}</button>
+      <label class="pause"><input type="checkbox" v-model="state.paused" /> {{ t('pauseAll') }}</label>
     </header>
 
     <p v-if="!hasAccess" class="notice">
-      Headerwise needs access to sites to change their headers.
-      <button @click="grantAccess">Allow on all sites</button>
+      {{ t('needsAccess') }}
+      <button @click="grantAccess">{{ t('allowAllSites') }}</button>
     </p>
 
     <section v-if="tab || tabNote" class="here">
-      <h2>On this tab<template v-if="tab"> · <span class="host">{{ tab.host }}</span></template></h2>
-      <p v-if="state.paused" class="dim">Paused: nothing is changed anywhere.</p>
+      <h2>{{ t('onThisTab') }}<template v-if="tab"> · <span class="host">{{ tab.host }}</span></template></h2>
+      <p v-if="state.paused" class="dim">{{ t('pausedNothing') }}</p>
       <template v-else-if="tab">
-        <p v-if="hasAccess && !tabAccess" class="dim">Headerwise has no access to this site, so nothing is changed here.</p>
+        <p v-if="hasAccess && !tabAccess" class="dim">{{ t('noAccessHere') }}</p>
         <ul class="lines">
           <li v-for="l in tabLines" :key="l.profileId" :class="l.line.kind">
             <strong>{{ l.title }}</strong> {{ describe(l.line) }}
           </li>
         </ul>
-        <button v-if="needsReload" @click="reloadTab">Reload tab</button>
+        <button v-if="needsReload" @click="reloadTab">{{ t('reloadTab') }}</button>
       </template>
       <p v-if="tabNote" class="dim">{{ tabNote }}</p>
     </section>
@@ -545,7 +552,7 @@ async function importFile(e: Event) {
         :key="p.id"
         :class="{ on: i === selected, off: !p.enabled }"
         draggable="true"
-        :title="`${p.title || 'Untitled'}. Drag (or Alt+←/→) to reorder: the leftmost profile wins when two set the same header`"
+        :title="t('profileTabTitle', { title: untitled(p.title) })"
         :aria-pressed="i === selected"
         @click="selected = i"
         @dragstart="dragFrom = i"
@@ -555,172 +562,172 @@ async function importFile(e: Event) {
         @dragover.prevent
         @drop.prevent="dropOn(i)"
       >
-        {{ p.title || 'Untitled' }}
+        {{ untitled(p.title) }}
       </button>
-      <button title="Add profile" @click="addProfile">+</button>
+      <button :title="t('addProfile')" :aria-label="t('addProfile')" @click="addProfile">+</button>
     </nav>
 
     <p v-if="undo" class="undo" role="status">
-      Deleted “{{ undo.profile.title || 'Untitled' }}”.
-      <button class="link" @click="undoDelete">Undo</button>
+      {{ t('deleted', { title: untitled(undo.profile.title) }) }}
+      <button class="link" @click="undoDelete">{{ t('undo') }}</button>
     </p>
 
     <section v-if="profile" :class="{ paused: state.paused }">
       <div class="row">
-        <input type="checkbox" v-model="profile.enabled" title="Profile on/off" aria-label="Profile on or off" @change="clearTimer" />
-        <input class="grow" v-model="profile.title" placeholder="Profile name" aria-label="Profile name" />
-        <span v-if="profile.enabled && profile.offAt" class="chip timer" :title="`Switches itself off at ${clockTime(profile.offAt)}`">
-          until {{ clockTime(profile.offAt) }}
-          <button class="x" title="Keep it on" aria-label="Keep it on" @click="clearTimer">×</button>
+        <input type="checkbox" v-model="profile.enabled" :title="t('profileOnOff')" :aria-label="t('profileOnOff')" @change="clearTimer" />
+        <input class="grow" v-model="profile.title" :placeholder="t('profileName')" :aria-label="t('profileName')" />
+        <span v-if="profile.enabled && profile.offAt" class="chip timer" :title="t('timerOffAt', { time: clockTime(profile.offAt) })">
+          {{ t('timerUntil', { time: clockTime(profile.offAt) }) }}
+          <button class="x" :title="t('keepItOn')" :aria-label="t('keepItOn')" @click="clearTimer">×</button>
         </span>
-        <select v-else class="timer" value="" title="Switch this profile on, and off again after a while" aria-label="Switch on for a while" @change="setTimer">
-          <option value="">On for…</option>
-          <option v-for="m in TIMER_MINUTES" :key="m" :value="m">{{ m < 60 ? `${m} min` : `${m / 60} hour${m === 60 ? '' : 's'}` }}</option>
+        <select v-else class="timer" value="" :title="t('timerSelectTitle')" :aria-label="t('timerSelectLabel')" @change="setTimer">
+          <option value="">{{ t('onFor') }}</option>
+          <option v-for="m in TIMER_MINUTES" :key="m" :value="m">{{ duration(m) }}</option>
         </select>
-        <span v-if="profile.tab" class="chip" :title="profile.tab.id === tab?.id ? 'Applies only in this tab' : 'Applies only in another tab'">
-          only in {{ profile.tab.id === tab?.id ? 'this tab' : 'another tab' }} · {{ profile.tab.host }}
-          <button class="x" title="Apply in all tabs again" @click="unbindTab">×</button>
+        <span v-if="profile.tab" class="chip" :title="profile.tab.id === tab?.id ? t('onlyThisTabTitle') : t('onlyAnotherTabTitle')">
+          {{ profile.tab.id === tab?.id ? t('onlyInThisTab', { host: profile.tab.host }) : t('onlyInAnotherTab', { host: profile.tab.host }) }}
+          <button class="x" :title="t('allTabsAgain')" :aria-label="t('allTabsAgain')" @click="unbindTab">×</button>
         </span>
-        <button v-else-if="tab" title="Apply this profile only in the current tab, until it closes" @click="bindToTab">Only this tab</button>
-        <button title="Copy this profile (the copy starts switched off)" @click="duplicate">Duplicate</button>
-        <button :disabled="state.profiles.length === 1" title="Delete profile" @click="deleteProfile">Delete</button>
+        <button v-else-if="tab" :title="t('onlyThisTabButtonTitle')" @click="bindToTab">{{ t('onlyThisTab') }}</button>
+        <button :title="t('duplicateTitle')" @click="duplicate">{{ t('duplicate') }}</button>
+        <button :disabled="state.profiles.length === 1" :title="t('deleteTitle')" @click="deleteProfile">{{ t('delete') }}</button>
       </div>
 
-      <h2>Request headers</h2>
+      <h2>{{ t('requestHeaders') }}</h2>
       <div v-for="(h, i) in profile.requestHeaders" :key="h.id" class="row">
-        <input type="checkbox" v-model="h.enabled" aria-label="Header on or off" />
-        <select v-model="h.op" aria-label="What to do with the header">
-          <option>set</option>
-          <option>append</option>
-          <option>remove</option>
+        <input type="checkbox" v-model="h.enabled" :aria-label="t('headerOnOff')" />
+        <select v-model="h.op" :aria-label="t('headerAction')">
+          <option value="set">{{ t('op_set') }}</option>
+          <option value="append">{{ t('op_append') }}</option>
+          <option value="remove">{{ t('op_remove') }}</option>
         </select>
-        <input v-model="h.name" placeholder="Name" list="request-names" aria-label="Request header name" />
-        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" :placeholder="h.op === 'remove' ? '(removed)' : 'Value'" aria-label="Header value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
-        <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? 'Hide value' : 'Show value'" :aria-label="revealed.has(h.id) ? 'Hide value' : 'Show value'" :aria-pressed="revealed.has(h.id)" @click="toggleReveal(h)">👁</button>
+        <input v-model="h.name" :placeholder="t('namePlaceholder')" list="request-names" :aria-label="t('requestHeaderName')" />
+        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" :placeholder="h.op === 'remove' ? t('removedPlaceholder') : t('valuePlaceholder')" :aria-label="t('headerValue')" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
+        <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? t('hideValue') : t('showValue')" :aria-label="revealed.has(h.id) ? t('hideValue') : t('showValue')" :aria-pressed="revealed.has(h.id)" @click="toggleReveal(h)">👁</button>
         <span v-else class="icon-space"></span>
-        <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? 'Secret: value hidden. Click to show it always' : 'Mark as secret: hide the value'" aria-label="Secret value" :aria-pressed="isSecret(h)" @click="toggleSecret(h)">🔒</button>
-        <button title="Remove" aria-label="Remove" @click="removeAt(profile.requestHeaders, i)">×</button>
+        <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? t('secretOnTitle') : t('secretOffTitle')" :aria-label="t('secretValue')" :aria-pressed="isSecret(h)" @click="toggleSecret(h)">🔒</button>
+        <button :title="t('remove')" :aria-label="t('remove')" @click="removeAt(profile.requestHeaders, i)">×</button>
       </div>
-      <p v-if="isBlank" class="dim small-hint">Start here: type a header name and value above, paste a request copied in DevTools, or pick a preset.</p>
+      <p v-if="isBlank" class="dim small-hint">{{ t('startHere') }}</p>
       <p v-if="secretsEverywhere.length" class="small-hint secret-hint">
-        {{ secretsEverywhere.join(', ') }} {{ secretsEverywhere.length === 1 ? 'goes' : 'go' }} to every site your pages talk to, third-party scripts and fonts included.
-        <button v-if="tabSite" class="link" @click="limitToThisSite">Only on {{ tabSite }}</button>
-        <template v-else>Add an "only on" filter below to keep {{ secretsEverywhere.length === 1 ? 'it' : 'them' }} to your own sites.</template>
+        {{ tn('secretsEverywhere', secretsEverywhere.length, { names: secretsEverywhere.join(', ') }) }}
+        <button v-if="tabSite" class="link" @click="limitToThisSite">{{ t('onlyOnSite', { site: tabSite }) }}</button>
+        <template v-else>{{ t('addOnlyOnFilter') }}</template>
       </p>
       <div class="row">
-        <button class="link" @click="addHeader(profile.requestHeaders)">+ request header</button>
-        <button class="link" @click="showPaste = !showPaste">Paste from DevTools…</button>
-        <select class="preset" v-model="presetChoice" @change="onPreset" title="Add a ready-made set of headers" aria-label="Add a preset">
-          <option value="">+ preset…</option>
-          <option v-for="x in PRESETS" :key="x.id" :value="x.id">{{ x.label }}</option>
+        <button class="link" @click="addHeader(profile.requestHeaders)">{{ t('addRequestHeader') }}</button>
+        <button class="link" @click="showPaste = !showPaste">{{ t('pasteFromDevTools') }}</button>
+        <select class="preset" v-model="presetChoice" @change="onPreset" :title="t('presetTitle')" :aria-label="t('presetLabel')">
+          <option value="">{{ t('presetPick') }}</option>
+          <option v-for="x in PRESETS" :key="x.id" :value="x.id">{{ presetLabel(x.id) }}</option>
         </select>
       </div>
       <p v-if="usesVariables" class="dim small-hint">{{ variablesHint }}</p>
       <div v-if="showPaste" class="import">
-        <textarea v-model="pasteText" rows="4" placeholder="In DevTools → Network, right-click a request → Copy as cURL, fetch or PowerShell, and paste it here. Plain &quot;Name: value&quot; lines work too."></textarea>
+        <textarea v-model="pasteText" rows="4" :placeholder="t('pastePlaceholder')"></textarea>
         <template v-if="pasted">
-          <p v-if="!pasted.headers.length" class="dim">No headers found in that text.</p>
+          <p v-if="!pasted.headers.length" class="dim">{{ t('pasteNoHeaders') }}</p>
           <label v-for="(h, i) in pasted.headers" :key="h.name" class="pasted">
             <input type="checkbox" v-model="pastePicked[i]" />
             <code>{{ h.name }}</code>
             <span class="val">{{ isSecret(h) ? maskValue(h.value) : h.value }}</span>
           </label>
-          <label v-if="canLimitToHost" class="pasted"><input type="checkbox" v-model="pasteOnlyHost" /> make this profile apply only on {{ pasteHost }}</label>
-          <button :disabled="!pastePicked.some(Boolean)" @click="addPasted">Add {{ pastePicked.filter(Boolean).length }} header{{ pastePicked.filter(Boolean).length === 1 ? '' : 's' }}</button>
+          <label v-if="canLimitToHost" class="pasted"><input type="checkbox" v-model="pasteOnlyHost" /> {{ t('pasteOnlyHost', { host: pasteHost }) }}</label>
+          <button :disabled="!pastePicked.some(Boolean)" @click="addPasted">{{ tn('addHeaders', pastePicked.filter(Boolean).length) }}</button>
         </template>
       </div>
 
-      <h2>Response headers</h2>
+      <h2>{{ t('responseHeaders') }}</h2>
       <div v-for="(h, i) in profile.responseHeaders" :key="h.id" class="row">
-        <input type="checkbox" v-model="h.enabled" aria-label="Header on or off" />
-        <select v-model="h.op" aria-label="What to do with the header">
-          <option>set</option>
-          <option>append</option>
-          <option>remove</option>
+        <input type="checkbox" v-model="h.enabled" :aria-label="t('headerOnOff')" />
+        <select v-model="h.op" :aria-label="t('headerAction')">
+          <option value="set">{{ t('op_set') }}</option>
+          <option value="append">{{ t('op_append') }}</option>
+          <option value="remove">{{ t('op_remove') }}</option>
         </select>
-        <input v-model="h.name" placeholder="Name" list="response-names" aria-label="Response header name" />
-        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" :placeholder="h.op === 'remove' ? '(removed)' : 'Value'" aria-label="Header value" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
-        <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? 'Hide value' : 'Show value'" :aria-label="revealed.has(h.id) ? 'Hide value' : 'Show value'" :aria-pressed="revealed.has(h.id)" @click="toggleReveal(h)">👁</button>
+        <input v-model="h.name" :placeholder="t('namePlaceholder')" list="response-names" :aria-label="t('responseHeaderName')" />
+        <input class="grow" v-model="h.value" :disabled="h.op === 'remove'" :placeholder="h.op === 'remove' ? t('removedPlaceholder') : t('valuePlaceholder')" :aria-label="t('headerValue')" :class="{ masked: masked(h) }" autocomplete="off" spellcheck="false" />
+        <button v-if="isSecret(h) && h.op !== 'remove'" class="icon" :class="{ on: revealed.has(h.id) }" :title="revealed.has(h.id) ? t('hideValue') : t('showValue')" :aria-label="revealed.has(h.id) ? t('hideValue') : t('showValue')" :aria-pressed="revealed.has(h.id)" @click="toggleReveal(h)">👁</button>
         <span v-else class="icon-space"></span>
-        <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? 'Secret: value hidden. Click to show it always' : 'Mark as secret: hide the value'" aria-label="Secret value" :aria-pressed="isSecret(h)" @click="toggleSecret(h)">🔒</button>
-        <button title="Remove" aria-label="Remove" @click="removeAt(profile.responseHeaders, i)">×</button>
+        <button class="icon" :class="{ on: isSecret(h) }" :title="isSecret(h) ? t('secretOnTitle') : t('secretOffTitle')" :aria-label="t('secretValue')" :aria-pressed="isSecret(h)" @click="toggleSecret(h)">🔒</button>
+        <button :title="t('remove')" :aria-label="t('remove')" @click="removeAt(profile.responseHeaders, i)">×</button>
       </div>
-      <button class="link" @click="addHeader(profile.responseHeaders)">+ response header</button>
+      <button class="link" @click="addHeader(profile.responseHeaders)">{{ t('addResponseHeader') }}</button>
 
-      <h2>Redirects</h2>
+      <h2>{{ t('redirects') }}</h2>
       <div v-for="(r, i) in profile.redirects ?? []" :key="r.id" class="row">
-        <input type="checkbox" v-model="r.enabled" aria-label="Redirect on or off" />
-        <input class="grow" v-model="r.from" @change="arm(r)" aria-label="Replace this part of the address" :class="{ bad: badRegex[r.id] }" :title="badRegex[r.id] ?? ''" :placeholder="r.isRegex ? 'regex, e.g. /v(\\d+)/' : 'part of the URL, e.g. api.example.com'" spellcheck="false" />
+        <input type="checkbox" v-model="r.enabled" :aria-label="t('redirectOnOff')" />
+        <input class="grow" v-model="r.from" @change="arm(r)" :aria-label="t('redirectFrom')" :class="{ bad: badRegex[r.id] }" :title="badRegex[r.id] ?? ''" :placeholder="r.isRegex ? t('redirectFromRegexPlaceholder') : t('redirectFromPlaceholder')" spellcheck="false" />
         <span class="arrow" aria-hidden="true">→</span>
-        <input class="grow" v-model="r.to" @change="arm(r)" aria-label="With this" :placeholder="r.isRegex ? 'e.g. /v$1-beta/' : 'e.g. api.staging.example.com'" spellcheck="false" />
-        <label class="small"><input type="checkbox" v-model="r.isRegex" /> regex</label>
-        <button title="Remove" aria-label="Remove" @click="removeAt(profile.redirects!, i)">×</button>
+        <input class="grow" v-model="r.to" @change="arm(r)" :aria-label="t('redirectTo')" :placeholder="r.isRegex ? t('redirectToRegexPlaceholder') : t('redirectToPlaceholder')" spellcheck="false" />
+        <label class="small"><input type="checkbox" v-model="r.isRegex" /> {{ t('regex') }}</label>
+        <button :title="t('remove')" :aria-label="t('remove')" @click="removeAt(profile.redirects!, i)">×</button>
       </div>
-      <button class="link" @click="addRedirect">+ redirect</button>
-      <p v-if="profile.redirects?.length" class="dim small-hint">Replaces the first match in the address of a request and sends it there. A new redirect switches on once both fields are filled; to cut text out, leave the second empty and tick it yourself. "Only on" filters don't apply to redirects; "never on" and the other limits do.</p>
+      <button class="link" @click="addRedirect">{{ t('addRedirect') }}</button>
+      <p v-if="profile.redirects?.length" class="dim small-hint">{{ t('redirectsHint') }}</p>
 
-      <h2>Only on / never on</h2>
+      <h2>{{ t('onlyOnNeverOn') }}</h2>
       <div v-for="(f, i) in profile.filters" :key="f.id" class="row">
-        <input type="checkbox" v-model="f.enabled" aria-label="Filter on or off" />
-        <select v-model="f.kind" aria-label="Only on or never on">
-          <option value="include">only on</option>
-          <option value="exclude">never on</option>
+        <input type="checkbox" v-model="f.enabled" :aria-label="t('filterOnOff')" />
+        <select v-model="f.kind" :aria-label="t('filterKind')">
+          <option value="include">{{ t('onlyOn') }}</option>
+          <option value="exclude">{{ t('neverOn') }}</option>
         </select>
-        <input class="grow" v-model="f.pattern" :placeholder="filterPlaceholder(f.kind, f.isRegex)" aria-label="URL pattern" :class="{ bad: badRegex[f.id] }" :title="badRegex[f.id] ?? ''" />
-        <label class="small"><input type="checkbox" v-model="f.isRegex" /> regex</label>
-        <button title="Remove" aria-label="Remove" @click="removeAt(profile.filters, i)">×</button>
+        <input class="grow" v-model="f.pattern" :placeholder="filterPlaceholder(f.kind, f.isRegex)" :aria-label="t('urlPattern')" :class="{ bad: badRegex[f.id] }" :title="badRegex[f.id] ?? ''" />
+        <label class="small"><input type="checkbox" v-model="f.isRegex" /> {{ t('regex') }}</label>
+        <button :title="t('remove')" :aria-label="t('remove')" @click="removeAt(profile.filters, i)">×</button>
       </div>
-      <button class="link" @click="addFilter('include')">+ only on…</button>
-      <button class="link" @click="addFilter('exclude')">+ never on…</button>
+      <button class="link" @click="addFilter('include')">{{ t('addOnlyOn') }}</button>
+      <button class="link" @click="addFilter('exclude')">{{ t('addNeverOn') }}</button>
 
       <details class="more" :open="hasScope(profile)">
-        <summary>Sites, request types, methods</summary>
+        <summary>{{ t('scopeSummary') }}</summary>
         <div class="row">
-          <span class="lbl">Only from sites</span>
-          <input class="grow" :value="(profile.initiatorDomains ?? []).join(', ')" @change="setDomains(profile, 'initiatorDomains', $event)" aria-label="Only from sites" placeholder="app.example.com, admin.example.com" />
+          <span class="lbl">{{ t('onlyFromSites') }}</span>
+          <input class="grow" :value="(profile.initiatorDomains ?? []).join(', ')" @change="setDomains(profile, 'initiatorDomains', $event)" :aria-label="t('onlyFromSites')" placeholder="app.example.com, admin.example.com" />
         </div>
         <div class="row">
-          <span class="lbl">Never from sites</span>
-          <input class="grow" :value="(profile.excludedInitiatorDomains ?? []).join(', ')" @change="setDomains(profile, 'excludedInitiatorDomains', $event)" aria-label="Never from sites" placeholder="example.org" />
+          <span class="lbl">{{ t('neverFromSites') }}</span>
+          <input class="grow" :value="(profile.excludedInitiatorDomains ?? []).join(', ')" @change="setDomains(profile, 'excludedInitiatorDomains', $event)" :aria-label="t('neverFromSites')" placeholder="example.org" />
         </div>
         <div class="checks">
-          <span class="lbl">Only these requests</span>
+          <span class="lbl">{{ t('onlyTheseRequests') }}</span>
           <div class="opts">
-            <label v-for="t in RESOURCE_TYPES" :key="t.id"><input type="checkbox" :checked="profile.resourceTypes?.includes(t.id)" @change="toggleIn(profile, 'resourceTypes', t.id)" /> {{ t.label }}</label>
+            <label v-for="rt in RESOURCE_TYPES" :key="rt.id"><input type="checkbox" :checked="profile.resourceTypes?.includes(rt.id)" @change="toggleIn(profile, 'resourceTypes', rt.id)" /> {{ typeLabel(rt.id) }}</label>
           </div>
         </div>
         <div class="checks">
-          <span class="lbl">Only these methods</span>
+          <span class="lbl">{{ t('onlyTheseMethods') }}</span>
           <div class="opts">
             <label v-for="m in REQUEST_METHODS" :key="m"><input type="checkbox" :checked="profile.requestMethods?.includes(m)" @change="toggleIn(profile, 'requestMethods', m)" /> {{ m.toUpperCase() }}</label>
           </div>
         </div>
-        <p class="dim">Nothing ticked means all. "From sites" is the page that made the request: a page opened from the address bar or a bookmark has none, so it doesn't count.</p>
+        <p class="dim">{{ t('scopeHint') }}</p>
       </details>
     </section>
 
     <section>
-      <button class="link" @click="openMigrate">Move from ModHeader (turned off in Chrome)</button>
-      <button class="link" @click="showImport = !showImport; showExport = false">Import JSON</button>
-      <button class="link" @click="showExport = !showExport; showImport = false; exportDone = ''">Export…</button>
+      <button class="link" @click="openMigrate">{{ t('moveFromModHeader') }}</button>
+      <button class="link" @click="showImport = !showImport; showExport = false">{{ t('importJson') }}</button>
+      <button class="link" @click="showExport = !showExport; showImport = false; exportDone = ''">{{ t('export') }}</button>
       <div v-if="showImport" class="import">
         <input type="file" accept=".json,application/json" @change="importFile" />
-        <textarea v-model="importText" rows="5" placeholder="…or paste an export from Headerwise, ModHeader, Requestly or Simple Modify Headers"></textarea>
-        <button :disabled="!importText.trim()" @click="doImport">Import</button>
+        <textarea v-model="importText" rows="5" :placeholder="t('importPlaceholder')"></textarea>
+        <button :disabled="!importText.trim()" @click="doImport">{{ t('import') }}</button>
       </div>
       <ul v-if="importNotes.length" class="warnings notes">
         <li v-for="(w, i) in importNotes" :key="i">{{ w }}</li>
-        <li class="ok"><button class="link" @click="importNotes = []">OK</button></li>
+        <li class="ok"><button class="link" @click="importNotes = []">{{ t('ok') }}</button></li>
       </ul>
       <div v-if="showExport" class="import export">
         <label v-for="p in state.profiles" :key="p.id" class="pasted">
           <input type="checkbox" :checked="exportPicked[p.id] !== false" @change="exportPicked[p.id] = ($event.target as HTMLInputElement).checked" />
-          {{ p.title || 'Untitled' }}
+          {{ untitled(p.title) }}
         </label>
-        <label class="pasted"><input type="checkbox" v-model="exportSecrets" /> Include secret values (tokens, cookies). Only for your own machines.</label>
+        <label class="pasted"><input type="checkbox" v-model="exportSecrets" /> {{ t('includeSecrets') }}</label>
         <div class="row">
-          <button :disabled="!exportChosen.length" @click="downloadExport">Download {{ exportChosen.length }} profile{{ exportChosen.length === 1 ? '' : 's' }}</button>
-          <button :disabled="!exportChosen.length" @click="copyExport">Copy</button>
+          <button :disabled="!exportChosen.length" @click="downloadExport">{{ tn('download', exportChosen.length) }}</button>
+          <button :disabled="!exportChosen.length" @click="copyExport">{{ t('copy') }}</button>
           <span class="dim">{{ exportDone }}</span>
         </div>
       </div>
@@ -730,15 +737,15 @@ async function importFile(e: Event) {
     <datalist id="response-names"><option v-for="n in RESPONSE_HEADER_NAMES" :key="n" :value="n" /></datalist>
 
     <p v-if="showRate" class="rate">
-      Finding Headerwise useful?
-      <button class="link" @click="rateDone(true)">Rate it in the Chrome Web Store</button>
-      <button class="link x" title="Don't show again" aria-label="Don't show again" @click="rateDone(false)">×</button>
+      {{ t('rateQuestion') }}
+      <button class="link" @click="rateDone(true)">{{ t('rateIt') }}</button>
+      <button class="link x" :title="t('dontShowAgain')" :aria-label="t('dontShowAgain')" @click="rateDone(false)">×</button>
     </p>
 
     <footer>
-      Runs locally. No account, no analytics, nothing is sent anywhere.
-      <span v-if="shortcuts.length" class="keys"><br />Shortcuts: <template v-for="(k, i) in shortcuts" :key="k.what">{{ i ? ', ' : '' }}<kbd>{{ k.key }}</kbd> {{ k.what }}</template></span>
-      <br />Something wrong? <button class="link" @click="copyDiagnostics">Copy diagnostics</button> and <button class="link" @click="reportProblem">report a problem</button>.
+      {{ t('footerLocal') }}
+      <span v-if="shortcuts.length" class="keys"><br />{{ t('shortcuts') }} <template v-for="(k, i) in shortcuts" :key="k.what">{{ i ? ', ' : '' }}<kbd>{{ k.key }}</kbd> {{ k.what }}</template></span>
+      <br />{{ t('somethingWrong') }} <button class="link" @click="copyDiagnostics">{{ t('copyDiagnostics') }}</button> {{ t('and') }} <button class="link" @click="reportProblem">{{ t('reportProblem') }}</button>.
       <span v-if="diagnosticsDone" class="note-done"><br />{{ diagnosticsDone }}</span>
     </footer>
   </main>

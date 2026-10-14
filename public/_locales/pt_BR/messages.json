@@ -9,5 +9,659 @@
   "extDescription": {
     "message": "Modifique cabeçalhos de requisição e resposta por perfil. Importe seus perfis do ModHeader. Roda localmente, não envia nada.",
     "description": "Store summary, at most 132 characters"
+  },
+  "openInTab": {
+    "message": "Abrir em uma aba"
+  },
+  "openInTabTitle": {
+    "message": "O mesmo editor em uma aba do navegador, com mais espaço"
+  },
+  "pauseAll": {
+    "message": "Pausar tudo"
+  },
+  "needsAccess": {
+    "message": "O Headerwise precisa de acesso aos sites para alterar os cabeçalhos deles."
+  },
+  "allowAllSites": {
+    "message": "Permitir em todos os sites"
+  },
+  "onThisTab": {
+    "message": "Nesta aba"
+  },
+  "pausedNothing": {
+    "message": "Pausado: nada é alterado em lugar nenhum."
+  },
+  "noAccessHere": {
+    "message": "O Headerwise não tem acesso a este site, então nada é alterado aqui."
+  },
+  "reloadTab": {
+    "message": "Recarregar aba"
+  },
+  "cantCheckTab": {
+    "message": "O Headerwise não conseguiu verificar esta aba ({error})."
+  },
+  "cantChangeThisPage": {
+    "message": "Os navegadores não permitem que extensões alterem cabeçalhos nesta página."
+  },
+  "noMatchedRulesApi": {
+    "message": "Este navegador não informa às extensões quais regras corresponderam, então isto se baseia no endereço da página."
+  },
+  "matchedRulesError": {
+    "message": "O Chrome não consegue informar agora quais regras corresponderam aqui ({error})."
+  },
+  "badRegex": {
+    "message": "O Chrome não consegue usar esta regex ({reason})"
+  },
+  "notSupported": {
+    "message": "sem suporte"
+  },
+  "line_applied_one": {
+    "message": "alterou {n} requisição"
+  },
+  "line_applied_many": {
+    "message": "alterou {n} requisições"
+  },
+  "line_applied_other": {
+    "message": "alterou {n} requisições"
+  },
+  "line_skippedWhere": {
+    "message": "; ignorado onde “nunca em” {pattern} corresponde"
+  },
+  "line_excluded": {
+    "message": "ignorado aqui: “nunca em” {pattern} corresponde a esta página"
+  },
+  "line_notIncluded": {
+    "message": "“só em” {patterns}: esta página não corresponde (as requisições dela para outros sites ainda podem corresponder)"
+  },
+  "line_waiting": {
+    "message": "nada alterado aqui desde sua última edição: recarregue a aba"
+  },
+  "line_off": {
+    "message": "desativado"
+  },
+  "line_empty": {
+    "message": "nenhum cabeçalho ainda"
+  },
+  "line_otherTab": {
+    "message": "só em outra aba ({host})"
+  },
+  "line_narrowed": {
+    "message": "só {scope}: nenhuma aqui desde sua última edição"
+  },
+  "line_pageMatch": {
+    "message": "se aplica a esta página"
+  },
+  "untitled": {
+    "message": "Sem título"
+  },
+  "profileN": {
+    "message": "Perfil {n}"
+  },
+  "profileTabTitle": {
+    "message": "{title}. Arraste (ou Alt+←/→) para reordenar: se dois perfis definirem o mesmo cabeçalho, vale o mais à esquerda"
+  },
+  "addProfile": {
+    "message": "Adicionar perfil"
+  },
+  "deleted": {
+    "message": "“{title}” excluído."
+  },
+  "undo": {
+    "message": "Desfazer"
+  },
+  "profileOnOff": {
+    "message": "Ativar ou desativar perfil"
+  },
+  "profileName": {
+    "message": "Nome do perfil"
+  },
+  "timerOffAt": {
+    "message": "Desativa sozinho às {time}"
+  },
+  "timerUntil": {
+    "message": "até {time}"
+  },
+  "keepItOn": {
+    "message": "Manter ativado"
+  },
+  "timerSelectTitle": {
+    "message": "Ativar este perfil e desativá-lo de novo depois de um tempo"
+  },
+  "timerSelectLabel": {
+    "message": "Ativar por um tempo"
+  },
+  "onFor": {
+    "message": "Ativar por…"
+  },
+  "minutes_one": {
+    "message": "{n} min"
+  },
+  "minutes_many": {
+    "message": "{n} min"
+  },
+  "minutes_other": {
+    "message": "{n} min"
+  },
+  "hours_one": {
+    "message": "{n} hora"
+  },
+  "hours_many": {
+    "message": "{n} horas"
+  },
+  "hours_other": {
+    "message": "{n} horas"
+  },
+  "onlyThisTabTitle": {
+    "message": "Vale só nesta aba"
+  },
+  "onlyAnotherTabTitle": {
+    "message": "Vale só em outra aba"
+  },
+  "onlyInThisTab": {
+    "message": "só nesta aba · {host}"
+  },
+  "onlyInAnotherTab": {
+    "message": "só em outra aba · {host}"
+  },
+  "allTabsAgain": {
+    "message": "Aplicar de novo em todas as abas"
+  },
+  "onlyThisTab": {
+    "message": "Só esta aba"
+  },
+  "onlyThisTabButtonTitle": {
+    "message": "Aplicar este perfil só na aba atual, até ela ser fechada"
+  },
+  "duplicate": {
+    "message": "Duplicar"
+  },
+  "duplicateTitle": {
+    "message": "Copiar este perfil (a cópia começa desativada)"
+  },
+  "delete": {
+    "message": "Excluir"
+  },
+  "deleteTitle": {
+    "message": "Excluir perfil"
+  },
+  "requestHeaders": {
+    "message": "Cabeçalhos de requisição"
+  },
+  "responseHeaders": {
+    "message": "Cabeçalhos de resposta"
+  },
+  "headerOnOff": {
+    "message": "Ativar ou desativar cabeçalho"
+  },
+  "headerAction": {
+    "message": "O que fazer com o cabeçalho"
+  },
+  "op_set": {
+    "message": "definir"
+  },
+  "op_append": {
+    "message": "anexar"
+  },
+  "op_remove": {
+    "message": "remover"
+  },
+  "namePlaceholder": {
+    "message": "Nome"
+  },
+  "valuePlaceholder": {
+    "message": "Valor"
+  },
+  "removedPlaceholder": {
+    "message": "(removido)"
+  },
+  "requestHeaderName": {
+    "message": "Nome do cabeçalho de requisição"
+  },
+  "responseHeaderName": {
+    "message": "Nome do cabeçalho de resposta"
+  },
+  "headerValue": {
+    "message": "Valor do cabeçalho"
+  },
+  "hideValue": {
+    "message": "Ocultar valor"
+  },
+  "showValue": {
+    "message": "Mostrar valor"
+  },
+  "secretOnTitle": {
+    "message": "Secreto: valor oculto. Clique para mostrá-lo sempre"
+  },
+  "secretOffTitle": {
+    "message": "Marcar como secreto: ocultar o valor"
+  },
+  "secretValue": {
+    "message": "Valor secreto"
+  },
+  "remove": {
+    "message": "Remover"
+  },
+  "startHere": {
+    "message": "Comece aqui: digite acima um nome e um valor de cabeçalho, cole uma requisição copiada no DevTools ou escolha uma predefinição."
+  },
+  "secretsEverywhere_one": {
+    "message": "{names} vai para todos os sites com que suas páginas se comunicam, incluindo scripts e fontes de terceiros."
+  },
+  "secretsEverywhere_many": {
+    "message": "{names} vão para todos os sites com que suas páginas se comunicam, incluindo scripts e fontes de terceiros."
+  },
+  "secretsEverywhere_other": {
+    "message": "{names} vão para todos os sites com que suas páginas se comunicam, incluindo scripts e fontes de terceiros."
+  },
+  "onlyOnSite": {
+    "message": "Só em {site}"
+  },
+  "addOnlyOnFilter": {
+    "message": "Adicione abaixo um filtro “só em” para limitá-los aos seus próprios sites."
+  },
+  "addRequestHeader": {
+    "message": "+ cabeçalho de requisição"
+  },
+  "addResponseHeader": {
+    "message": "+ cabeçalho de resposta"
+  },
+  "pasteFromDevTools": {
+    "message": "Colar do DevTools…"
+  },
+  "presetTitle": {
+    "message": "Adicionar um conjunto pronto de cabeçalhos"
+  },
+  "presetLabel": {
+    "message": "Adicionar uma predefinição"
+  },
+  "presetPick": {
+    "message": "+ predefinição…"
+  },
+  "variablesHint": {
+    "message": "Variáveis: {list}. O Chrome envia valores fixos, então o Headerwise os preenche a cada edição e uma vez por minuto: requisições dentro do mesmo minuto compartilham o mesmo valor."
+  },
+  "pastePlaceholder": {
+    "message": "No DevTools → Rede, clique com o botão direito em uma requisição → Copiar → cURL, fetch ou PowerShell e cole aqui. Linhas simples “Nome: valor” também funcionam."
+  },
+  "pasteNoHeaders": {
+    "message": "Nenhum cabeçalho encontrado nesse texto."
+  },
+  "pasteOnlyHost": {
+    "message": "aplicar este perfil só em {host}"
+  },
+  "addHeaders_one": {
+    "message": "Adicionar {n} cabeçalho"
+  },
+  "addHeaders_many": {
+    "message": "Adicionar {n} cabeçalhos"
+  },
+  "addHeaders_other": {
+    "message": "Adicionar {n} cabeçalhos"
+  },
+  "redirects": {
+    "message": "Redirecionamentos"
+  },
+  "redirectOnOff": {
+    "message": "Ativar ou desativar redirecionamento"
+  },
+  "redirectFrom": {
+    "message": "Substituir esta parte do endereço"
+  },
+  "redirectTo": {
+    "message": "Por isto"
+  },
+  "redirectFromRegexPlaceholder": {
+    "message": "regex, ex.: /v(\\d+)/"
+  },
+  "redirectFromPlaceholder": {
+    "message": "parte da URL, ex.: api.example.com"
+  },
+  "redirectToRegexPlaceholder": {
+    "message": "ex.: /v$$1-beta/"
+  },
+  "redirectToPlaceholder": {
+    "message": "ex.: api.staging.example.com"
+  },
+  "regex": {
+    "message": "regex"
+  },
+  "addRedirect": {
+    "message": "+ redirecionamento"
+  },
+  "redirectsHint": {
+    "message": "Substitui a primeira correspondência no endereço de uma requisição e a envia para lá. Um redirecionamento novo é ativado quando os dois campos estão preenchidos; para cortar texto, deixe o segundo vazio e ative-o você mesmo. Filtros “só em” não se aplicam a redirecionamentos; “nunca em” e os outros limites, sim."
+  },
+  "onlyOnNeverOn": {
+    "message": "Só em / nunca em"
+  },
+  "filterOnOff": {
+    "message": "Ativar ou desativar filtro"
+  },
+  "filterKind": {
+    "message": "Só em ou nunca em"
+  },
+  "onlyOn": {
+    "message": "só em"
+  },
+  "neverOn": {
+    "message": "nunca em"
+  },
+  "urlPattern": {
+    "message": "Padrão de URL"
+  },
+  "filterRegexExcludePlaceholder": {
+    "message": "regex, ex.: /login"
+  },
+  "filterRegexIncludePlaceholder": {
+    "message": "regex, ex.: ^https://api\\.example\\.com/"
+  },
+  "filterExcludePlaceholder": {
+    "message": "example.com ou *login*"
+  },
+  "addOnlyOn": {
+    "message": "+ só em…"
+  },
+  "addNeverOn": {
+    "message": "+ nunca em…"
+  },
+  "scopeSummary": {
+    "message": "Sites, tipos de requisição, métodos"
+  },
+  "onlyFromSites": {
+    "message": "Só a partir de sites"
+  },
+  "neverFromSites": {
+    "message": "Nunca a partir de sites"
+  },
+  "onlyTheseRequests": {
+    "message": "Só estas requisições"
+  },
+  "onlyTheseMethods": {
+    "message": "Só estes métodos"
+  },
+  "scopeHint": {
+    "message": "Nada marcado significa todos. “A partir de sites” é a página que fez a requisição: uma página aberta pela barra de endereço ou por um favorito não tem nenhuma, então não conta."
+  },
+  "type_main_frame": {
+    "message": "Página"
+  },
+  "type_sub_frame": {
+    "message": "Frames"
+  },
+  "type_xmlhttprequest": {
+    "message": "fetch / XHR"
+  },
+  "type_script": {
+    "message": "Scripts"
+  },
+  "type_stylesheet": {
+    "message": "Estilos"
+  },
+  "type_image": {
+    "message": "Imagens"
+  },
+  "type_font": {
+    "message": "Fontes"
+  },
+  "type_media": {
+    "message": "Mídia"
+  },
+  "type_websocket": {
+    "message": "WebSocket"
+  },
+  "type_ping": {
+    "message": "Beacons"
+  },
+  "type_other": {
+    "message": "Outros"
+  },
+  "preset_cors": {
+    "message": "CORS: permitir qualquer origem"
+  },
+  "preset_no_csp": {
+    "message": "Remover Content-Security-Policy"
+  },
+  "preset_iframe": {
+    "message": "Permitir o site em um iframe"
+  },
+  "preset_bearer": {
+    "message": "Authorization: token Bearer"
+  },
+  "preset_no_cache": {
+    "message": "Sem cache"
+  },
+  "preset_mobile": {
+    "message": "User-Agent: iPhone"
+  },
+  "preset_googlebot": {
+    "message": "User-Agent: Googlebot"
+  },
+  "preset_xff": {
+    "message": "X-Forwarded-For: IP de teste"
+  },
+  "preset_lang": {
+    "message": "Accept-Language: inglês"
+  },
+  "moveFromModHeader": {
+    "message": "Migrar do ModHeader (desativado no Chrome)"
+  },
+  "importJson": {
+    "message": "Importar JSON"
+  },
+  "export": {
+    "message": "Exportar…"
+  },
+  "importPlaceholder": {
+    "message": "…ou cole uma exportação do Headerwise, ModHeader, Requestly ou Simple Modify Headers"
+  },
+  "import": {
+    "message": "Importar"
+  },
+  "cantRead": {
+    "message": "Não foi possível ler: {error}"
+  },
+  "imported_one": {
+    "message": "{n} perfil importado."
+  },
+  "imported_many": {
+    "message": "{n} perfis importados."
+  },
+  "imported_other": {
+    "message": "{n} perfis importados."
+  },
+  "ok": {
+    "message": "OK"
+  },
+  "includeSecrets": {
+    "message": "Incluir valores secretos (tokens, cookies). Só para suas próprias máquinas."
+  },
+  "download_one": {
+    "message": "Baixar {n} perfil"
+  },
+  "download_many": {
+    "message": "Baixar {n} perfis"
+  },
+  "download_other": {
+    "message": "Baixar {n} perfis"
+  },
+  "copy": {
+    "message": "Copiar"
+  },
+  "copied": {
+    "message": "Copiado"
+  },
+  "saved": {
+    "message": "{file} salvo"
+  },
+  "rateQuestion": {
+    "message": "O Headerwise está sendo útil?"
+  },
+  "rateIt": {
+    "message": "Avalie na Chrome Web Store"
+  },
+  "dontShowAgain": {
+    "message": "Não mostrar de novo"
+  },
+  "footerLocal": {
+    "message": "Roda localmente. Sem conta, sem analytics, nada é enviado a lugar nenhum."
+  },
+  "shortcuts": {
+    "message": "Atalhos:"
+  },
+  "shortcutOpen": {
+    "message": "abrir"
+  },
+  "shortcutPause": {
+    "message": "pausar"
+  },
+  "shortcutNext": {
+    "message": "próximo perfil"
+  },
+  "somethingWrong": {
+    "message": "Algo errado?"
+  },
+  "copyDiagnostics": {
+    "message": "Copiar diagnóstico"
+  },
+  "and": {
+    "message": "e"
+  },
+  "reportProblem": {
+    "message": "relatar um problema"
+  },
+  "diagnosticsCopied": {
+    "message": "Copiado. Os avisos vão do jeito que estão: confira-os antes de publicar."
+  },
+  "m_titleMove": {
+    "message": "Migrar do ModHeader · Headerwise"
+  },
+  "m_titleWelcome": {
+    "message": "Boas-vindas ao Headerwise"
+  },
+  "m_pasteWin": {
+    "message": "No seletor de pastas, cole-o na barra de endereço no topo e pressione Enter."
+  },
+  "m_pasteMac": {
+    "message": "No seletor de pastas, pressione ⌘ Shift G, cole-o e pressione Enter."
+  },
+  "m_pasteLinux": {
+    "message": "No seletor de pastas, pressione Ctrl+L, cole-o e pressione Enter."
+  },
+  "m_someUnreadable": {
+    "message": "Alguns arquivos da pasta não puderam ser lidos, então estes podem não ser seus perfis mais recentes: {errors}"
+  },
+  "m_folderEmpty": {
+    "message": "Essa pasta está vazia."
+  },
+  "m_cantReadFiles": {
+    "message": "Não foi possível ler os arquivos do ModHeader: {errors}. Copie a pasta para outro lugar e escolha a cópia, ou feche o navegador que a usa e tente de novo."
+  },
+  "m_noProfiles": {
+    "message": "Nenhum perfil do ModHeader nessa pasta. Confira o caminho abaixo ou tente o mesmo caminho com “Sync Extension Settings” em vez de “Local Extension Settings”."
+  },
+  "m_cantReadFolder": {
+    "message": "Não foi possível ler a pasta: {error}"
+  },
+  "m_installed": {
+    "message": "O Headerwise está instalado"
+  },
+  "m_twoSteps": {
+    "message": "Dois passos rápidos"
+  },
+  "m_stepAccess": {
+    "message": "Permita que o Headerwise altere cabeçalhos nos sites. O próprio Chrome aplica as alterações; o Headerwise nunca lê suas páginas."
+  },
+  "m_done": {
+    "message": "Pronto."
+  },
+  "m_stepPin": {
+    "message": "Fixe o ícone: clique na peça de quebra-cabeça na barra de ferramentas e depois no alfinete ao lado do Headerwise. Clique no ícone para adicionar cabeçalhos."
+  },
+  "m_comingFrom": {
+    "message": "Vindo do ModHeader?"
+  },
+  "m_moveTitle": {
+    "message": "Migre seus perfis do ModHeader"
+  },
+  "m_intro": {
+    "message": "O Chrome e o Edge desativaram o ModHeader em julho de 2026, então o botão de exportar dele sumiu. Seus perfis continuam na pasta dele, no seu disco. O Headerwise os lê aqui mesmo, nesta página. Nada é carregado nem enviado para lugar nenhum."
+  },
+  "m_added_one": {
+    "message": "Pronto: {n} perfil adicionado"
+  },
+  "m_added_many": {
+    "message": "Pronto: {n} perfis adicionados"
+  },
+  "m_added_other": {
+    "message": "Pronto: {n} perfis adicionados"
+  },
+  "m_addedHint": {
+    "message": "Clique no ícone do Headerwise na barra de ferramentas para vê-los. Quando estiver tudo certo, você pode remover o ModHeader na página de extensões."
+  },
+  "m_step1": {
+    "message": "1. Copie o caminho da pasta do ModHeader"
+  },
+  "m_firefoxHint": {
+    "message": "Isto lê a pasta do ModHeader do Chrome ou do Edge neste computador. Se você usava o ModHeader no Firefox e ele ainda abre, use o botão de exportar dele e “Importar JSON” no pop-up do Headerwise."
+  },
+  "m_chromeAlso": {
+    "message": "Chrome (também Brave, Vivaldi, Opera…)"
+  },
+  "m_profilesHint": {
+    "message": "Se você usa vários perfis no navegador, o ModHeader pode estar em outro: abra {version} no perfil em que você o usava e substitua {path} pelo “Caminho do perfil” dele."
+  },
+  "m_step2": {
+    "message": "2. Escolha essa pasta"
+  },
+  "m_uploadHint": {
+    "message": "O navegador vai perguntar se você quer “fazer upload” dos arquivos para esta página: isso só permite que o Headerwise os leia aqui."
+  },
+  "m_reading": {
+    "message": "Lendo…"
+  },
+  "m_chooseFolder": {
+    "message": "Escolher pasta"
+  },
+  "m_orDrag": {
+    "message": "ou arraste a pasta para esta página"
+  },
+  "m_step3": {
+    "message": "3. Importe"
+  },
+  "m_restoredBackup": {
+    "message": "Restaurado do backup do ModHeader de {date}."
+  },
+  "m_headers_one": {
+    "message": "{n} cabeçalho"
+  },
+  "m_headers_many": {
+    "message": "{n} cabeçalhos"
+  },
+  "m_headers_other": {
+    "message": "{n} cabeçalhos"
+  },
+  "m_urlFilters_one": {
+    "message": "{n} filtro de URL"
+  },
+  "m_urlFilters_many": {
+    "message": "{n} filtros de URL"
+  },
+  "m_urlFilters_other": {
+    "message": "{n} filtros de URL"
+  },
+  "m_on": {
+    "message": "ativado"
+  },
+  "m_tokensHint": {
+    "message": "Perfis costumam guardar tokens e cookies. Eles ficam só neste navegador."
+  },
+  "m_import_one": {
+    "message": "Importar {n} perfil"
+  },
+  "m_import_many": {
+    "message": "Importar {n} perfis"
+  },
+  "m_import_other": {
+    "message": "Importar {n} perfis"
   }
 }

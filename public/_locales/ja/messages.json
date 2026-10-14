@@ -9,5 +9,593 @@
   "extDescription": {
     "message": "プロファイルごとにリクエスト／レスポンスヘッダーを変更。ModHeader のプロファイルを読み込めます。ローカルで動作し、何も送信しません。",
     "description": "Store summary, at most 132 characters"
+  },
+  "openInTab": {
+    "message": "タブで開く"
+  },
+  "openInTabTitle": {
+    "message": "同じエディターをブラウザのタブで広く表示します"
+  },
+  "pauseAll": {
+    "message": "すべて一時停止"
+  },
+  "needsAccess": {
+    "message": "ヘッダーを変更するには、Headerwise にサイトへのアクセスを許可する必要があります。"
+  },
+  "allowAllSites": {
+    "message": "すべてのサイトで許可"
+  },
+  "onThisTab": {
+    "message": "このタブ"
+  },
+  "pausedNothing": {
+    "message": "一時停止中：どこでも何も変更されません。"
+  },
+  "noAccessHere": {
+    "message": "Headerwise はこのサイトにアクセスできないため、ここでは何も変更されません。"
+  },
+  "reloadTab": {
+    "message": "タブを再読み込み"
+  },
+  "cantCheckTab": {
+    "message": "Headerwise はこのタブを確認できませんでした（{error}）。"
+  },
+  "cantChangeThisPage": {
+    "message": "このページでは、ブラウザが拡張機能によるヘッダーの変更を許可していません。"
+  },
+  "noMatchedRulesApi": {
+    "message": "このブラウザは一致したルールを拡張機能に知らせないため、ページのアドレスをもとに判断しています。"
+  },
+  "matchedRulesError": {
+    "message": "ここで一致したルールを Chrome が現在取得できません（{error}）。"
+  },
+  "badRegex": {
+    "message": "Chrome はこの正規表現を使用できません（{reason}）"
+  },
+  "notSupported": {
+    "message": "非対応"
+  },
+  "line_applied_other": {
+    "message": "{n} 件のリクエストを変更"
+  },
+  "line_skippedWhere": {
+    "message": "（除外 {pattern} に一致する箇所はスキップ）"
+  },
+  "line_excluded": {
+    "message": "ここではスキップ：除外 {pattern} がこのページに一致"
+  },
+  "line_notIncluded": {
+    "message": "適用先 {patterns}：このページは一致しません（このページから他サイトへのリクエストには適用される場合があります）"
+  },
+  "line_waiting": {
+    "message": "前回の編集以降、ここでは何も変更されていません：タブを再読み込みしてください"
+  },
+  "line_off": {
+    "message": "オフ"
+  },
+  "line_empty": {
+    "message": "ヘッダーなし"
+  },
+  "line_otherTab": {
+    "message": "別のタブのみ（{host}）"
+  },
+  "line_narrowed": {
+    "message": "{scope} のみ：前回の編集以降、ここでは該当なし"
+  },
+  "line_pageMatch": {
+    "message": "このページに適用"
+  },
+  "untitled": {
+    "message": "無題"
+  },
+  "profileN": {
+    "message": "プロファイル {n}"
+  },
+  "profileTabTitle": {
+    "message": "{title}。ドラッグ（または Alt+←/→）で並べ替え：2 つのプロファイルが同じヘッダーを設定する場合は、左側のプロファイルが優先されます"
+  },
+  "addProfile": {
+    "message": "プロファイルを追加"
+  },
+  "deleted": {
+    "message": "「{title}」を削除しました。"
+  },
+  "undo": {
+    "message": "元に戻す"
+  },
+  "profileOnOff": {
+    "message": "プロファイルのオン／オフ"
+  },
+  "profileName": {
+    "message": "プロファイル名"
+  },
+  "timerOffAt": {
+    "message": "{time} に自動でオフになります"
+  },
+  "timerUntil": {
+    "message": "{time} まで"
+  },
+  "keepItOn": {
+    "message": "オンのままにする"
+  },
+  "timerSelectTitle": {
+    "message": "このプロファイルをオンにし、一定時間後にオフに戻します"
+  },
+  "timerSelectLabel": {
+    "message": "一定時間オンにする"
+  },
+  "onFor": {
+    "message": "時間指定…"
+  },
+  "minutes_other": {
+    "message": "{n} 分"
+  },
+  "hours_other": {
+    "message": "{n} 時間"
+  },
+  "onlyThisTabTitle": {
+    "message": "このタブでのみ適用"
+  },
+  "onlyAnotherTabTitle": {
+    "message": "別のタブでのみ適用"
+  },
+  "onlyInThisTab": {
+    "message": "このタブのみ · {host}"
+  },
+  "onlyInAnotherTab": {
+    "message": "別のタブのみ · {host}"
+  },
+  "allTabsAgain": {
+    "message": "再びすべてのタブで適用"
+  },
+  "onlyThisTab": {
+    "message": "このタブのみ"
+  },
+  "onlyThisTabButtonTitle": {
+    "message": "このプロファイルを、現在のタブを閉じるまでそのタブにのみ適用します"
+  },
+  "duplicate": {
+    "message": "複製"
+  },
+  "duplicateTitle": {
+    "message": "このプロファイルをコピーします（コピーはオフの状態で作成されます）"
+  },
+  "delete": {
+    "message": "削除"
+  },
+  "deleteTitle": {
+    "message": "プロファイルを削除"
+  },
+  "requestHeaders": {
+    "message": "リクエストヘッダー"
+  },
+  "responseHeaders": {
+    "message": "レスポンスヘッダー"
+  },
+  "headerOnOff": {
+    "message": "ヘッダーのオン／オフ"
+  },
+  "headerAction": {
+    "message": "ヘッダーの操作"
+  },
+  "op_set": {
+    "message": "設定"
+  },
+  "op_append": {
+    "message": "追加"
+  },
+  "op_remove": {
+    "message": "削除"
+  },
+  "namePlaceholder": {
+    "message": "名前"
+  },
+  "valuePlaceholder": {
+    "message": "値"
+  },
+  "removedPlaceholder": {
+    "message": "（削除）"
+  },
+  "requestHeaderName": {
+    "message": "リクエストヘッダー名"
+  },
+  "responseHeaderName": {
+    "message": "レスポンスヘッダー名"
+  },
+  "headerValue": {
+    "message": "ヘッダーの値"
+  },
+  "hideValue": {
+    "message": "値を隠す"
+  },
+  "showValue": {
+    "message": "値を表示"
+  },
+  "secretOnTitle": {
+    "message": "シークレット：値は非表示です。クリックすると常に表示します"
+  },
+  "secretOffTitle": {
+    "message": "シークレットにする：値を隠します"
+  },
+  "secretValue": {
+    "message": "シークレット値"
+  },
+  "remove": {
+    "message": "削除"
+  },
+  "startHere": {
+    "message": "まずはここから：上にヘッダー名と値を入力するか、DevTools でコピーしたリクエストを貼り付けるか、プリセットを選んでください。"
+  },
+  "secretsEverywhere_other": {
+    "message": "{names} は、サードパーティのスクリプトやフォントも含め、ページが通信するすべてのサイトに送信されます。"
+  },
+  "onlyOnSite": {
+    "message": "{site} のみ"
+  },
+  "addOnlyOnFilter": {
+    "message": "自分のサイトだけに送るには、下に「適用先」フィルターを追加してください。"
+  },
+  "addRequestHeader": {
+    "message": "+ リクエストヘッダー"
+  },
+  "addResponseHeader": {
+    "message": "+ レスポンスヘッダー"
+  },
+  "pasteFromDevTools": {
+    "message": "DevTools から貼り付け…"
+  },
+  "presetTitle": {
+    "message": "用意されたヘッダーのセットを追加"
+  },
+  "presetLabel": {
+    "message": "プリセットを追加"
+  },
+  "presetPick": {
+    "message": "+ プリセット…"
+  },
+  "variablesHint": {
+    "message": "変数：{list}。Chrome は固定値を送信するため、Headerwise は編集のたびと 1 分ごとに値を埋め込みます。同じ 1 分間のリクエストは同じ値になります。"
+  },
+  "pastePlaceholder": {
+    "message": "DevTools の Network（ネットワーク）でリクエストを右クリックし、cURL、fetch、PowerShell のいずれかの形式でコピーして、ここに貼り付けてください。「Name: value」形式の行も使えます。"
+  },
+  "pasteNoHeaders": {
+    "message": "そのテキストにヘッダーが見つかりません。"
+  },
+  "pasteOnlyHost": {
+    "message": "このプロファイルを {host} のみに適用する"
+  },
+  "addHeaders_other": {
+    "message": "ヘッダーを {n} 件追加"
+  },
+  "redirects": {
+    "message": "リダイレクト"
+  },
+  "redirectOnOff": {
+    "message": "リダイレクトのオン／オフ"
+  },
+  "redirectFrom": {
+    "message": "アドレスのこの部分を置換"
+  },
+  "redirectTo": {
+    "message": "置換後"
+  },
+  "redirectFromRegexPlaceholder": {
+    "message": "正規表現（例：/v(\\d+)/）"
+  },
+  "redirectFromPlaceholder": {
+    "message": "URL の一部（例：api.example.com）"
+  },
+  "redirectToRegexPlaceholder": {
+    "message": "例：/v$$1-beta/"
+  },
+  "redirectToPlaceholder": {
+    "message": "例：api.staging.example.com"
+  },
+  "regex": {
+    "message": "正規表現"
+  },
+  "addRedirect": {
+    "message": "+ リダイレクト"
+  },
+  "redirectsHint": {
+    "message": "リクエストのアドレスで最初に一致した部分を置き換え、そのアドレスへ送ります。新しいリダイレクトは両方の欄を入力するとオンになります。文字列を削除するだけなら、2 つ目の欄を空のままにして自分でチェックを入れてください。「適用先」フィルターはリダイレクトには適用されませんが、「除外」とその他の制限は適用されます。"
+  },
+  "onlyOnNeverOn": {
+    "message": "適用先／除外"
+  },
+  "filterOnOff": {
+    "message": "フィルターのオン／オフ"
+  },
+  "filterKind": {
+    "message": "適用先または除外"
+  },
+  "onlyOn": {
+    "message": "適用先"
+  },
+  "neverOn": {
+    "message": "除外"
+  },
+  "urlPattern": {
+    "message": "URL パターン"
+  },
+  "filterRegexExcludePlaceholder": {
+    "message": "正規表現（例：/login）"
+  },
+  "filterRegexIncludePlaceholder": {
+    "message": "正規表現（例：^https://api\\.example\\.com/）"
+  },
+  "filterExcludePlaceholder": {
+    "message": "example.com または *login*"
+  },
+  "addOnlyOn": {
+    "message": "+ 適用先…"
+  },
+  "addNeverOn": {
+    "message": "+ 除外…"
+  },
+  "scopeSummary": {
+    "message": "サイト、リクエストの種類、メソッド"
+  },
+  "onlyFromSites": {
+    "message": "発信元サイトを限定"
+  },
+  "neverFromSites": {
+    "message": "発信元サイトを除外"
+  },
+  "onlyTheseRequests": {
+    "message": "次のリクエストのみ"
+  },
+  "onlyTheseMethods": {
+    "message": "次のメソッドのみ"
+  },
+  "scopeHint": {
+    "message": "何もチェックしなければすべてが対象です。「発信元サイト」はリクエストを送ったページのことです。アドレスバーやブックマークから開いたページには発信元がないため、この条件では考慮されません。"
+  },
+  "type_main_frame": {
+    "message": "ページ"
+  },
+  "type_sub_frame": {
+    "message": "フレーム"
+  },
+  "type_xmlhttprequest": {
+    "message": "fetch / XHR"
+  },
+  "type_script": {
+    "message": "スクリプト"
+  },
+  "type_stylesheet": {
+    "message": "スタイル"
+  },
+  "type_image": {
+    "message": "画像"
+  },
+  "type_font": {
+    "message": "フォント"
+  },
+  "type_media": {
+    "message": "メディア"
+  },
+  "type_websocket": {
+    "message": "WebSocket"
+  },
+  "type_ping": {
+    "message": "ビーコン"
+  },
+  "type_other": {
+    "message": "その他"
+  },
+  "preset_cors": {
+    "message": "CORS：すべてのオリジンを許可"
+  },
+  "preset_no_csp": {
+    "message": "Content-Security-Policy を削除"
+  },
+  "preset_iframe": {
+    "message": "サイトの iframe 埋め込みを許可"
+  },
+  "preset_bearer": {
+    "message": "Authorization: Bearer トークン"
+  },
+  "preset_no_cache": {
+    "message": "キャッシュなし"
+  },
+  "preset_mobile": {
+    "message": "User-Agent: iPhone"
+  },
+  "preset_googlebot": {
+    "message": "User-Agent: Googlebot"
+  },
+  "preset_xff": {
+    "message": "X-Forwarded-For: テスト用 IP"
+  },
+  "preset_lang": {
+    "message": "Accept-Language: 英語"
+  },
+  "moveFromModHeader": {
+    "message": "ModHeader から移行（Chrome では無効化済み）"
+  },
+  "importJson": {
+    "message": "JSON をインポート"
+  },
+  "export": {
+    "message": "エクスポート…"
+  },
+  "importPlaceholder": {
+    "message": "…または Headerwise、ModHeader、Requestly、Simple Modify Headers のエクスポートを貼り付け"
+  },
+  "import": {
+    "message": "インポート"
+  },
+  "cantRead": {
+    "message": "読み取れませんでした：{error}"
+  },
+  "imported_other": {
+    "message": "{n} 件のプロファイルをインポートしました。"
+  },
+  "ok": {
+    "message": "OK"
+  },
+  "includeSecrets": {
+    "message": "シークレット値（トークン、Cookie）を含める。自分のマシン用に限ります。"
+  },
+  "download_other": {
+    "message": "{n} 件のプロファイルをダウンロード"
+  },
+  "copy": {
+    "message": "コピー"
+  },
+  "copied": {
+    "message": "コピーしました"
+  },
+  "saved": {
+    "message": "{file} を保存しました"
+  },
+  "rateQuestion": {
+    "message": "Headerwise は役に立っていますか？"
+  },
+  "rateIt": {
+    "message": "Chrome ウェブストアで評価する"
+  },
+  "dontShowAgain": {
+    "message": "今後表示しない"
+  },
+  "footerLocal": {
+    "message": "ローカルで動作します。アカウント不要、アクセス解析なし、どこにも何も送信しません。"
+  },
+  "shortcuts": {
+    "message": "ショートカット："
+  },
+  "shortcutOpen": {
+    "message": "開く"
+  },
+  "shortcutPause": {
+    "message": "一時停止"
+  },
+  "shortcutNext": {
+    "message": "次のプロファイル"
+  },
+  "somethingWrong": {
+    "message": "問題がありますか？"
+  },
+  "copyDiagnostics": {
+    "message": "診断情報をコピー"
+  },
+  "and": {
+    "message": "して"
+  },
+  "reportProblem": {
+    "message": "問題を報告"
+  },
+  "diagnosticsCopied": {
+    "message": "コピーしました。警告はそのまま含まれているので、投稿する前に確認してください。"
+  },
+  "m_titleMove": {
+    "message": "ModHeader から移行 · Headerwise"
+  },
+  "m_titleWelcome": {
+    "message": "Headerwise へようこそ"
+  },
+  "m_pasteWin": {
+    "message": "フォルダーの選択画面で、上部のアドレスバーに貼り付けて Enter キーを押してください。"
+  },
+  "m_pasteMac": {
+    "message": "フォルダーの選択画面で ⌘ Shift G を押し、貼り付けて Enter キーを押してください。"
+  },
+  "m_pasteLinux": {
+    "message": "フォルダーの選択画面で Ctrl+L を押し、貼り付けて Enter キーを押してください。"
+  },
+  "m_someUnreadable": {
+    "message": "フォルダー内の一部のファイルを読み取れなかったため、これが最新のプロファイルではない可能性があります：{errors}"
+  },
+  "m_folderEmpty": {
+    "message": "そのフォルダーは空です。"
+  },
+  "m_cantReadFiles": {
+    "message": "ModHeader のファイルを読み取れませんでした：{errors}。フォルダーを別の場所にコピーしてそのコピーを選ぶか、そのフォルダーを使っているブラウザを閉じてから、もう一度お試しください。"
+  },
+  "m_noProfiles": {
+    "message": "そのフォルダーに ModHeader のプロファイルがありません。下のパスを確認するか、同じパスの「Local Extension Settings」を「Sync Extension Settings」に置き換えてお試しください。"
+  },
+  "m_cantReadFolder": {
+    "message": "フォルダーを読み取れませんでした：{error}"
+  },
+  "m_installed": {
+    "message": "Headerwise をインストールしました"
+  },
+  "m_twoSteps": {
+    "message": "かんたん 2 ステップ"
+  },
+  "m_stepAccess": {
+    "message": "Headerwise がサイトのヘッダーを変更できるようにします。変更は Chrome 自体が適用し、Headerwise がページを読み取ることはありません。"
+  },
+  "m_done": {
+    "message": "完了しました。"
+  },
+  "m_stepPin": {
+    "message": "アイコンを固定します：ツールバーのパズルピースをクリックし、Headerwise の横にあるピンをクリックします。アイコンをクリックするとヘッダーを追加できます。"
+  },
+  "m_comingFrom": {
+    "message": "ModHeader から乗り換えますか？"
+  },
+  "m_moveTitle": {
+    "message": "ModHeader からプロファイルを移行"
+  },
+  "m_intro": {
+    "message": "2026 年 7 月に Chrome と Edge で ModHeader が無効化されたため、その Export ボタンは使えなくなりました。プロファイルは今もディスク上の ModHeader のフォルダーに残っています。Headerwise はこのページ内でそれを直接読み取ります。何もアップロード・送信されません。"
+  },
+  "m_added_other": {
+    "message": "完了：{n} 件のプロファイルを追加しました"
+  },
+  "m_addedHint": {
+    "message": "ツールバーの Headerwise アイコンをクリックすると確認できます。問題がなければ、拡張機能ページから ModHeader を削除できます。"
+  },
+  "m_step1": {
+    "message": "1. ModHeader のフォルダーのパスをコピー"
+  },
+  "m_firefoxHint": {
+    "message": "ここでは、このパソコンの Chrome または Edge から ModHeader のフォルダーを読み取ります。Firefox で ModHeader を使っていて、まだ開ける場合は、代わりに ModHeader の Export ボタンと Headerwise ポップアップの「JSON をインポート」を使ってください。"
+  },
+  "m_chromeAlso": {
+    "message": "Chrome（Brave、Vivaldi、Opera なども）"
+  },
+  "m_profilesHint": {
+    "message": "複数のブラウザ プロフィールを使っている場合、ModHeader は別のプロフィールにあるかもしれません。ModHeader を使っていたプロフィールで {version} を開き、{path} をそこに表示される「プロフィール パス」に置き換えてください。"
+  },
+  "m_step2": {
+    "message": "2. そのフォルダーを選択"
+  },
+  "m_uploadHint": {
+    "message": "ブラウザがこのページにファイルを「アップロード」するかどうか確認します。これは Headerwise がここでファイルを読み取れるようにするだけです。"
+  },
+  "m_reading": {
+    "message": "読み取り中…"
+  },
+  "m_chooseFolder": {
+    "message": "フォルダーを選択"
+  },
+  "m_orDrag": {
+    "message": "またはフォルダーをこのページにドラッグ"
+  },
+  "m_step3": {
+    "message": "3. インポート"
+  },
+  "m_restoredBackup": {
+    "message": "{date} 時点の ModHeader のバックアップから復元しました。"
+  },
+  "m_headers_other": {
+    "message": "ヘッダー {n} 件"
+  },
+  "m_urlFilters_other": {
+    "message": "URL フィルター {n} 件"
+  },
+  "m_on": {
+    "message": "オン"
+  },
+  "m_tokensHint": {
+    "message": "プロファイルにはトークンや Cookie が含まれていることがよくあります。それらはこのブラウザ内にのみ保存されます。"
+  },
+  "m_import_other": {
+    "message": "{n} 件のプロファイルをインポート"
   }
 }

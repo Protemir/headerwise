@@ -11,13 +11,14 @@
 import { spawn } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { gunzipSync } from 'node:zlib';
 import { join, resolve } from 'node:path';
 import { openTab, sleep } from './cdp.mjs';
 import { accessChecks, cspChecks, migrateChecks, noAccessChecks, quickInputChecks, tabChecks } from './checks.mjs';
 import { secretChecks, tabOnlyChecks } from './checks-tabs.mjs';
-import { corsAndSecretChecks, exportChecks, filterChecks, otherImportChecks } from './checks-filters.mjs';
+import { corsAndSecretChecks, exportChecks, filterChecks, otherImportChecks, websocketChecks } from './checks-filters.mjs';
 import { listChecks, variableChecks, welcomeChecks } from './checks-ux.mjs';
 import { redirectChecks } from './checks-redirects.mjs';
 import { supportChecks } from './checks-support.mjs';
@@ -46,6 +47,13 @@ const echo = createServer((req, res) => {
   res.setHeader('X-Server', 'echo');
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify({ url: req.url, headers: req.headers }));
+});
+// WebSocket handshakes too (headers a page can't set on one, an extension can).
+echo.on('upgrade', (req, socket) => {
+  requests.push(req.url);
+  headersByPath.set(req.url, { ...req.headers, ':method': 'UPGRADE' });
+  const accept = createHash('sha1').update(req.headers['sec-websocket-key'] + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
+  socket.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);
 });
 await new Promise(ok => echo.listen(ECHO_PORT, '127.0.0.1', ok));
 
@@ -110,6 +118,7 @@ async function launchWithFlag(dir, ext) {
     `--load-extension=${ext}`,
     `--remote-debugging-port=${CDP_PORT}`,
     '--no-first-run',
+    '--lang=en-US', // the checks read the English UI
     '--no-default-browser-check',
     'about:blank',
   ], { stdio: 'ignore', detached: true }).unref();
@@ -138,6 +147,7 @@ async function launchWithPipe(dir, ext) {
     `--remote-debugging-port=${CDP_PORT}`,
     '--enable-unsafe-extension-debugging',
     '--no-first-run',
+    '--lang=en-US', // the checks read the English UI
     '--no-default-browser-check',
     'about:blank',
   ], { stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe'] });
@@ -181,6 +191,7 @@ const both = async (tabs, ctx, check) => {
   await exportChecks(tabs, ctx, check);
   await otherImportChecks(tabs, ctx, check);
   await corsAndSecretChecks(tabs, ctx, check);
+  await websocketChecks(tabs, ctx, check);
   await variableChecks(tabs, ctx, check);
   await listChecks(tabs, ctx, check);
   await redirectChecks(tabs, ctx, check);

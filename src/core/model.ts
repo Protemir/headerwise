@@ -1,3 +1,4 @@
+import { t } from './i18n.ts';
 export type HeaderOp = 'set' | 'remove' | 'append';
 
 export interface HeaderMod {
@@ -201,7 +202,7 @@ export function emptyHeader(): HeaderMod {
   return { id: newId(), enabled: true, name: '', value: '', op: 'set' };
 }
 
-export function emptyProfile(title = 'Profile 1'): Profile {
+export function emptyProfile(title = t('profileN', { n: 1 })): Profile {
   return {
     id: newId(),
     title,

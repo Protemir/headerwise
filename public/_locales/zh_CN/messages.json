@@ -9,5 +9,593 @@
   "extDescription": {
     "message": "按配置文件修改请求头和响应头。可导入 ModHeader 配置。完全在本地运行，不发送任何数据。",
     "description": "Store summary, at most 132 characters"
+  },
+  "openInTab": {
+    "message": "在标签页中打开"
+  },
+  "openInTabTitle": {
+    "message": "在浏览器标签页中打开同一编辑器，空间更大"
+  },
+  "pauseAll": {
+    "message": "全部暂停"
+  },
+  "needsAccess": {
+    "message": "Headerwise 需要网站访问权限才能修改其标头。"
+  },
+  "allowAllSites": {
+    "message": "在所有网站上允许"
+  },
+  "onThisTab": {
+    "message": "此标签页"
+  },
+  "pausedNothing": {
+    "message": "已暂停：任何地方都不会被修改。"
+  },
+  "noAccessHere": {
+    "message": "Headerwise 无权访问此网站，因此这里不会做任何修改。"
+  },
+  "reloadTab": {
+    "message": "重新加载标签页"
+  },
+  "cantCheckTab": {
+    "message": "Headerwise 无法检查此标签页（{error}）。"
+  },
+  "cantChangeThisPage": {
+    "message": "浏览器不允许扩展程序修改此页面的标头。"
+  },
+  "noMatchedRulesApi": {
+    "message": "此浏览器不会告知扩展程序匹配了哪些规则，因此这里依据页面地址判断。"
+  },
+  "matchedRulesError": {
+    "message": "Chrome 暂时无法告知此处匹配了哪些规则（{error}）。"
+  },
+  "badRegex": {
+    "message": "Chrome 无法使用此正则表达式（{reason}）"
+  },
+  "notSupported": {
+    "message": "不支持"
+  },
+  "line_applied_other": {
+    "message": "已修改 {n} 个请求"
+  },
+  "line_skippedWhere": {
+    "message": "；匹配排除规则 {pattern} 的已跳过"
+  },
+  "line_excluded": {
+    "message": "此处已跳过：排除规则 {pattern} 匹配此页面"
+  },
+  "line_notIncluded": {
+    "message": "仅限 {patterns}：此页面不匹配（它向其他网站发出的请求仍可能被修改）"
+  },
+  "line_waiting": {
+    "message": "自上次编辑后此处未作修改：请重新加载标签页"
+  },
+  "line_off": {
+    "message": "已关闭"
+  },
+  "line_empty": {
+    "message": "尚无标头"
+  },
+  "line_otherTab": {
+    "message": "仅在另一个标签页中（{host}）"
+  },
+  "line_narrowed": {
+    "message": "仅限 {scope}：自上次编辑后此处没有匹配"
+  },
+  "line_pageMatch": {
+    "message": "适用于此页面"
+  },
+  "untitled": {
+    "message": "未命名"
+  },
+  "profileN": {
+    "message": "配置文件 {n}"
+  },
+  "profileTabTitle": {
+    "message": "{title}。拖动（或按 Alt+←/→）可调整顺序：两个配置文件设置同一标头时，最左侧的优先"
+  },
+  "addProfile": {
+    "message": "添加配置文件"
+  },
+  "deleted": {
+    "message": "已删除“{title}”。"
+  },
+  "undo": {
+    "message": "撤消"
+  },
+  "profileOnOff": {
+    "message": "配置文件开关"
+  },
+  "profileName": {
+    "message": "配置文件名称"
+  },
+  "timerOffAt": {
+    "message": "将于 {time} 自动关闭"
+  },
+  "timerUntil": {
+    "message": "直到 {time}"
+  },
+  "keepItOn": {
+    "message": "保持开启"
+  },
+  "timerSelectTitle": {
+    "message": "开启此配置文件，并在一段时间后自动关闭"
+  },
+  "timerSelectLabel": {
+    "message": "临时开启一段时间"
+  },
+  "onFor": {
+    "message": "开启时长…"
+  },
+  "minutes_other": {
+    "message": "{n} 分钟"
+  },
+  "hours_other": {
+    "message": "{n} 小时"
+  },
+  "onlyThisTabTitle": {
+    "message": "仅在此标签页中生效"
+  },
+  "onlyAnotherTabTitle": {
+    "message": "仅在另一个标签页中生效"
+  },
+  "onlyInThisTab": {
+    "message": "仅此标签页 · {host}"
+  },
+  "onlyInAnotherTab": {
+    "message": "仅另一个标签页 · {host}"
+  },
+  "allTabsAgain": {
+    "message": "恢复在所有标签页中生效"
+  },
+  "onlyThisTab": {
+    "message": "仅此标签页"
+  },
+  "onlyThisTabButtonTitle": {
+    "message": "仅在当前标签页中应用此配置文件，直到该标签页关闭"
+  },
+  "duplicate": {
+    "message": "创建副本"
+  },
+  "duplicateTitle": {
+    "message": "复制此配置文件（副本默认处于关闭状态）"
+  },
+  "delete": {
+    "message": "删除"
+  },
+  "deleteTitle": {
+    "message": "删除配置文件"
+  },
+  "requestHeaders": {
+    "message": "请求头"
+  },
+  "responseHeaders": {
+    "message": "响应头"
+  },
+  "headerOnOff": {
+    "message": "标头开关"
+  },
+  "headerAction": {
+    "message": "如何处理此标头"
+  },
+  "op_set": {
+    "message": "设置"
+  },
+  "op_append": {
+    "message": "追加"
+  },
+  "op_remove": {
+    "message": "移除"
+  },
+  "namePlaceholder": {
+    "message": "名称"
+  },
+  "valuePlaceholder": {
+    "message": "值"
+  },
+  "removedPlaceholder": {
+    "message": "（已移除）"
+  },
+  "requestHeaderName": {
+    "message": "请求头名称"
+  },
+  "responseHeaderName": {
+    "message": "响应头名称"
+  },
+  "headerValue": {
+    "message": "标头值"
+  },
+  "hideValue": {
+    "message": "隐藏值"
+  },
+  "showValue": {
+    "message": "显示值"
+  },
+  "secretOnTitle": {
+    "message": "机密：值已隐藏。点击可始终显示"
+  },
+  "secretOffTitle": {
+    "message": "标记为机密：隐藏值"
+  },
+  "secretValue": {
+    "message": "机密值"
+  },
+  "remove": {
+    "message": "移除"
+  },
+  "startHere": {
+    "message": "从这里开始：在上方输入标头名称和值，粘贴从 DevTools 复制的请求，或选择一个预设。"
+  },
+  "secretsEverywhere_other": {
+    "message": "{names} 会发送到页面访问的所有网站，包括第三方脚本和字体。"
+  },
+  "onlyOnSite": {
+    "message": "仅限 {site}"
+  },
+  "addOnlyOnFilter": {
+    "message": "在下方添加“仅限”过滤器，使其只发送到你自己的网站。"
+  },
+  "addRequestHeader": {
+    "message": "+ 请求头"
+  },
+  "addResponseHeader": {
+    "message": "+ 响应头"
+  },
+  "pasteFromDevTools": {
+    "message": "从 DevTools 粘贴…"
+  },
+  "presetTitle": {
+    "message": "添加一组现成的标头"
+  },
+  "presetLabel": {
+    "message": "添加预设"
+  },
+  "presetPick": {
+    "message": "+ 预设…"
+  },
+  "variablesHint": {
+    "message": "变量：{list}。Chrome 只能发送固定值，因此 Headerwise 会在每次编辑时以及每分钟填入一次：同一分钟内的请求共用同一个值。"
+  },
+  "pastePlaceholder": {
+    "message": "在 DevTools 的“网络”（Network）面板中右键点击请求，以 cURL、fetch 或 PowerShell 格式复制，然后粘贴到这里。也支持纯文本“Name: value”行。"
+  },
+  "pasteNoHeaders": {
+    "message": "该文本中未找到标头。"
+  },
+  "pasteOnlyHost": {
+    "message": "仅在 {host} 上应用此配置文件"
+  },
+  "addHeaders_other": {
+    "message": "添加 {n} 个标头"
+  },
+  "redirects": {
+    "message": "重定向"
+  },
+  "redirectOnOff": {
+    "message": "重定向开关"
+  },
+  "redirectFrom": {
+    "message": "替换地址中的这部分"
+  },
+  "redirectTo": {
+    "message": "替换为"
+  },
+  "redirectFromRegexPlaceholder": {
+    "message": "正则表达式，例如 /v(\\d+)/"
+  },
+  "redirectFromPlaceholder": {
+    "message": "URL 的一部分，例如 api.example.com"
+  },
+  "redirectToRegexPlaceholder": {
+    "message": "例如 /v$$1-beta/"
+  },
+  "redirectToPlaceholder": {
+    "message": "例如 api.staging.example.com"
+  },
+  "regex": {
+    "message": "正则"
+  },
+  "addRedirect": {
+    "message": "+ 重定向"
+  },
+  "redirectsHint": {
+    "message": "替换请求地址中的第一个匹配项，并将请求发送到新地址。新的重定向在两个字段都填写后自动开启；如需删去文本，请将第二个字段留空并手动勾选。“仅限”过滤器不适用于重定向；“排除”及其他限制则适用。"
+  },
+  "onlyOnNeverOn": {
+    "message": "仅限／排除"
+  },
+  "filterOnOff": {
+    "message": "过滤器开关"
+  },
+  "filterKind": {
+    "message": "仅限或排除"
+  },
+  "onlyOn": {
+    "message": "仅限"
+  },
+  "neverOn": {
+    "message": "排除"
+  },
+  "urlPattern": {
+    "message": "URL 模式"
+  },
+  "filterRegexExcludePlaceholder": {
+    "message": "正则表达式，例如 /login"
+  },
+  "filterRegexIncludePlaceholder": {
+    "message": "正则表达式，例如 ^https://api\\.example\\.com/"
+  },
+  "filterExcludePlaceholder": {
+    "message": "example.com 或 *login*"
+  },
+  "addOnlyOn": {
+    "message": "+ 仅限…"
+  },
+  "addNeverOn": {
+    "message": "+ 排除…"
+  },
+  "scopeSummary": {
+    "message": "网站、请求类型、方法"
+  },
+  "onlyFromSites": {
+    "message": "仅限来源网站"
+  },
+  "neverFromSites": {
+    "message": "排除来源网站"
+  },
+  "onlyTheseRequests": {
+    "message": "仅限这些请求"
+  },
+  "onlyTheseMethods": {
+    "message": "仅限这些方法"
+  },
+  "scopeHint": {
+    "message": "不勾选任何项即表示全部。“来源网站”指发起请求的页面：从地址栏或书签打开的页面没有来源网站，因此不计入。"
+  },
+  "type_main_frame": {
+    "message": "页面"
+  },
+  "type_sub_frame": {
+    "message": "框架"
+  },
+  "type_xmlhttprequest": {
+    "message": "fetch / XHR"
+  },
+  "type_script": {
+    "message": "脚本"
+  },
+  "type_stylesheet": {
+    "message": "样式"
+  },
+  "type_image": {
+    "message": "图片"
+  },
+  "type_font": {
+    "message": "字体"
+  },
+  "type_media": {
+    "message": "媒体"
+  },
+  "type_websocket": {
+    "message": "WebSocket"
+  },
+  "type_ping": {
+    "message": "信标"
+  },
+  "type_other": {
+    "message": "其他"
+  },
+  "preset_cors": {
+    "message": "CORS：允许任意来源"
+  },
+  "preset_no_csp": {
+    "message": "移除 Content-Security-Policy"
+  },
+  "preset_iframe": {
+    "message": "允许网站嵌入 iframe"
+  },
+  "preset_bearer": {
+    "message": "Authorization: Bearer 令牌"
+  },
+  "preset_no_cache": {
+    "message": "禁用缓存"
+  },
+  "preset_mobile": {
+    "message": "User-Agent: iPhone"
+  },
+  "preset_googlebot": {
+    "message": "User-Agent: Googlebot"
+  },
+  "preset_xff": {
+    "message": "X-Forwarded-For: 测试 IP"
+  },
+  "preset_lang": {
+    "message": "Accept-Language: 英语"
+  },
+  "moveFromModHeader": {
+    "message": "从 ModHeader 迁移（已在 Chrome 中停用）"
+  },
+  "importJson": {
+    "message": "导入 JSON"
+  },
+  "export": {
+    "message": "导出…"
+  },
+  "importPlaceholder": {
+    "message": "…或粘贴从 Headerwise、ModHeader、Requestly 或 Simple Modify Headers 导出的内容"
+  },
+  "import": {
+    "message": "导入"
+  },
+  "cantRead": {
+    "message": "无法读取：{error}"
+  },
+  "imported_other": {
+    "message": "已导入 {n} 个配置文件。"
+  },
+  "ok": {
+    "message": "确定"
+  },
+  "includeSecrets": {
+    "message": "包含机密值（令牌、Cookie）。仅限用于你自己的设备。"
+  },
+  "download_other": {
+    "message": "下载 {n} 个配置文件"
+  },
+  "copy": {
+    "message": "复制"
+  },
+  "copied": {
+    "message": "已复制"
+  },
+  "saved": {
+    "message": "已保存 {file}"
+  },
+  "rateQuestion": {
+    "message": "觉得 Headerwise 有用吗？"
+  },
+  "rateIt": {
+    "message": "在 Chrome 应用商店中评分"
+  },
+  "dontShowAgain": {
+    "message": "不再显示"
+  },
+  "footerLocal": {
+    "message": "完全在本地运行。无需账号，没有统计分析，不发送任何数据。"
+  },
+  "shortcuts": {
+    "message": "快捷键："
+  },
+  "shortcutOpen": {
+    "message": "打开"
+  },
+  "shortcutPause": {
+    "message": "暂停"
+  },
+  "shortcutNext": {
+    "message": "下一个配置文件"
+  },
+  "somethingWrong": {
+    "message": "遇到问题？"
+  },
+  "copyDiagnostics": {
+    "message": "复制诊断信息"
+  },
+  "and": {
+    "message": "并"
+  },
+  "reportProblem": {
+    "message": "报告问题"
+  },
+  "diagnosticsCopied": {
+    "message": "已复制。其中的警告按原样保留：发布前请检查。"
+  },
+  "m_titleMove": {
+    "message": "从 ModHeader 迁移 · Headerwise"
+  },
+  "m_titleWelcome": {
+    "message": "欢迎使用 Headerwise"
+  },
+  "m_pasteWin": {
+    "message": "在文件夹选择窗口中，将其粘贴到顶部的地址栏并按 Enter。"
+  },
+  "m_pasteMac": {
+    "message": "在文件夹选择窗口中，按 ⌘ Shift G，粘贴后按 Enter。"
+  },
+  "m_pasteLinux": {
+    "message": "在文件夹选择窗口中，按 Ctrl+L，粘贴后按 Enter。"
+  },
+  "m_someUnreadable": {
+    "message": "文件夹中有些文件无法读取，因此这些可能不是你最新的配置文件：{errors}"
+  },
+  "m_folderEmpty": {
+    "message": "该文件夹为空。"
+  },
+  "m_cantReadFiles": {
+    "message": "无法读取 ModHeader 的文件：{errors}。请将该文件夹复制到其他位置后选择副本，或关闭正在使用它的浏览器后重试。"
+  },
+  "m_noProfiles": {
+    "message": "该文件夹中没有 ModHeader 配置文件。请检查下方路径，或将同一路径中的“Local Extension Settings”换成“Sync Extension Settings”后再试。"
+  },
+  "m_cantReadFolder": {
+    "message": "无法读取文件夹：{error}"
+  },
+  "m_installed": {
+    "message": "Headerwise 已安装"
+  },
+  "m_twoSteps": {
+    "message": "只需两步"
+  },
+  "m_stepAccess": {
+    "message": "允许 Headerwise 修改网站的标头。修改由 Chrome 自身执行；Headerwise 从不读取你的网页。"
+  },
+  "m_done": {
+    "message": "已完成。"
+  },
+  "m_stepPin": {
+    "message": "固定图标：点击工具栏中的拼图图标，再点击 Headerwise 旁边的图钉。点击该图标即可添加标头。"
+  },
+  "m_comingFrom": {
+    "message": "从 ModHeader 迁移过来？"
+  },
+  "m_moveTitle": {
+    "message": "从 ModHeader 迁移你的配置文件"
+  },
+  "m_intro": {
+    "message": "Chrome 和 Edge 已于 2026 年 7 月停用 ModHeader，因此它的 Export 按钮已无法使用。你的配置文件仍保存在磁盘上它的文件夹中。Headerwise 会直接在此页面中读取它们，不会上传或发送任何内容。"
+  },
+  "m_added_other": {
+    "message": "完成：已添加 {n} 个配置文件"
+  },
+  "m_addedHint": {
+    "message": "点击工具栏中的 Headerwise 图标即可查看。确认无误后，可以在扩展程序页面中移除 ModHeader。"
+  },
+  "m_step1": {
+    "message": "1. 复制 ModHeader 文件夹的路径"
+  },
+  "m_firefoxHint": {
+    "message": "这里读取的是本机 Chrome 或 Edge 中 ModHeader 的文件夹。如果你在 Firefox 中使用 ModHeader 且它仍能打开，请改用它的 Export 按钮，再在 Headerwise 弹出窗口中使用“导入 JSON”。"
+  },
+  "m_chromeAlso": {
+    "message": "Chrome（以及 Brave、Vivaldi、Opera…）"
+  },
+  "m_profilesHint": {
+    "message": "如果你使用多个浏览器个人资料，ModHeader 可能在其他个人资料中：请在使用过 ModHeader 的个人资料中打开 {version}，并将 {path} 替换为其中的“个人资料路径”。"
+  },
+  "m_step2": {
+    "message": "2. 选择该文件夹"
+  },
+  "m_uploadHint": {
+    "message": "浏览器会询问是否将文件“上传”到此页面：这只是让 Headerwise 在此处读取它们。"
+  },
+  "m_reading": {
+    "message": "正在读取…"
+  },
+  "m_chooseFolder": {
+    "message": "选择文件夹"
+  },
+  "m_orDrag": {
+    "message": "或将文件夹拖到此页面"
+  },
+  "m_step3": {
+    "message": "3. 导入"
+  },
+  "m_restoredBackup": {
+    "message": "已从 ModHeader {date} 的备份中恢复。"
+  },
+  "m_headers_other": {
+    "message": "{n} 个标头"
+  },
+  "m_urlFilters_other": {
+    "message": "{n} 个 URL 过滤器"
+  },
+  "m_on": {
+    "message": "已开启"
+  },
+  "m_tokensHint": {
+    "message": "配置文件中常含有令牌和 Cookie。它们只保存在此浏览器中。"
+  },
+  "m_import_other": {
+    "message": "导入 {n} 个配置文件"
   }
 }

@@ -9,5 +9,692 @@
   "extDescription": {
     "message": "Меняйте заголовки запросов и ответов в профилях. Импорт профилей из ModHeader. Работает локально и ничего никуда не отправляет.",
     "description": "Store summary, at most 132 characters"
+  },
+  "openInTab": {
+    "message": "Открыть во вкладке"
+  },
+  "openInTabTitle": {
+    "message": "Тот же редактор во вкладке браузера, где больше места"
+  },
+  "pauseAll": {
+    "message": "Всё на паузе"
+  },
+  "needsAccess": {
+    "message": "Headerwise нужен доступ к сайтам, чтобы менять их заголовки."
+  },
+  "allowAllSites": {
+    "message": "Разрешить на всех сайтах"
+  },
+  "onThisTab": {
+    "message": "На этой вкладке"
+  },
+  "pausedNothing": {
+    "message": "Пауза: сейчас ничего нигде не меняется."
+  },
+  "noAccessHere": {
+    "message": "У Headerwise нет доступа к этому сайту, поэтому здесь ничего не меняется."
+  },
+  "reloadTab": {
+    "message": "Перезагрузить вкладку"
+  },
+  "cantCheckTab": {
+    "message": "Headerwise не удалось проверить эту вкладку ({error})."
+  },
+  "cantChangeThisPage": {
+    "message": "На этой странице браузер не даёт расширениям менять заголовки."
+  },
+  "noMatchedRulesApi": {
+    "message": "Этот браузер не сообщает расширениям, какие правила сработали, поэтому здесь это определено по адресу страницы."
+  },
+  "matchedRulesError": {
+    "message": "Chrome сейчас не может сказать, какие правила здесь сработали ({error})."
+  },
+  "badRegex": {
+    "message": "Chrome не может использовать это регулярное выражение ({reason})"
+  },
+  "notSupported": {
+    "message": "не поддерживается"
+  },
+  "line_applied_one": {
+    "message": "изменён {n} запрос"
+  },
+  "line_applied_few": {
+    "message": "изменено {n} запроса"
+  },
+  "line_applied_many": {
+    "message": "изменено {n} запросов"
+  },
+  "line_applied_other": {
+    "message": "изменено {n} запроса"
+  },
+  "line_skippedWhere": {
+    "message": "; пропущено там, где подходит «никогда на» {pattern}"
+  },
+  "line_excluded": {
+    "message": "здесь пропущен: эта страница подходит под «никогда на» {pattern}"
+  },
+  "line_notIncluded": {
+    "message": "«только на» {patterns}: эта страница не подходит (её запросы к другим сайтам всё равно могут подойти)"
+  },
+  "line_waiting": {
+    "message": "после вашей последней правки здесь ничего не менялось: перезагрузите вкладку"
+  },
+  "line_off": {
+    "message": "выключен"
+  },
+  "line_empty": {
+    "message": "заголовков пока нет"
+  },
+  "line_otherTab": {
+    "message": "только в другой вкладке ({host})"
+  },
+  "line_narrowed": {
+    "message": "только {scope}: после вашей последней правки здесь таких не было"
+  },
+  "line_pageMatch": {
+    "message": "действует на этой странице"
+  },
+  "untitled": {
+    "message": "Без названия"
+  },
+  "profileN": {
+    "message": "Профиль {n}"
+  },
+  "profileTabTitle": {
+    "message": "{title}. Перетащите (или Alt+←/→), чтобы изменить порядок: если два профиля задают один и тот же заголовок, побеждает левый"
+  },
+  "addProfile": {
+    "message": "Добавить профиль"
+  },
+  "deleted": {
+    "message": "Профиль «{title}» удалён."
+  },
+  "undo": {
+    "message": "Отменить"
+  },
+  "profileOnOff": {
+    "message": "Включить или выключить профиль"
+  },
+  "profileName": {
+    "message": "Название профиля"
+  },
+  "timerOffAt": {
+    "message": "Выключится сам в {time}"
+  },
+  "timerUntil": {
+    "message": "до {time}"
+  },
+  "keepItOn": {
+    "message": "Не выключать"
+  },
+  "timerSelectTitle": {
+    "message": "Включить этот профиль и через какое-то время снова выключить"
+  },
+  "timerSelectLabel": {
+    "message": "Включить на время"
+  },
+  "onFor": {
+    "message": "Включить на…"
+  },
+  "minutes_one": {
+    "message": "{n} мин"
+  },
+  "minutes_few": {
+    "message": "{n} мин"
+  },
+  "minutes_many": {
+    "message": "{n} мин"
+  },
+  "minutes_other": {
+    "message": "{n} мин"
+  },
+  "hours_one": {
+    "message": "{n} час"
+  },
+  "hours_few": {
+    "message": "{n} часа"
+  },
+  "hours_many": {
+    "message": "{n} часов"
+  },
+  "hours_other": {
+    "message": "{n} часа"
+  },
+  "onlyThisTabTitle": {
+    "message": "Действует только в этой вкладке"
+  },
+  "onlyAnotherTabTitle": {
+    "message": "Действует только в другой вкладке"
+  },
+  "onlyInThisTab": {
+    "message": "только в этой вкладке · {host}"
+  },
+  "onlyInAnotherTab": {
+    "message": "только в другой вкладке · {host}"
+  },
+  "allTabsAgain": {
+    "message": "Снова во всех вкладках"
+  },
+  "onlyThisTab": {
+    "message": "Только эта вкладка"
+  },
+  "onlyThisTabButtonTitle": {
+    "message": "Применять этот профиль только в текущей вкладке, пока она не закрыта"
+  },
+  "duplicate": {
+    "message": "Дублировать"
+  },
+  "duplicateTitle": {
+    "message": "Скопировать профиль (копия создаётся выключенной)"
+  },
+  "delete": {
+    "message": "Удалить"
+  },
+  "deleteTitle": {
+    "message": "Удалить профиль"
+  },
+  "requestHeaders": {
+    "message": "Заголовки запроса"
+  },
+  "responseHeaders": {
+    "message": "Заголовки ответа"
+  },
+  "headerOnOff": {
+    "message": "Включить или выключить заголовок"
+  },
+  "headerAction": {
+    "message": "Что сделать с заголовком"
+  },
+  "op_set": {
+    "message": "задать"
+  },
+  "op_append": {
+    "message": "дописать"
+  },
+  "op_remove": {
+    "message": "удалить"
+  },
+  "namePlaceholder": {
+    "message": "Имя"
+  },
+  "valuePlaceholder": {
+    "message": "Значение"
+  },
+  "removedPlaceholder": {
+    "message": "(удаляется)"
+  },
+  "requestHeaderName": {
+    "message": "Имя заголовка запроса"
+  },
+  "responseHeaderName": {
+    "message": "Имя заголовка ответа"
+  },
+  "headerValue": {
+    "message": "Значение заголовка"
+  },
+  "hideValue": {
+    "message": "Скрыть значение"
+  },
+  "showValue": {
+    "message": "Показать значение"
+  },
+  "secretOnTitle": {
+    "message": "Секрет: значение скрыто. Нажмите, чтобы всегда его показывать"
+  },
+  "secretOffTitle": {
+    "message": "Пометить как секрет: скрыть значение"
+  },
+  "secretValue": {
+    "message": "Секретное значение"
+  },
+  "remove": {
+    "message": "Удалить"
+  },
+  "startHere": {
+    "message": "С чего начать: введите выше имя и значение заголовка, вставьте запрос, скопированный в DevTools, или выберите шаблон."
+  },
+  "secretsEverywhere_one": {
+    "message": "{names} уходит на все сайты, к которым обращаются ваши страницы, включая сторонние скрипты и шрифты."
+  },
+  "secretsEverywhere_few": {
+    "message": "{names} уходят на все сайты, к которым обращаются ваши страницы, включая сторонние скрипты и шрифты."
+  },
+  "secretsEverywhere_many": {
+    "message": "{names} уходят на все сайты, к которым обращаются ваши страницы, включая сторонние скрипты и шрифты."
+  },
+  "secretsEverywhere_other": {
+    "message": "{names} уходят на все сайты, к которым обращаются ваши страницы, включая сторонние скрипты и шрифты."
+  },
+  "onlyOnSite": {
+    "message": "Только на {site}"
+  },
+  "addOnlyOnFilter": {
+    "message": "Добавьте ниже фильтр «только на», чтобы они уходили только на ваши сайты."
+  },
+  "addRequestHeader": {
+    "message": "+ заголовок запроса"
+  },
+  "addResponseHeader": {
+    "message": "+ заголовок ответа"
+  },
+  "pasteFromDevTools": {
+    "message": "Вставить из DevTools…"
+  },
+  "presetTitle": {
+    "message": "Добавить готовый набор заголовков"
+  },
+  "presetLabel": {
+    "message": "Добавить шаблон"
+  },
+  "presetPick": {
+    "message": "+ шаблон…"
+  },
+  "variablesHint": {
+    "message": "Переменные: {list}. Chrome отправляет фиксированные значения, поэтому Headerwise подставляет их при каждой правке и раз в минуту: запросы в пределах этой минуты получают одно и то же значение."
+  },
+  "pastePlaceholder": {
+    "message": "В DevTools → Network щёлкните запрос правой кнопкой → Copy as cURL, fetch или PowerShell и вставьте сюда. Подойдут и простые строки «Имя: значение»."
+  },
+  "pasteNoHeaders": {
+    "message": "В этом тексте не найдено заголовков."
+  },
+  "pasteOnlyHost": {
+    "message": "применять этот профиль только на {host}"
+  },
+  "addHeaders_one": {
+    "message": "Добавить {n} заголовок"
+  },
+  "addHeaders_few": {
+    "message": "Добавить {n} заголовка"
+  },
+  "addHeaders_many": {
+    "message": "Добавить {n} заголовков"
+  },
+  "addHeaders_other": {
+    "message": "Добавить {n} заголовка"
+  },
+  "redirects": {
+    "message": "Перенаправления"
+  },
+  "redirectOnOff": {
+    "message": "Включить или выключить перенаправление"
+  },
+  "redirectFrom": {
+    "message": "Заменить эту часть адреса"
+  },
+  "redirectTo": {
+    "message": "На это"
+  },
+  "redirectFromRegexPlaceholder": {
+    "message": "regex, например /v(\\d+)/"
+  },
+  "redirectFromPlaceholder": {
+    "message": "часть URL, например api.example.com"
+  },
+  "redirectToRegexPlaceholder": {
+    "message": "например /v$$1-beta/"
+  },
+  "redirectToPlaceholder": {
+    "message": "например api.staging.example.com"
+  },
+  "regex": {
+    "message": "regex"
+  },
+  "addRedirect": {
+    "message": "+ перенаправление"
+  },
+  "redirectsHint": {
+    "message": "Заменяет первое совпадение в адресе запроса и отправляет запрос туда. Новое перенаправление включается, когда заполнены оба поля; чтобы вырезать текст, оставьте второе поле пустым и включите перенаправление сами. Фильтры «только на» на перенаправления не действуют; «никогда на» и остальные ограничения действуют."
+  },
+  "onlyOnNeverOn": {
+    "message": "Только на / никогда на"
+  },
+  "filterOnOff": {
+    "message": "Включить или выключить фильтр"
+  },
+  "filterKind": {
+    "message": "Только на или никогда на"
+  },
+  "onlyOn": {
+    "message": "только на"
+  },
+  "neverOn": {
+    "message": "никогда на"
+  },
+  "urlPattern": {
+    "message": "Шаблон URL"
+  },
+  "filterRegexExcludePlaceholder": {
+    "message": "regex, например /login"
+  },
+  "filterRegexIncludePlaceholder": {
+    "message": "regex, например ^https://api\\.example\\.com/"
+  },
+  "filterExcludePlaceholder": {
+    "message": "example.com или *login*"
+  },
+  "addOnlyOn": {
+    "message": "+ только на…"
+  },
+  "addNeverOn": {
+    "message": "+ никогда на…"
+  },
+  "scopeSummary": {
+    "message": "Сайты, типы запросов, методы"
+  },
+  "onlyFromSites": {
+    "message": "Только с сайтов"
+  },
+  "neverFromSites": {
+    "message": "Никогда с сайтов"
+  },
+  "onlyTheseRequests": {
+    "message": "Только эти запросы"
+  },
+  "onlyTheseMethods": {
+    "message": "Только эти методы"
+  },
+  "scopeHint": {
+    "message": "Если ничего не отмечено, подходит всё. «С сайтов» — это страница, которая отправила запрос: у страницы, открытой из адресной строки или закладки, такой нет, поэтому она не учитывается."
+  },
+  "type_main_frame": {
+    "message": "Страница"
+  },
+  "type_sub_frame": {
+    "message": "Фреймы"
+  },
+  "type_xmlhttprequest": {
+    "message": "fetch / XHR"
+  },
+  "type_script": {
+    "message": "Скрипты"
+  },
+  "type_stylesheet": {
+    "message": "Стили"
+  },
+  "type_image": {
+    "message": "Картинки"
+  },
+  "type_font": {
+    "message": "Шрифты"
+  },
+  "type_media": {
+    "message": "Медиа"
+  },
+  "type_websocket": {
+    "message": "WebSocket"
+  },
+  "type_ping": {
+    "message": "Beacon"
+  },
+  "type_other": {
+    "message": "Другое"
+  },
+  "preset_cors": {
+    "message": "CORS: разрешить любой origin"
+  },
+  "preset_no_csp": {
+    "message": "Удалить Content-Security-Policy"
+  },
+  "preset_iframe": {
+    "message": "Разрешить сайт в iframe"
+  },
+  "preset_bearer": {
+    "message": "Authorization: Bearer-токен"
+  },
+  "preset_no_cache": {
+    "message": "Без кеша"
+  },
+  "preset_mobile": {
+    "message": "User-Agent: iPhone"
+  },
+  "preset_googlebot": {
+    "message": "User-Agent: Googlebot"
+  },
+  "preset_xff": {
+    "message": "X-Forwarded-For: тестовый IP"
+  },
+  "preset_lang": {
+    "message": "Accept-Language: английский"
+  },
+  "moveFromModHeader": {
+    "message": "Перенести из ModHeader (выключен в Chrome)"
+  },
+  "importJson": {
+    "message": "Импорт JSON"
+  },
+  "export": {
+    "message": "Экспорт…"
+  },
+  "importPlaceholder": {
+    "message": "…или вставьте экспорт из Headerwise, ModHeader, Requestly или Simple Modify Headers"
+  },
+  "import": {
+    "message": "Импортировать"
+  },
+  "cantRead": {
+    "message": "Не удалось прочитать: {error}"
+  },
+  "imported_one": {
+    "message": "Импортирован {n} профиль."
+  },
+  "imported_few": {
+    "message": "Импортировано {n} профиля."
+  },
+  "imported_many": {
+    "message": "Импортировано {n} профилей."
+  },
+  "imported_other": {
+    "message": "Импортировано {n} профиля."
+  },
+  "ok": {
+    "message": "OK"
+  },
+  "includeSecrets": {
+    "message": "Включить секретные значения (токены, cookie). Только для ваших собственных компьютеров."
+  },
+  "download_one": {
+    "message": "Скачать {n} профиль"
+  },
+  "download_few": {
+    "message": "Скачать {n} профиля"
+  },
+  "download_many": {
+    "message": "Скачать {n} профилей"
+  },
+  "download_other": {
+    "message": "Скачать {n} профиля"
+  },
+  "copy": {
+    "message": "Копировать"
+  },
+  "copied": {
+    "message": "Скопировано"
+  },
+  "saved": {
+    "message": "Сохранено: {file}"
+  },
+  "rateQuestion": {
+    "message": "Headerwise вам пригодился?"
+  },
+  "rateIt": {
+    "message": "Оцените его в Chrome Web Store"
+  },
+  "dontShowAgain": {
+    "message": "Больше не показывать"
+  },
+  "footerLocal": {
+    "message": "Работает локально. Без аккаунта, без аналитики, ничего никуда не отправляется."
+  },
+  "shortcuts": {
+    "message": "Сочетания клавиш:"
+  },
+  "shortcutOpen": {
+    "message": "открыть"
+  },
+  "shortcutPause": {
+    "message": "пауза"
+  },
+  "shortcutNext": {
+    "message": "следующий профиль"
+  },
+  "somethingWrong": {
+    "message": "Что-то не так?"
+  },
+  "copyDiagnostics": {
+    "message": "Скопируйте диагностику"
+  },
+  "and": {
+    "message": "и"
+  },
+  "reportProblem": {
+    "message": "сообщите о проблеме"
+  },
+  "diagnosticsCopied": {
+    "message": "Скопировано. Предупреждения включены как есть: проверьте их перед публикацией."
+  },
+  "m_titleMove": {
+    "message": "Перенос из ModHeader · Headerwise"
+  },
+  "m_titleWelcome": {
+    "message": "Добро пожаловать в Headerwise"
+  },
+  "m_pasteWin": {
+    "message": "В окне выбора папки вставьте его в адресную строку сверху и нажмите Enter."
+  },
+  "m_pasteMac": {
+    "message": "В окне выбора папки нажмите ⌘ Shift G, вставьте его и нажмите Enter."
+  },
+  "m_pasteLinux": {
+    "message": "В окне выбора папки нажмите Ctrl+L, вставьте его и нажмите Enter."
+  },
+  "m_someUnreadable": {
+    "message": "Некоторые файлы в папке не удалось прочитать, поэтому это могут быть не самые свежие ваши профили: {errors}"
+  },
+  "m_folderEmpty": {
+    "message": "Папка пуста."
+  },
+  "m_cantReadFiles": {
+    "message": "Не удалось прочитать файлы ModHeader: {errors}. Скопируйте папку в другое место и выберите копию или закройте браузер, который её использует, и попробуйте снова."
+  },
+  "m_noProfiles": {
+    "message": "В этой папке нет профилей ModHeader. Проверьте путь ниже или попробуйте тот же путь с «Sync Extension Settings» вместо «Local Extension Settings»."
+  },
+  "m_cantReadFolder": {
+    "message": "Не удалось прочитать папку: {error}"
+  },
+  "m_installed": {
+    "message": "Headerwise установлен"
+  },
+  "m_twoSteps": {
+    "message": "Два быстрых шага"
+  },
+  "m_stepAccess": {
+    "message": "Разрешите Headerwise менять заголовки на сайтах. Изменения применяет сам Chrome; Headerwise никогда не читает ваши страницы."
+  },
+  "m_done": {
+    "message": "Готово."
+  },
+  "m_stepPin": {
+    "message": "Закрепите значок: нажмите на значок пазла на панели инструментов, затем на булавку рядом с Headerwise. Нажмите на значок, чтобы добавить заголовки."
+  },
+  "m_comingFrom": {
+    "message": "Переходите с ModHeader?"
+  },
+  "m_moveTitle": {
+    "message": "Перенесите профили из ModHeader"
+  },
+  "m_intro": {
+    "message": "Chrome и Edge отключили ModHeader в июле 2026 года, поэтому его кнопки экспорта больше нет. Ваши профили по-прежнему лежат в его папке на диске. Headerwise прочитает их прямо здесь, на этой странице. Ничего не загружается и никуда не отправляется."
+  },
+  "m_added_one": {
+    "message": "Готово: добавлен {n} профиль"
+  },
+  "m_added_few": {
+    "message": "Готово: добавлено {n} профиля"
+  },
+  "m_added_many": {
+    "message": "Готово: добавлено {n} профилей"
+  },
+  "m_added_other": {
+    "message": "Готово: добавлено {n} профиля"
+  },
+  "m_addedHint": {
+    "message": "Нажмите на значок Headerwise на панели инструментов, чтобы их увидеть. Когда убедитесь, что всё в порядке, можно удалить ModHeader на странице расширений."
+  },
+  "m_step1": {
+    "message": "1. Скопируйте путь к папке ModHeader"
+  },
+  "m_firefoxHint": {
+    "message": "Эта страница читает папку ModHeader из Chrome или Edge на этом компьютере. Если вы пользовались ModHeader в Firefox и он там ещё открывается, используйте вместо этого его кнопку экспорта и «Импорт JSON» во всплывающем окне Headerwise."
+  },
+  "m_chromeAlso": {
+    "message": "Chrome (а также Brave, Vivaldi, Opera…)"
+  },
+  "m_profilesHint": {
+    "message": "Если у вас несколько профилей браузера, ModHeader может быть в другом: откройте {version} в том профиле, где вы им пользовались, и замените {path} на значение «Путь к профилю»."
+  },
+  "m_step2": {
+    "message": "2. Выберите эту папку"
+  },
+  "m_uploadHint": {
+    "message": "Браузер спросит, «загрузить» ли файлы на эту страницу: это лишь позволяет Headerwise прочитать их здесь."
+  },
+  "m_reading": {
+    "message": "Чтение…"
+  },
+  "m_chooseFolder": {
+    "message": "Выбрать папку"
+  },
+  "m_orDrag": {
+    "message": "или перетащите папку на эту страницу"
+  },
+  "m_step3": {
+    "message": "3. Импорт"
+  },
+  "m_restoredBackup": {
+    "message": "Восстановлено из резервной копии ModHeader от {date}."
+  },
+  "m_headers_one": {
+    "message": "{n} заголовок"
+  },
+  "m_headers_few": {
+    "message": "{n} заголовка"
+  },
+  "m_headers_many": {
+    "message": "{n} заголовков"
+  },
+  "m_headers_other": {
+    "message": "{n} заголовка"
+  },
+  "m_urlFilters_one": {
+    "message": "{n} фильтр URL"
+  },
+  "m_urlFilters_few": {
+    "message": "{n} фильтра URL"
+  },
+  "m_urlFilters_many": {
+    "message": "{n} фильтров URL"
+  },
+  "m_urlFilters_other": {
+    "message": "{n} фильтра URL"
+  },
+  "m_on": {
+    "message": "включён"
+  },
+  "m_tokensHint": {
+    "message": "В профилях часто хранятся токены и cookie. Они остаются только в этом браузере."
+  },
+  "m_import_one": {
+    "message": "Импортировать {n} профиль"
+  },
+  "m_import_few": {
+    "message": "Импортировать {n} профиля"
+  },
+  "m_import_many": {
+    "message": "Импортировать {n} профилей"
+  },
+  "m_import_other": {
+    "message": "Импортировать {n} профиля"
   }
 }

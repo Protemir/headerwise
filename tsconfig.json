@@ -11,6 +11,7 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "resolveJsonModule": true,
     "types": ["chrome", "node"]
   },
   "include": ["src/**/*.ts", "src/**/*.vue", "tests/**/*.ts"]
