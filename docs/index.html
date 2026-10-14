@@ -206,7 +206,7 @@
         <div class="facts">
           <p><b>No network access</b>This line in the manifest covers every page of the extension and its background worker. A test checks it in a real browser on every change.</p>
           <p><b>Never reads your pages</b>Chrome applies the header rules itself through declarativeNetRequest. Headerwise never sees page content or request bodies.</p>
-          <p><b>No account, no analytics</b>Your profiles stay in your browser's local storage. Nothing is synced to a server, because there is no server.</p>
+          <p><b>No account, no analytics</b>Your profiles stay in your browser. Nothing goes to a server of ours, because there is none. Sync, if you switch it on, is the browser's own.</p>
           <p><b>Open code</b>Read it, build it, and compare it with what the store ships. Site access is asked for only when you click "Allow".</p>
         </div>
       </div>
@@ -277,9 +277,12 @@
               <span>Mobile User-Agent</span>
               <span>{{uuid}} and {{timestamp}}</span>
               <span>Hidden secrets</span>
+              <span>Share by link</span>
+              <span>Sync across computers</span>
               <span>Export to JSON</span>
               <span>Keyboard shortcuts</span>
               <span>Undo</span>
+              <span>In 8 languages</span>
               <span>Dark theme</span>
             </div>
           </div>
@@ -340,7 +343,7 @@
           </details>
           <details>
             <summary>How can I tell it sends nothing?</summary>
-            <p>The manifest blocks network access for the whole extension, so the browser refuses any request it might try. The code is on GitHub, and your profiles live in the browser's local storage.</p>
+            <p>The manifest blocks network access for the whole extension, so the browser refuses any request it might try. The code is on GitHub, and your profiles live in the browser's storage (and in the browser's own sync, if you switch that on).</p>
           </details>
           <details>
             <summary>Why don't I see the changed headers in DevTools?</summary>
@@ -349,6 +352,14 @@
           <details>
             <summary>Which browsers does it work in?</summary>
             <p>Chrome and Edge are tested on every change. Install it from the Chrome Web Store in any of them: Edge asks to "Allow extensions from other stores" the first time. Brave and Vivaldi work the same way. Firefox is planned.</p>
+          </details>
+          <details>
+            <summary>Can I share a profile with my team?</summary>
+            <p>Click "Share…" in the popup and send the link. The profile travels inside the link itself, after the "#", which browsers never send to a server. Secret values such as tokens are left out, and the profile arrives switched off, so whoever opens it looks it over first.</p>
+          </details>
+          <details>
+            <summary>Does it sync between my computers?</summary>
+            <p>If you want it to: tick "Sync profiles across my computers" in the popup on each one. The browser's own sync carries them (your Google or Microsoft account); Headerwise has no server. Secret values, and which profiles are switched on, stay on each computer. If the same profile is changed on two computers at once, both versions are kept.</p>
           </details>
           <details>
             <summary>How do I move from ModHeader?</summary>
