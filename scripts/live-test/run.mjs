@@ -34,7 +34,8 @@ const BINARIES = {
 };
 const binary = process.env.HW_BROWSER ?? BINARIES[browser];
 const dist = resolve('dist');
-const ECHO_PORT = 8787;
+// HW_ECHO_PORT when 8787 is taken by something else on this machine.
+const ECHO_PORT = Number(process.env.HW_ECHO_PORT ?? 8787);
 const CDP_PORT = 9334;
 // Only the automation run reads no translated UI: HW_LANG=ru npm run test:live -- --only automation
 const LANG = process.env.HW_LANG ?? 'en-US';

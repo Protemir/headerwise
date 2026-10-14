@@ -757,5 +757,7 @@
   "syncFailed": { "message": "falha na sincronização: {error}" },
   "syncConflictTitle": { "message": "{title} (de outro computador)" },
   "syncConflicts": { "message": "alterados em dois computadores ao mesmo tempo, as duas versões foram mantidas: {profiles}" },
-  "syncNewer": { "message": "outro computador tem um Headerwise mais novo: atualize este para continuar sincronizando" }
+  "syncNewer": { "message": "outro computador tem um Headerwise mais novo: atualize este para continuar sincronizando" },
+  "syncFull": { "message": "o armazenamento de sincronização do navegador para o Headerwise está cheio (100 KB): apague ou encurte alguns perfis" },
+  "syncBusy": { "message": "mudanças demais de uma vez para a sincronização do navegador; nova tentativa em alguns minutos" }
 }

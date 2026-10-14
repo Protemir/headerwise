@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, ref, toRaw, watch } from 'vue';
 import { clockTime, defaultState, duplicateProfile, emptyHeader, emptyProfile, isSecret, moveProfile, maskValue, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type Redirect, type State } from '../core/model.ts';
 import { exportFileName, exportProfiles, importProfiles } from '../core/export.ts';
 import { importShareLink, shareLink } from '../core/share.ts';
-import type { SyncStatus } from '../core/sync.ts';
+import { withEditsKept, type SyncStatus } from '../core/sync.ts';
 import { VARIABLES } from '../core/variables.ts';
 import { loadMeta, loadState, saveMeta, saveState, STATE_KEY } from '../core/storage.ts';
 import type { RuleInfo } from '../core/dnr.ts';
@@ -90,16 +90,6 @@ function onStateChanged(changes: Record<string, chrome.storage.StorageChange>) {
   if (typed) saveNow();
 }
 
-/** `next` with what was changed here since `saved`: edited, added and deleted profiles, pause. */
-function withEditsKept(saved: State, here: State, next: State): State {
-  const before = new Map(saved.profiles.map(p => [p.id, JSON.stringify(p)]));
-  const mine = new Map(here.profiles.map(p => [p.id, p]));
-  const profiles = next.profiles
-    .filter(p => mine.has(p.id) || !before.has(p.id)) // deleted here
-    .map(p => (mine.has(p.id) && JSON.stringify(mine.get(p.id)) !== before.get(p.id) ? mine.get(p.id)! : p));
-  for (const p of here.profiles) if (!before.has(p.id) && !profiles.some(x => x.id === p.id)) profiles.push(p); // added here
-  return { ...next, paused: here.paused !== saved.paused ? here.paused : next.paused, profiles };
-}
 
 // What the background script left for us: warnings, and which profile each rule belongs to.
 const ruleInfo = ref<Record<number, RuleInfo>>({});

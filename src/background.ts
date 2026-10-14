@@ -88,15 +88,16 @@ const SYNC_RETRY = 'sync-retry';
 const sync = createSync({
   enabled: async () => (await loadMeta()).sync === true,
   // Its own key: the popup writes meta (the sync switch) at any time.
+  // Its own key, kept when sync is switched off: switched on again, it still knows
+  // what was agreed, so edits made elsewhere meanwhile win over this computer's old copies.
   base: async () => ((await chrome.storage.local.get('syncBase')).syncBase as SyncBase | undefined) ?? emptyBase(),
-  setBase: base => chrome.storage.local.set({ syncBase: base }),
   remote: {
     get: () => chrome.storage.sync.get(null),
     set: items => chrome.storage.sync.set(items),
     remove: keys => chrome.storage.sync.remove(keys),
   },
   loadState,
-  saveState,
+  commit: (state, base) => chrome.storage.local.set({ ...(state ? { [STATE_KEY]: JSON.parse(JSON.stringify(state)) } : {}), syncBase: base }),
   status: (s: SyncStatus) => chrome.storage.session.set({ syncStatus: s }),
   retryLater: () => { chrome.alarms.create(SYNC_RETRY, { delayInMinutes: 2 }); },
   edit: fn => engine.edit(fn),

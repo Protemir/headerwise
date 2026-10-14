@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import { expect } from './expect.ts';
-import { createSync, emptyBase, reconcile, SYNC_ORDER, type SyncBase, type SyncItems, type SyncStatus } from '../src/core/sync.ts';
+import { createSync, emptyBase, reconcile, SYNC_ORDER, withEditsKept, type SyncBase, type SyncItems, type SyncStatus } from '../src/core/sync.ts';
 import { toDnrRules } from '../src/core/dnr.ts';
 import type { HeaderMod, Profile, State } from '../src/core/model.ts';
 
@@ -16,11 +16,30 @@ function cloud() {
   let items: SyncItems = {};
   let writes = 0;
   let clock = 1000;
+  let refuse = false;
   return {
     get items() { return items; },
     set items(v: SyncItems) { items = v; },
     get writes() { return writes; },
-    computer(start: State, enabled = true) {
+    /** The browser's sync refuses writes (a quota) while this is set. */
+    set refuse(v: boolean) { refuse = v; },
+    /**
+     * Two rounds that don't see each other's writes (offline, or seconds apart):
+     * each runs against sync as it was, then the browser keeps the last write of
+     * each item, here the second one's.
+     */
+    async apart(first: { run(): Promise<void> }, second: { run(): Promise<void> }) {
+      const before = structuredClone(items);
+      const wrote = () => Object.fromEntries(Object.entries(items).filter(([k, v]) => JSON.stringify(before[k]) !== JSON.stringify(v)));
+      await first.run();
+      const firstWrote = wrote();
+      items = structuredClone(before);
+      await second.run();
+      const secondWrote = wrote();
+      items = { ...before, ...firstWrote, ...secondWrote };
+    },
+    computer(start: State, on = true) {
+      let enabled = on;
       let state = structuredClone(start);
       let base: SyncBase = emptyBase();
       let status: SyncStatus | undefined;
@@ -28,14 +47,13 @@ function cloud() {
       const sync = createSync({
         enabled: async () => enabled,
         base: async () => structuredClone(base),
-        setBase: async b => { base = structuredClone(b); },
+        commit: async (s, b) => { if (s) state = structuredClone(s); base = structuredClone(b); },
         remote: {
           get: async () => structuredClone(items),
-          set: async next => { writes++; items = { ...items, ...structuredClone(next) }; },
-          remove: async keys => { writes++; items = Object.fromEntries(Object.entries(items).filter(([k]) => !keys.includes(k))); },
+          set: async next => { if (refuse) throw new Error('QUOTA_BYTES quota exceeded'); writes++; items = { ...items, ...structuredClone(next) }; },
+          remove: async keys => { if (refuse) throw new Error('QUOTA_BYTES quota exceeded'); writes++; items = Object.fromEntries(Object.entries(items).filter(([k]) => !keys.includes(k))); },
         },
         loadState: async () => structuredClone(state),
-        saveState: async s => { state = structuredClone(s); },
         status: async s => { status = s; },
         retryLater: () => {},
         edit: fn => { const run = queue.then(fn); queue = run.then(() => {}, () => {}); return run; },
@@ -43,6 +61,7 @@ function cloud() {
       });
       const computer = {
         run: (first = false) => sync.run(first),
+        set enabled(v: boolean) { enabled = v; },
         get state() { return state; },
         get status() { return status; },
         /** An edit made here (in the popup), not yet synced. */
@@ -256,6 +275,115 @@ describe('sync', () => {
   it('unreadable items are left alone and never get into the profiles', () => {
     const r = reconcile(st(p('1', 'One')), { [SYNC_ORDER]: { v: 1, order: ['1', '2'] }, 'hw:p:2': { id: '2', title: 'Broken', requestHeaders: [{ id: 'h' }], responseHeaders: [], filters: [] } }, emptyBase(), 0);
     expect(r === 'newer' ? r : [r.state?.profiles.map(x => x.title) ?? 'unchanged', 'hw:p:2' in r.set, r.remove]).toEqual(['unchanged', false, []]);
+  });
+
+  it('edited on two computers that don\'t see each other\'s writes: both versions kept, whichever wrote last', async () => {
+    const c = cloud();
+    const a = c.computer(st(p('1', 'One')));
+    await a.run(true);
+    const b = c.computer(st());
+    await b.run(true);
+    a.change(s => { s.profiles[0].title = 'One edited on A'; });
+    b.change(s => { s.profiles[0].title = 'One edited on B'; });
+    await c.apart(a, b); // B's write lands last
+    await a.run();
+    await b.run();
+    await a.run();
+    const names = (x: typeof a) => x.titles().map(t => t.replace(' (off)', '')).sort();
+    expect(names(a)).toEqual(['One edited on A', 'One edited on B (from another computer)']);
+    expect(names(b)).toEqual(names(a));
+  });
+
+  it('deleted on one computer while edited on another that hadn\'t seen it: the edit stays', async () => {
+    const c = cloud();
+    const a = c.computer(st(p('1', 'Keep'), p('2', 'Two')));
+    await a.run(true);
+    const b = c.computer(st());
+    await b.run(true);
+    b.change(s => { s.profiles[1].title = 'Two edited on B'; });
+    a.change(s => { s.profiles = s.profiles.filter(x => x.id !== '2'); });
+    await c.apart(b, a); // A's deletion lands last
+    await b.run();
+    await a.run();
+    expect([a.titles(), b.titles()]).toEqual([['Keep', 'Two edited on B (off)'], ['Keep (off)', 'Two edited on B (off)']]);
+  });
+
+  it('switched off and on again: edits made elsewhere meanwhile win over the old copies here', async () => {
+    const c = cloud();
+    const a = c.computer(st(p('1', 'One'), p('2', 'Two')));
+    await a.run(true);
+    const b = c.computer(st());
+    await b.run(true);
+    b.enabled = false;
+    a.change(s => { s.profiles[0].title = 'One v2'; s.profiles = s.profiles.filter(x => x.id !== '2'); });
+    await a.run();
+    b.enabled = true;
+    await b.run(true);
+    await a.run();
+    expect([a.titles(), b.titles()]).toEqual([['One v2'], ['One v2 (off)']]);
+  });
+
+  it('a failing write repeated many times makes one conflict copy, not one per try', async () => {
+    const c = cloud();
+    const a = c.computer(st(p('1', 'One')));
+    await a.run(true);
+    const b = c.computer(st());
+    await b.run(true);
+    a.change(s => { s.profiles[0].title = 'One on A'; });
+    b.change(s => { s.profiles[0].title = 'One on B'; });
+    await a.run();
+    c.refuse = true;
+    for (let i = 0; i < 4; i++) await b.run();
+    expect([b.titles().length, b.status?.error]).toEqual([1, 'the browser\'s sync storage for Headerwise is full (100 KB): delete or shorten some profiles']);
+    c.refuse = false;
+    await b.run();
+    await b.run();
+    expect(b.titles().length).toBe(2);
+  });
+
+  it('an id one computer can\'t hold (too big there) doesn\'t make the order bounce between computers', async () => {
+    const c = cloud();
+    const a = c.computer(st(p('1', 'One'), p('2', 'Two')));
+    await a.run(true);
+    const b = c.computer(st());
+    await b.run(true);
+    a.change(s => { s.profiles.splice(1, 0, p('big', 'Big', { requestHeaders: [h('b', 'X-Big', 'x'.repeat(9000))] })); });
+    await a.run();
+    await b.run();
+    const writes = c.writes;
+    for (let i = 0; i < 5; i++) { await a.run(); await b.run(); }
+    expect([c.writes - writes, a.titles()]).toEqual([0, ['One', 'Big', 'Two']]);
+  });
+
+  it('a profile too big to sync can still be deleted, on either computer', async () => {
+    const c = cloud();
+    const a = c.computer(st(p('1', 'One'), p('2', 'Grows')));
+    await a.run(true);
+    const b = c.computer(st());
+    await b.run(true);
+    a.change(s => { s.profiles[1].requestHeaders[0].value = 'x'.repeat(9000); });
+    await a.run();
+    a.change(s => { s.profiles = s.profiles.filter(x => x.id !== '2'); });
+    await a.run();
+    await b.run();
+    expect(b.titles()).toEqual(['One (off)']);
+  });
+
+  it('the popup, typing while a change to the same profile arrives, keeps both', () => {
+    const saved = st(p('1', 'One'), p('2', 'Two'));
+    const here = structuredClone(saved);
+    here.profiles[0].title = 'One typed';
+    const incoming = structuredClone(saved);
+    incoming.profiles[0].filters = [{ id: 'f', enabled: true, kind: 'include', pattern: '||b.example^', isRegex: false }];
+    incoming.profiles[1].title = 'Two from B';
+    incoming.paused = true;
+    const out = withEditsKept(saved, here, incoming);
+    expect([out.paused, out.profiles.map(x => x.title), out.profiles[1].filters[0]?.pattern])
+      .toEqual([true, ['One typed', 'One (from another computer)', 'Two from B'], '||b.example^']);
+    // only switched on or off there: no copy
+    const toggled = structuredClone(saved);
+    toggled.profiles[0].enabled = false;
+    expect(withEditsKept(saved, here, toggled).profiles.map(x => x.title)).toEqual(['One typed', 'Two']);
   });
 
   it('switched off: nothing is read or written', async () => {

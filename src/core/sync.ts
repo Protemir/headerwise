@@ -1,5 +1,5 @@
 import { t } from './i18n.ts';
-import { emptyProfile, isSecret, newId, type HeaderMod, type Profile, type State } from './model.ts';
+import { emptyProfile, isSecret, type HeaderMod, type Profile, type State } from './model.ts';
 
 /*
  * Optional sync of profiles between computers, through the browser's own sync
@@ -101,12 +101,26 @@ function fromSynced(r: SyncedProfile, local: Profile | undefined): Profile {
 const isBlank = (p: Profile) => !p.requestHeaders.some(h => h.name.trim()) && !p.responseHeaders.some(h => h.name.trim())
   && !p.filters.some(f => f.pattern.trim()) && !(p.redirects ?? []).some(r => r.from.trim());
 
+/** A short fingerprint of a synced form: which version an edit was made from. */
+export function fingerprint(s: string): string {
+  let a = 0x811c9dc5;
+  let b = 0x9747b28c ^ s.length;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    a = Math.imul(a ^ c, 0x01000193);
+    b = Math.imul(b ^ c, 0x5bd1e995);
+  }
+  return (a >>> 0).toString(36) + (b >>> 0).toString(36);
+}
+
 export interface Reconciled {
   /** The profiles here after taking in the other computers' changes; undefined if unchanged. */
   state?: State;
   set: SyncItems;
   remove: string[];
   base: SyncBase;
+  /** The base to keep if `state` couldn't be saved (the popup saved meanwhile): only what this computer still holds as it was. */
+  baseIfNotSaved: SyncBase;
   tooBig: string[];
   /** Titles of profiles changed on two computers at once (both versions kept). */
   conflicts: string[];
@@ -115,24 +129,32 @@ export interface Reconciled {
 /**
  * One round of sync: this computer's state against sync storage and the base.
  * `first`: sync was just switched on here; a blank starter profile then makes
- * way for the profiles already in sync.
+ * way for the profiles already in sync, and their order comes first.
+ *
+ * Each item sent carries `parent`, the fingerprint of the version it was edited
+ * from. A version from elsewhere whose parent isn't what this computer last
+ * agreed on was made without seeing this computer's last version: both are kept.
  */
 export function reconcile(local: State, remote: SyncItems, base: SyncBase, now: number, first = false): Reconciled | 'newer' {
   const order = remote[SYNC_ORDER];
   if (obj(order) && typeof order.v === 'number' && order.v > FORMAT) return 'newer';
-  const remoteOrder = obj(order) && Array.isArray(order.order) ? order.order.filter(str) : [];
+  const remoteOrder = obj(order) && Array.isArray(order.order) ? [...new Set(order.order.filter(str))] : [];
 
-  const theirs = new Map<string, SyncedProfile>();
-  const deleted = new Map<string, number>();
+  const theirs = new Map<string, { p: SyncedProfile; s: string; parent?: string }>();
+  const deleted = new Map<string, { at: number; parent?: string }>();
   const tooBigThere = new Set<string>();
+  const unreadable = new Set<string>();
   for (const [key, item] of Object.entries(remote)) {
     if (!key.startsWith(PREFIX)) continue;
     const id = key.slice(PREFIX.length);
-    if (obj(item) && typeof item.deleted === 'number') deleted.set(id, item.deleted);
+    const parent = obj(item) && str(item.parent) ? item.parent : undefined;
+    if (obj(item) && typeof item.deleted === 'number') deleted.set(id, { at: item.deleted, parent });
     else if (obj(item) && item.tooBig === true) tooBigThere.add(id);
     else {
-      const p = readProfile(item, id);
-      if (p) theirs.set(id, p); // anything unreadable is left alone, as if not there yet
+      const { parent: _parent, ...body } = obj(item) ? item : {};
+      const p = readProfile(body, id);
+      if (p) theirs.set(id, { p, s: stable(p), parent });
+      else unreadable.add(id); // from a newer version, or damaged: left alone
     }
   }
 
@@ -141,25 +163,38 @@ export function reconcile(local: State, remote: SyncItems, base: SyncBase, now: 
   const remove: string[] = [];
   const next: SyncBase = { profiles: {}, order: [] };
   const kept = new Map<string, Profile>();
-  const added: Profile[] = []; // copies made on a conflict
+  const added: Profile[] = []; // copies kept on a conflict
+  const marked = new Set<string>(); // deleted here this round
   const tooBig: string[] = [];
   const conflicts: string[] = [];
-  const send = (p: Profile, form: SyncedProfile, s: string) => { set[PREFIX + p.id] = form; next.profiles[p.id] = s; };
+  const send = (p: Profile, form: SyncedProfile, s: string, parent?: string) => {
+    set[PREFIX + p.id] = parent ? { ...form, parent } : form;
+    next.profiles[p.id] = s;
+  };
+  // A version kept next to another under an id made from both, so a round repeated
+  // after a failure finds the copy it already made instead of making another.
+  const keepCopy = (p: Profile, s: string, title: string) => {
+    const id = `${p.id}~${fingerprint(s)}`;
+    if (mine.has(id) || theirs.has(id) || added.some(x => x.id === id)) return;
+    added.push({ ...p, id, enabled: false, tab: undefined, offAt: undefined, title: t('syncConflictTitle', { title }) });
+  };
 
   // Switched on with only a blank profile here, and profiles in sync: the blank one goes.
   const dropBlank = first && local.profiles.length === 1 && isBlank(local.profiles[0]) && theirs.size > 0;
 
-  const ids = [...new Set([...local.profiles.map(p => p.id), ...remoteOrder, ...theirs.keys(), ...Object.keys(base.profiles)])];
+  const ids = [...new Set([...local.profiles.map(p => p.id), ...remoteOrder, ...theirs.keys(), ...Object.keys(base.profiles), ...tooBigThere])];
   for (const id of ids) {
     const L = mine.get(id);
-    const R = theirs.get(id);
+    const T = theirs.get(id);
+    const R = T?.p;
+    const Rs = T?.s;
     const B = base.profiles[id];
+    const fromB = B !== undefined && B !== TOO_BIG ? fingerprint(B) : undefined;
     if (L && dropBlank && L === local.profiles[0] && !R) continue;
     const form = L ? syncedProfile(L) : undefined;
     const Ls = form ? stable(form) : undefined;
-    const Rs = R ? stable(R) : undefined;
 
-    if (L && form && bytes(PREFIX + id) + bytes(JSON.stringify(form)) > SYNC_ITEM_LIMIT) {
+    if (L && form && bytes(PREFIX + id) + bytes(JSON.stringify({ ...form, parent: 'x'.repeat(14) })) > SYNC_ITEM_LIMIT) {
       // Too big for one sync item: kept here, a placeholder there, the other computers keep their copy.
       kept.set(id, L);
       tooBig.push(L.title.trim() || id);
@@ -167,36 +202,55 @@ export function reconcile(local: State, remote: SyncItems, base: SyncBase, now: 
       next.profiles[id] = TOO_BIG;
       continue;
     }
-    if (L && tooBigThere.has(id) && !R && B !== TOO_BIG) {
-      // Too big on another computer: keep this copy, and don't send it over the bigger one.
+    if (L && !R && ((tooBigThere.has(id) && B !== TOO_BIG) || unreadable.has(id))) {
+      // Too big on another computer, or written by a newer version: keep this copy, don't send it over that.
       kept.set(id, L);
       if (B !== undefined) next.profiles[id] = B;
       continue;
     }
-    if (L && R) {
-      if (Ls === Rs) { kept.set(id, L); next.profiles[id] = Ls!; }
-      else if (Ls === B) { kept.set(id, fromSynced(R, L)); next.profiles[id] = Rs!; } // changed elsewhere
-      else if (Rs === B) { kept.set(id, L); send(L, form!, Ls!); } // changed here
-      else {
-        // Changed on both (or met for the first time with different contents): keep
-        // both. This computer's version keeps the id; the other comes in as a copy.
+    if (L && R && Rs !== undefined && Ls !== undefined && form) {
+      if (Ls === Rs) {
         kept.set(id, L);
-        send(L, form!, Ls!);
-        const copy = fromSynced(R, undefined);
-        added.push({ ...copy, id: newId(), title: t('syncConflictTitle', { title: R.title }) });
+        next.profiles[id] = Ls;
+      } else if (Ls === B && (T!.parent === undefined || T!.parent === fromB)) {
+        kept.set(id, fromSynced(R, L)); // changed elsewhere, from the version this computer has
+        next.profiles[id] = Rs;
+      } else if (Rs === B) {
+        kept.set(id, L); // changed here
+        send(L, form, Ls, fromB);
+      } else if (B === undefined) {
+        // Met for the first time with different contents: the version in sync keeps
+        // the id (the other computers aren't disturbed), this one is kept as a copy.
+        kept.set(id, fromSynced(R, L));
+        next.profiles[id] = Rs;
+        keepCopy(L, Ls, L.title);
+        conflicts.push(L.title.trim() || id);
+      } else {
+        // Changed on both, or changed elsewhere without having seen this computer's
+        // last version: this one keeps the id, the other is kept as a copy.
+        kept.set(id, L);
+        send(L, form, Ls, fingerprint(Rs));
+        keepCopy(fromSynced(R, undefined), Rs, R.title);
         conflicts.push(L.title.trim() || id);
       }
-    } else if (L) {
-      // Deleted elsewhere and not changed here since: goes here too. Otherwise (new
-      // here, changed here after a deletion elsewhere, or its item lost) it is sent.
-      if (deleted.has(id) && B !== undefined && Ls === B) continue;
+    } else if (L && form && Ls !== undefined) {
+      const mark = deleted.get(id);
+      // Deleted elsewhere, from the version this computer still has: goes here too.
+      if (mark && Ls === B && (mark.parent === undefined || mark.parent === fromB)) continue;
+      // New here, changed here (after a deletion elsewhere too), or its item lost: sent.
       kept.set(id, L);
-      send(L, form!, Ls!);
-    } else if (R) {
-      if (B === undefined) kept.set(id, fromSynced(R, undefined)); // new elsewhere: comes in off
-      else if (Rs === B) set[PREFIX + id] = { id, deleted: now }; // deleted here
-      else kept.set(id, fromSynced(R, undefined)); // changed elsewhere after a deletion here: the change wins
-      if (kept.has(id)) next.profiles[id] = Rs!;
+      send(L, form, Ls, fromB);
+    } else if (R && Rs !== undefined) {
+      if (B === undefined || Rs !== B) {
+        kept.set(id, fromSynced(R, undefined)); // new elsewhere (comes in off), or changed there after a deletion here
+        next.profiles[id] = Rs;
+      } else {
+        set[PREFIX + id] = { id, deleted: now, ...(fromB ? { parent: fromB } : {}) }; // deleted here
+        marked.add(id);
+      }
+    } else if (B !== undefined && tooBigThere.has(id)) {
+      set[PREFIX + id] = { id, deleted: now }; // deleted here, too big to have been in sync
+      marked.add(id);
     }
   }
   for (const p of added) {
@@ -205,21 +259,64 @@ export function reconcile(local: State, remote: SyncItems, base: SyncBase, now: 
     send(p, form, stable(form));
   }
   // Old deletion marks.
-  for (const [id, at] of deleted) if (now - at > KEEP_DELETIONS && !kept.has(id)) remove.push(PREFIX + id);
+  for (const [id, mark] of deleted) if (now - mark.at > KEEP_DELETIONS && !kept.has(id)) remove.push(PREFIX + id);
 
-  // Order: the other computers' if this one hasn't changed its own since the last
-  // agreement (or is just joining: its own profiles then go after theirs).
+  // Order. Ids in sync this computer doesn't hold (not arrived yet, too big, newer)
+  // stay in their places, so two computers never rewrite it back and forth.
+  const othersOnly = remoteOrder.filter(id => !kept.has(id) && !deleted.has(id) && !marked.has(id) && !(mine.has(id) && !kept.has(id)));
   const localOrder = local.profiles.map(p => p.id);
-  const useTheirs = (first || stable(localOrder) === stable(base.order)) && remoteOrder.length > 0;
-  const ranked = [...new Set([...(useTheirs ? remoteOrder : localOrder), ...localOrder, ...kept.keys()])].filter(id => kept.has(id));
-  next.order = ranked;
-  if (stable(remoteOrder) !== stable(ranked) || !obj(order)) set[SYNC_ORDER] = { v: FORMAT, order: ranked };
+  // The other computers' order, unless this one changed its own since the last agreement.
+  const useTheirs = remoteOrder.length > 0 && (first || stable(localOrder) === stable(base.order.filter(id => mine.has(id))));
+  let full: string[];
+  if (useTheirs) {
+    full = [...new Set([...remoteOrder.filter(id => kept.has(id) || othersOnly.includes(id)), ...localOrder.filter(id => kept.has(id)), ...kept.keys()])];
+  } else {
+    full = [...new Set([...localOrder.filter(id => kept.has(id)), ...kept.keys()])];
+    for (const id of othersOnly) {
+      const before = remoteOrder.slice(0, remoteOrder.indexOf(id)).reverse().find(x => full.includes(x));
+      full.splice(before ? full.indexOf(before) + 1 : 0, 0, id);
+    }
+  }
+  next.order = full;
+  if (!obj(order) || stable(remoteOrder) !== stable(full)) set[SYNC_ORDER] = { v: FORMAT, order: full };
 
   // Never none: the popup needs one to show.
+  const ranked = full.filter(id => kept.has(id));
   const profiles = ranked.length ? ranked.map(id => kept.get(id)!) : [emptyProfile()];
   const state: State = { ...local, profiles };
   const changed = stable(state) !== stable(local);
-  return { ...(changed ? { state } : {}), set, remove, base: next, tooBig, conflicts };
+
+  const baseIfNotSaved: SyncBase = { profiles: {}, order: base.order };
+  for (const id of new Set([...Object.keys(next.profiles), ...Object.keys(base.profiles)])) {
+    const v = kept.get(id) === mine.get(id) && mine.has(id) ? next.profiles[id] : base.profiles[id];
+    if (v !== undefined) baseIfNotSaved.profiles[id] = v;
+  }
+  return { ...(changed ? { state } : {}), set, remove, base: next, baseIfNotSaved, tooBig, conflicts };
+}
+
+/**
+ * The popup's state when a change arrives while it has unsaved typing: profiles
+ * changed only here keep the typing, the rest comes from the change. A profile
+ * changed in both keeps the typing, and the incoming version is kept as a copy.
+ */
+export function withEditsKept(saved: State, here: State, incoming: State): State {
+  const j = (v: unknown) => stable(v);
+  const before = new Map(saved.profiles.map(p => [p.id, j(p)]));
+  const mine = new Map(here.profiles.map(p => [p.id, p]));
+  const profiles: Profile[] = [];
+  for (const p of incoming.profiles) {
+    const m = mine.get(p.id);
+    if (!m && before.has(p.id)) continue; // deleted here
+    if (!m || j(m) === before.get(p.id)) { profiles.push(p); continue; } // not edited here
+    profiles.push(m);
+    const was = saved.profiles.find(x => x.id === p.id);
+    // Changed there too (not just switched on or off, or a tab let go): keep that version as well.
+    if (was && j(syncedProfile(p)) !== j(syncedProfile(was)) && j(syncedProfile(p)) !== j(syncedProfile(m))) {
+      profiles.push({ ...p, id: `${p.id}~${fingerprint(stable(syncedProfile(p)))}`, enabled: false, tab: undefined, offAt: undefined, title: t('syncConflictTitle', { title: p.title }) });
+    }
+  }
+  for (const p of here.profiles) if (!before.has(p.id) && !profiles.some(x => x.id === p.id)) profiles.push(p); // added here
+  return { ...incoming, paused: here.paused !== saved.paused ? here.paused : incoming.paused, profiles };
 }
 
 export interface SyncStatus {
@@ -232,20 +329,28 @@ export interface SyncStatus {
 export interface SyncApi {
   enabled(): Promise<boolean>;
   base(): Promise<SyncBase>;
-  setBase(base: SyncBase): Promise<void>;
   remote: {
     get(): Promise<SyncItems>;
     set(items: SyncItems): Promise<void>;
     remove(keys: string[]): Promise<void>;
   };
   loadState(): Promise<State>;
-  saveState(state: State): Promise<void>;
+  /** Saves the profiles (if given) and the base together, in one write. */
+  commit(state: State | undefined, base: SyncBase): Promise<void>;
   status(s: SyncStatus): Promise<void>;
-  /** Try again in a while (a quota error, or the profiles changed under us). */
+  /** Try again in a while (after a failure). */
   retryLater(): void;
   /** The engine's edit queue: changes to the profiles one at a time. */
   edit<T>(fn: () => Promise<T>): Promise<T>;
   now(): number;
+}
+
+/** The browser's sync errors, in words. */
+function syncError(e: unknown): string {
+  const message = e instanceof Error ? e.message : String(e);
+  if (/QUOTA_BYTES(?!_PER_ITEM)/.test(message)) return t('syncFull');
+  if (/MAX_WRITE_OPERATIONS|MAX_ITEMS/.test(message)) return t('syncBusy');
+  return message;
 }
 
 export function createSync(api: SyncApi) {
@@ -256,23 +361,22 @@ export function createSync(api: SyncApi) {
         if (!(await api.enabled())) return;
         try {
           const local = await api.loadState();
-          const r = reconcile(local, await api.remote.get(), first ? emptyBase() : await api.base(), api.now(), first);
+          const r = reconcile(local, await api.remote.get(), await api.base(), api.now(), first);
           if (r === 'newer') {
             await api.status({ at: api.now(), error: t('syncNewer') });
             return;
           }
-          if (r.state) {
-            // The popup saves outside this queue: if it saved meanwhile, start over later.
-            if (stable(await api.loadState()) !== stable(local)) { api.retryLater(); return; }
-            await api.saveState(r.state);
-          }
+          // Sync first: if it fails, nothing here changes and the next round starts over.
           if (Object.keys(r.set).length) await api.remote.set(r.set);
           if (r.remove.length) await api.remote.remove(r.remove);
-          await api.setBase(r.base);
+          // The popup saves outside this queue. If it saved meanwhile, its state
+          // stays; what this round took in is taken in again by the next one.
+          const saved = stable(await api.loadState()) === stable(local);
+          await api.commit(saved ? r.state : undefined, saved ? r.base : r.baseIfNotSaved);
           await api.status({ at: api.now(), ...(r.tooBig.length ? { tooBig: r.tooBig } : {}), ...(r.conflicts.length ? { conflicts: r.conflicts } : {}) });
         } catch (e) {
-          // Most likely the browser's sync quota; nothing here is lost, the next round sends it.
-          await api.status({ at: api.now(), error: e instanceof Error ? e.message : String(e) });
+          // Nothing here is lost: the next round sends it.
+          await api.status({ at: api.now(), error: syncError(e) });
           api.retryLater();
         }
       });

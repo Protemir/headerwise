@@ -310,5 +310,7 @@
   "syncFailed": { "message": "sync failed: {error}" },
   "syncConflictTitle": { "message": "{title} (from another computer)" },
   "syncConflicts": { "message": "changed on two computers at once, both versions kept: {profiles}" },
-  "syncNewer": { "message": "another computer has a newer Headerwise: update this one to keep syncing" }
+  "syncNewer": { "message": "another computer has a newer Headerwise: update this one to keep syncing" },
+  "syncFull": { "message": "the browser's sync storage for Headerwise is full (100 KB): delete or shorten some profiles" },
+  "syncBusy": { "message": "too many changes for the browser's sync at once; trying again in a few minutes" }
 }
