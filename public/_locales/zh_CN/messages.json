@@ -682,5 +682,6 @@
   "syncConflicts": { "message": "在两台电脑上同时被修改，两个版本都已保留：{profiles}" },
   "syncNewer": { "message": "另一台电脑上的 Headerwise 版本更新：请更新此处的版本以继续同步" },
   "syncFull": { "message": "浏览器为 Headerwise 提供的同步存储已满（100 KB）：请删除或精简部分配置文件" },
-  "syncBusy": { "message": "一次性更改太多，浏览器同步暂时无法处理；几分钟后重试" }
+  "syncBusy": { "message": "一次性更改太多，浏览器同步暂时无法处理；几分钟后重试" },
+  "footerLocalSynced": { "message": "完全在本地运行。无需账号，没有统计分析。配置文件通过浏览器自己的账户同步，除此之外不发送任何数据。" }
 }

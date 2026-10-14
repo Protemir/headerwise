@@ -759,5 +759,6 @@
   "syncConflicts": { "message": "modifiés sur deux ordinateurs à la fois, les deux versions sont gardées : {profiles}" },
   "syncNewer": { "message": "un autre ordinateur a un Headerwise plus récent : mettez à jour celui-ci pour continuer la synchronisation" },
   "syncFull": { "message": "le stockage de synchronisation du navigateur pour Headerwise est plein (100 Ko) : supprimez ou raccourcissez des profils" },
-  "syncBusy": { "message": "trop de changements à la fois pour la synchronisation du navigateur ; nouvel essai dans quelques minutes" }
+  "syncBusy": { "message": "trop de changements à la fois pour la synchronisation du navigateur ; nouvel essai dans quelques minutes" },
+  "footerLocalSynced": { "message": "Fonctionne en local. Pas de compte, pas de statistiques. Les profils se synchronisent via le compte du navigateur ; rien d’autre n’est envoyé nulle part." }
 }

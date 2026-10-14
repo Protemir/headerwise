@@ -80,3 +80,4 @@ html.in-tab body { width: auto; max-width: 880px; margin: 0 auto; padding: 16px 
 .share-url { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
 .sync { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; margin-top: 8px; }
 .sync .bad { color: var(--warn); opacity: 1; }
+.tools { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 12px; }

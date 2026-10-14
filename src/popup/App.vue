@@ -762,7 +762,7 @@ async function importFile(e: Event) {
       </details>
     </section>
 
-    <section>
+    <section class="tools">
       <button class="link" @click="openMigrate">{{ t('moveFromModHeader') }}</button>
       <button class="link" @click="showImport = !showImport; showExport = false">{{ t('importJson') }}</button>
       <button class="link" @click="showExport = !showExport; showImport = false; exportDone = ''; shareUrl = ''">{{ t('export') }}</button>
@@ -807,7 +807,7 @@ async function importFile(e: Event) {
     </p>
 
     <footer>
-      {{ t('footerLocal') }}
+      {{ syncOn ? t('footerLocalSynced') : t('footerLocal') }}
       <span v-if="shortcuts.length" class="keys"><br />{{ t('shortcuts') }} <template v-for="(k, i) in shortcuts" :key="k.what">{{ i ? ', ' : '' }}<kbd>{{ k.key }}</kbd> {{ k.what }}</template></span>
       <br />{{ t('somethingWrong') }} <button class="link" @click="copyDiagnostics">{{ t('copyDiagnostics') }}</button> {{ t('and') }} <button class="link" @click="reportProblem">{{ t('reportProblem') }}</button>.
       <span v-if="diagnosticsDone" class="note-done"><br />{{ diagnosticsDone }}</span>
