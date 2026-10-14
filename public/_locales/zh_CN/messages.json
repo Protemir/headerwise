@@ -677,5 +677,8 @@
   "syncTitle": { "message": "通过浏览器自带的同步（你的 Google 或 Microsoft 账户；需在浏览器中开启同步）。Headerwise 没有服务器。机密值以及哪些配置文件处于开启状态，在每台电脑上各自保留。" },
   "syncedAt": { "message": "已于 {time} 同步" },
   "syncTooBig": { "message": "太大，无法同步（每个配置文件 8 KB）：{profiles}" },
-  "syncFailed": { "message": "同步失败：{error}" }
+  "syncFailed": { "message": "同步失败：{error}" },
+  "syncConflictTitle": { "message": "{title}（来自另一台电脑）" },
+  "syncConflicts": { "message": "在两台电脑上同时被修改，两个版本都已保留：{profiles}" },
+  "syncNewer": { "message": "另一台电脑上的 Headerwise 版本更新：请更新此处的版本以继续同步" }
 }

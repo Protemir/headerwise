@@ -17,7 +17,7 @@ const until = async (fn, ms = 6000) => {
 };
 
 export async function syncChecks({ ctl, port }, { extId }, check) {
-  await ctl.evaluate(`chrome.storage.sync.clear().then(() => chrome.storage.local.get('meta')).then(m => chrome.storage.local.set({ meta: { ...m.meta, sync: false, syncKnown: [] }, state: ${JSON.stringify({ version: 1, paused: false, profiles: [
+  await ctl.evaluate(`chrome.storage.sync.clear().then(() => chrome.storage.local.get('meta')).then(m => chrome.storage.local.set({ meta: { ...m.meta, sync: false }, syncBase: { profiles: {}, order: [] }, state: ${JSON.stringify({ version: 1, paused: false, profiles: [
     prof('a', 'Staging', { requestHeaders: [hdr('Authorization', 'Bearer top-secret'), hdr('X-Env', 'staging')] }),
   ] })} }))`);
   await sleep(800);
@@ -26,7 +26,7 @@ export async function syncChecks({ ctl, port }, { extId }, check) {
   await popup.evaluate(`document.querySelector('label.sync input').click()`);
   const synced = await until(() => ctl.evaluate(`chrome.storage.sync.get(null).then(s => s['hw:p:a'] ? s : null)`));
   check('sync: switched on in the popup, the profile goes to sync storage without its secret',
-    synced?.['hw:index']?.order?.join() === 'a' && synced['hw:p:a'].requestHeaders.map(h => h.value).join('|') === '|staging' && !JSON.stringify(synced).includes('top-secret') && !('enabled' in synced['hw:p:a']),
+    synced?.['hw:order']?.order?.join() === 'a' && synced['hw:p:a'].requestHeaders.map(h => h.value).join('|') === '|staging' && !JSON.stringify(synced).includes('top-secret') && !('enabled' in synced['hw:p:a']),
     JSON.stringify(synced));
   const line = await until(() => popup.evaluate(`document.querySelector('label.sync .dim')?.textContent ?? ''`));
   check('sync: the popup says when it last synced', /synced at/.test(line), line);
@@ -35,7 +35,7 @@ export async function syncChecks({ ctl, port }, { extId }, check) {
   await ctl.evaluate(`chrome.storage.sync.set({
     'hw:p:a': { ...${JSON.stringify(synced['hw:p:a'])}, title: 'Staging (renamed)' },
     'hw:p:b': ${JSON.stringify({ id: 'b', title: 'From the laptop', requestHeaders: [hdr('X-Laptop', '1')], responseHeaders: [], filters: [] })},
-    'hw:index': { v: 1, order: ['a', 'b'] },
+    'hw:order': { v: 1, order: ['a', 'b'] },
   })`);
   const got = await until(() => ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state.profiles.length === 2 && s.state.profiles[0].title.includes('renamed') ? s.state.profiles : null)`));
   check('sync: changes from another computer come in; the new profile off, this one keeps its secret and stays on',
@@ -43,7 +43,7 @@ export async function syncChecks({ ctl, port }, { extId }, check) {
     JSON.stringify(got));
 
   // Deleted on the other computer.
-  await ctl.evaluate(`chrome.storage.sync.remove('hw:p:b').then(() => chrome.storage.sync.set({ 'hw:index': { v: 1, order: ['a'] } }))`);
+  await ctl.evaluate(`chrome.storage.sync.set({ 'hw:p:b': { id: 'b', deleted: Date.now() }, 'hw:order': { v: 1, order: ['a'] } })`);
   const left = await until(() => ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state.profiles.length === 1 ? s.state.profiles.map(p => p.title) : null)`));
   check('sync: a profile deleted on another computer goes here too', left?.join() === 'Staging (renamed)', JSON.stringify(left));
 

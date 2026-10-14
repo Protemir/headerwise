@@ -754,5 +754,8 @@
   "syncTitle": { "message": "Con la sincronización del propio navegador (tu cuenta de Google o Microsoft; debe estar activada en el navegador). Headerwise no tiene servidor. Los valores secretos, y qué perfiles están activados, se quedan en cada equipo." },
   "syncedAt": { "message": "sincronizado a las {time}" },
   "syncTooBig": { "message": "demasiado grandes para sincronizar (8 KB por perfil): {profiles}" },
-  "syncFailed": { "message": "error de sincronización: {error}" }
+  "syncFailed": { "message": "error de sincronización: {error}" },
+  "syncConflictTitle": { "message": "{title} (de otro equipo)" },
+  "syncConflicts": { "message": "cambiados en dos equipos a la vez, se guardan ambas versiones: {profiles}" },
+  "syncNewer": { "message": "otro equipo tiene un Headerwise más nuevo: actualiza este para seguir sincronizando" }
 }

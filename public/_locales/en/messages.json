@@ -307,5 +307,8 @@
   "syncTitle": { "message": "Through the browser's own sync (your Google or Microsoft account; sync must be on in the browser). Headerwise has no server. Secret values, and which profiles are on, stay on each computer." },
   "syncedAt": { "message": "synced at {time}" },
   "syncTooBig": { "message": "too big to sync (8 KB per profile): {profiles}" },
-  "syncFailed": { "message": "sync failed: {error}" }
+  "syncFailed": { "message": "sync failed: {error}" },
+  "syncConflictTitle": { "message": "{title} (from another computer)" },
+  "syncConflicts": { "message": "changed on two computers at once, both versions kept: {profiles}" },
+  "syncNewer": { "message": "another computer has a newer Headerwise: update this one to keep syncing" }
 }

@@ -677,5 +677,8 @@
   "syncTitle": { "message": "ブラウザー自体の同期（Google または Microsoft アカウント。ブラウザーで同期をオンにしておく必要があります）を使います。Headerwise にサーバーはありません。シークレット値と、どのプロファイルがオンかは、コンピューターごとに別です。" },
   "syncedAt": { "message": "{time} に同期済み" },
   "syncTooBig": { "message": "大きすぎて同期できません（1 プロファイル 8 KB まで）：{profiles}" },
-  "syncFailed": { "message": "同期に失敗しました：{error}" }
+  "syncFailed": { "message": "同期に失敗しました：{error}" },
+  "syncConflictTitle": { "message": "{title}（別のコンピューターから）" },
+  "syncConflicts": { "message": "2 台のコンピューターで同時に変更されたため、両方の版を残しました：{profiles}" },
+  "syncNewer": { "message": "別のコンピューターの Headerwise の方が新しいバージョンです。同期を続けるにはこちらも更新してください" }
 }

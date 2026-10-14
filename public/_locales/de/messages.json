@@ -715,5 +715,8 @@
   "syncTitle": { "message": "Über die Synchronisierung des Browsers (dein Google- oder Microsoft-Konto; sie muss im Browser eingeschaltet sein). Headerwise hat keinen Server. Geheime Werte und welche Profile eingeschaltet sind bleiben auf jedem Rechner für sich." },
   "syncedAt": { "message": "synchronisiert um {time}" },
   "syncTooBig": { "message": "zu groß zum Synchronisieren (8 KB pro Profil): {profiles}" },
-  "syncFailed": { "message": "Synchronisierung fehlgeschlagen: {error}" }
+  "syncFailed": { "message": "Synchronisierung fehlgeschlagen: {error}" },
+  "syncConflictTitle": { "message": "{title} (von einem anderen Rechner)" },
+  "syncConflicts": { "message": "auf zwei Rechnern gleichzeitig geändert, beide Fassungen behalten: {profiles}" },
+  "syncNewer": { "message": "ein anderer Rechner hat ein neueres Headerwise: aktualisiere dieses, damit die Synchronisierung weiterläuft" }
 }

@@ -69,22 +69,36 @@ addEventListener('pagehide', () => { saveNow(); });
 addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveNow(); });
 
 // Changed elsewhere while the popup is open: a keyboard shortcut (pause, next
-// profile), a closed tab releasing "only this tab", another Headerwise window.
-// Take that in, or the next edit here would save the old state over it.
+// profile), a closed tab releasing "only this tab", another Headerwise window,
+// sync from another computer. Take that in, or the next edit here would save
+// the old state over it.
 function onStateChanged(changes: Record<string, chrome.storage.StorageChange>) {
   const next = changes[STATE_KEY]?.newValue as State | undefined;
   if (!next || JSON.stringify(next) === lastSaved) return; // our own save
   const current = state.value.profiles[selected.value]?.id;
-  // Typed here in the last 250 ms: that edit is newer, keep it (rare: it means a
-  // shortcut pressed mid-typing). A pending save with nothing typed (it follows a
-  // change taken in a moment ago) doesn't count: take this one in too.
-  if (timer !== undefined && JSON.stringify(state.value) !== lastSaved) { saveNow(); return; }
+  let incoming = next;
+  // Typed here in the last 250 ms (a pending save with nothing typed doesn't count):
+  // the profiles edited here keep this edit, everything else comes from the change.
+  const typed = timer !== undefined && JSON.stringify(state.value) !== lastSaved;
+  if (typed) incoming = withEditsKept(JSON.parse(lastSaved) as State, structuredClone(toRaw(state.value)), next);
   clearTimeout(timer);
   timer = undefined;
   lastSaved = JSON.stringify(next);
-  state.value = next;
-  const i = next.profiles.findIndex(p => p.id === current);
-  selected.value = i >= 0 ? i : Math.min(selected.value, next.profiles.length - 1);
+  state.value = incoming;
+  const i = incoming.profiles.findIndex(p => p.id === current);
+  selected.value = i >= 0 ? i : Math.min(selected.value, incoming.profiles.length - 1);
+  if (typed) saveNow();
+}
+
+/** `next` with what was changed here since `saved`: edited, added and deleted profiles, pause. */
+function withEditsKept(saved: State, here: State, next: State): State {
+  const before = new Map(saved.profiles.map(p => [p.id, JSON.stringify(p)]));
+  const mine = new Map(here.profiles.map(p => [p.id, p]));
+  const profiles = next.profiles
+    .filter(p => mine.has(p.id) || !before.has(p.id)) // deleted here
+    .map(p => (mine.has(p.id) && JSON.stringify(mine.get(p.id)) !== before.get(p.id) ? mine.get(p.id)! : p));
+  for (const p of here.profiles) if (!before.has(p.id) && !profiles.some(x => x.id === p.id)) profiles.push(p); // added here
+  return { ...next, paused: here.paused !== saved.paused ? here.paused : next.paused, profiles };
 }
 
 // What the background script left for us: warnings, and which profile each rule belongs to.
@@ -499,6 +513,7 @@ const syncLine = computed(() => {
   if (!s) return '';
   if (s.error) return t('syncFailed', { error: s.error });
   if (s.tooBig?.length) return t('syncTooBig', { profiles: s.tooBig.join(', ') });
+  if (s.conflicts?.length) return t('syncConflicts', { profiles: s.conflicts.join(', ') });
   return t('syncedAt', { time: clockTime(s.at) });
 });
 
@@ -788,7 +803,7 @@ async function importFile(e: Event) {
       <label class="sync" :title="t('syncTitle')">
         <input type="checkbox" :checked="syncOn" @change="setSync(($event.target as HTMLInputElement).checked)" />
         {{ t('syncLabel') }}
-        <span v-if="syncOn && syncLine" class="dim" :class="{ bad: syncStatus?.error || syncStatus?.tooBig?.length }">· {{ syncLine }}</span>
+        <span v-if="syncOn && syncLine" class="dim" :class="{ bad: syncStatus?.error || syncStatus?.tooBig?.length || syncStatus?.conflicts?.length }">· {{ syncLine }}</span>
       </label>
     </section>
 
