@@ -13,9 +13,11 @@ QUÉ PUEDES HACER
 • Variables: {{uuid}}, {{timestamp}}, {{date}} y otras, que se rellenan en cada cambio y se renuevan cada minuto.
 • Los secretos quedan ocultos: los tokens y cookies se muestran como puntos hasta que pulsas el ojo, útil al compartir pantalla.
 • Activo por un rato: activa un perfil de 15 minutos a 8 horas y se desactiva solo, para que un token o una cabecera de producción no se queden activos por descuido.
+• Compartir por enlace: Compartir… te da un enlace al perfil para un compañero. El perfil viaja dentro del propio enlace, sin pasar por un servidor; los valores secretos se quedan fuera, y llega desactivado.
+• Sincronización entre tus equipos, si quieres: los perfiles te acompañan mediante la sincronización del propio navegador (tu cuenta de Google o Microsoft). Headerwise no tiene servidor. Los valores secretos, y qué perfiles están activados, se quedan en cada equipo.
 • Exporta e importa perfiles en JSON. Los valores secretos no se incluyen salvo que lo pidas. También importa exportaciones de Requestly y Simple Modify Headers.
 • Pruebas automatizadas: una versión aparte para Selenium, Playwright y Puppeteer fija cabeceras desde tu prueba y ejecuta pruebas escritas para ModHeader cambiando solo la extensión. Descarga e instrucciones: https://protemir.github.io/headerwise/automation.html
-• Tema claro y oscuro.
+• En tu idioma: inglés, español, portugués, alemán, francés, japonés, chino y ruso. Tema claro y oscuro.
 
 ¿VIENES DE MODHEADER?
 ModHeader se retiró de las tiendas de Chrome y Edge en julio de 2026. Si tu navegador lo desactivó, su botón de exportar también desapareció, pero tus perfiles siguen en tu disco. Headerwise lee la carpeta de ModHeader directamente en la página (no se sube nada) y trae los perfiles con sus filtros, redirecciones y reglas de cookies. Los archivos JSON exportados de ModHeader también funcionan.
