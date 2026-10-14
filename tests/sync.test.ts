@@ -277,7 +277,7 @@ describe('sync', () => {
     expect(r === 'newer' ? r : [r.state?.profiles.map(x => x.title) ?? 'unchanged', 'hw:p:2' in r.set, r.remove]).toEqual(['unchanged', false, []]);
   });
 
-  it('edited on two computers that don\'t see each other\'s writes: both versions kept, whichever wrote last', async () => {
+  it('edited on two computers that don\'t see each other\'s writes: both versions kept, the last written under the id', async () => {
     const c = cloud();
     const a = c.computer(st(p('1', 'One')));
     await a.run(true);
@@ -290,7 +290,7 @@ describe('sync', () => {
     await b.run();
     await a.run();
     const names = (x: typeof a) => x.titles().map(t => t.replace(' (off)', '')).sort();
-    expect(names(a)).toEqual(['One edited on A', 'One edited on B (from another computer)']);
+    expect(names(a)).toEqual(['One edited on A (from another computer)', 'One edited on B']);
     expect(names(b)).toEqual(names(a));
   });
 
@@ -305,7 +305,8 @@ describe('sync', () => {
     await c.apart(b, a); // A's deletion lands last
     await b.run();
     await a.run();
-    expect([a.titles(), b.titles()]).toEqual([['Keep', 'Two edited on B (off)'], ['Keep (off)', 'Two edited on B (off)']]);
+    const names = (x: typeof a) => x.titles().map(t => t.replace(' (off)', ''));
+    expect([names(a), names(b)]).toEqual([['Keep', 'Two edited on B (from another computer)'], ['Keep', 'Two edited on B (from another computer)']]);
   });
 
   it('switched off and on again: edits made elsewhere meanwhile win over the old copies here', async () => {
@@ -384,6 +385,53 @@ describe('sync', () => {
     const toggled = structuredClone(saved);
     toggled.profiles[0].enabled = false;
     expect(withEditsKept(saved, here, toggled).profiles.map(x => x.title)).toEqual(['One typed', 'Two']);
+  });
+
+  it('a computer that missed versions in between takes the newest, with no copies', async () => {
+    const c = cloud();
+    const a = c.computer(st(p('1', 'v0')));
+    await a.run(true);
+    const b = c.computer(st());
+    await b.run(true);
+    const missed = structuredClone(c.items);
+    for (const v of ['v1', 'v2', 'v3']) { a.change(s => { s.profiles[0].title = v; }); await a.run(); }
+    const latest = c.items;
+    c.items = missed; // b was asleep...
+    c.items = latest; // ...and wakes up to the last one only
+    await b.run();
+    await a.run();
+    expect([a.titles(), b.titles()]).toEqual([['v3'], ['v3 (off)']]);
+  });
+
+  it('three computers editing in turn, one of them asleep, settle on the newest and stop writing', async () => {
+    const c = cloud();
+    const a = c.computer(st(p('1', 'v0')));
+    await a.run(true);
+    const b = c.computer(st());
+    await b.run(true);
+    const d = c.computer(st());
+    await d.run(true);
+    a.change(s => { s.profiles[0].title = 'v1 by A'; });
+    await a.run();
+    await b.run();
+    b.change(s => { s.profiles[0].title = 'v2 by B'; });
+    await b.run();
+    await d.run(); // was asleep through v1
+    for (let i = 0; i < 3; i++) { await a.run(); await b.run(); await d.run(); }
+    const writes = c.writes;
+    for (let i = 0; i < 3; i++) { await a.run(); await b.run(); await d.run(); }
+    const names = (x: typeof a) => x.titles().map(t => t.replace(' (off)', ''));
+    expect([c.writes - writes, names(a), names(b), names(d)]).toEqual([0, ['v2 by B'], ['v2 by B'], ['v2 by B']]);
+  });
+
+  it('the popup, switching a profile on while its rename arrives, takes the rename and keeps it on', () => {
+    const saved = st(p('1', 'One', { enabled: false }));
+    const here = structuredClone(saved);
+    here.profiles[0].enabled = true;
+    const incoming = structuredClone(saved);
+    incoming.profiles[0].title = 'One renamed on B';
+    const out = withEditsKept(saved, here, incoming);
+    expect(out.profiles.map(x => [x.title, x.enabled])).toEqual([['One renamed on B', true]]);
   });
 
   it('switched off: nothing is read or written', async () => {

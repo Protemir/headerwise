@@ -40,6 +40,8 @@ export interface SyncBase {
   /** Synced form (stable JSON) of each profile at the last agreement. */
   profiles: Record<string, string>;
   order: string[];
+  /** Profiles whose agreed version this computer wrote itself (its fingerprint). */
+  sent?: Record<string, string>;
 }
 export const emptyBase = (): SyncBase => ({ profiles: {}, order: [] });
 
@@ -132,8 +134,11 @@ export interface Reconciled {
  * way for the profiles already in sync, and their order comes first.
  *
  * Each item sent carries `parent`, the fingerprint of the version it was edited
- * from. A version from elsewhere whose parent isn't what this computer last
- * agreed on was made without seeing this computer's last version: both are kept.
+ * from. Only a profile changed here is ever sent, so rounds always settle. When
+ * a version this computer wrote is replaced by one not built on it (two computers
+ * that didn't see each other's writes), the new one takes the id and this
+ * computer's is kept as a copy. A computer that merely missed some versions in
+ * between just takes the newest.
  */
 export function reconcile(local: State, remote: SyncItems, base: SyncBase, now: number, first = false): Reconciled | 'newer' {
   const order = remote[SYNC_ORDER];
@@ -167,10 +172,16 @@ export function reconcile(local: State, remote: SyncItems, base: SyncBase, now: 
   const marked = new Set<string>(); // deleted here this round
   const tooBig: string[] = [];
   const conflicts: string[] = [];
+  const sentHere: Record<string, string> = {};
+  next.sent = sentHere;
   const send = (p: Profile, form: SyncedProfile, s: string, parent?: string) => {
     set[PREFIX + p.id] = parent ? { ...form, parent } : form;
     next.profiles[p.id] = s;
+    sentHere[p.id] = fingerprint(s);
   };
+  // This computer wrote the version it last agreed on, and the incoming one wasn't built on it.
+  const overwrote = (id: string, parent: string | undefined, fromB: string | undefined) =>
+    parent !== undefined && fromB !== undefined && parent !== fromB && base.sent?.[id] === fromB;
   // A version kept next to another under an id made from both, so a round repeated
   // after a failure finds the copy it already made instead of making another.
   const keepCopy = (p: Profile, s: string, title: string) => {
@@ -212,9 +223,16 @@ export function reconcile(local: State, remote: SyncItems, base: SyncBase, now: 
       if (Ls === Rs) {
         kept.set(id, L);
         next.profiles[id] = Ls;
-      } else if (Ls === B && (T!.parent === undefined || T!.parent === fromB)) {
-        kept.set(id, fromSynced(R, L)); // changed elsewhere, from the version this computer has
+        if (base.sent?.[id] === fingerprint(Ls)) sentHere[id] = base.sent[id]; // still ours
+      } else if (Ls === B) {
+        // Not changed here: the newer version is taken in. If it replaced this
+        // computer's own write without having seen it, that one is kept as a copy.
+        kept.set(id, fromSynced(R, L));
         next.profiles[id] = Rs;
+        if (overwrote(id, T!.parent, fromB)) {
+          keepCopy(L, Ls, L.title);
+          conflicts.push(L.title.trim() || id);
+        }
       } else if (Rs === B) {
         kept.set(id, L); // changed here
         send(L, form, Ls, fromB);
@@ -235,8 +253,12 @@ export function reconcile(local: State, remote: SyncItems, base: SyncBase, now: 
       }
     } else if (L && form && Ls !== undefined) {
       const mark = deleted.get(id);
-      // Deleted elsewhere, from the version this computer still has: goes here too.
-      if (mark && Ls === B && (mark.parent === undefined || mark.parent === fromB)) continue;
+      // Deleted elsewhere and not changed here since: goes here too (as a copy, if
+      // the deletion was of an older version than the one this computer wrote).
+      if (mark && Ls === B) {
+        if (overwrote(id, mark.parent, fromB)) keepCopy(L, Ls, L.title);
+        continue;
+      }
       // New here, changed here (after a deletion elsewhere too), or its item lost: sent.
       kept.set(id, L);
       send(L, form, Ls, fromB);
@@ -286,10 +308,13 @@ export function reconcile(local: State, remote: SyncItems, base: SyncBase, now: 
   const state: State = { ...local, profiles };
   const changed = stable(state) !== stable(local);
 
-  const baseIfNotSaved: SyncBase = { profiles: {}, order: base.order };
+  const baseIfNotSaved: SyncBase = { profiles: {}, order: base.order, sent: {} };
   for (const id of new Set([...Object.keys(next.profiles), ...Object.keys(base.profiles)])) {
-    const v = kept.get(id) === mine.get(id) && mine.has(id) ? next.profiles[id] : base.profiles[id];
+    const same = kept.get(id) === mine.get(id) && mine.has(id);
+    const v = same ? next.profiles[id] : base.profiles[id];
     if (v !== undefined) baseIfNotSaved.profiles[id] = v;
+    const sent = same ? sentHere[id] : base.sent?.[id];
+    if (sent !== undefined) baseIfNotSaved.sent![id] = sent;
   }
   return { ...(changed ? { state } : {}), set, remove, base: next, baseIfNotSaved, tooBig, conflicts };
 }
@@ -308,8 +333,13 @@ export function withEditsKept(saved: State, here: State, incoming: State): State
     const m = mine.get(p.id);
     if (!m && before.has(p.id)) continue; // deleted here
     if (!m || j(m) === before.get(p.id)) { profiles.push(p); continue; } // not edited here
-    profiles.push(m);
     const was = saved.profiles.find(x => x.id === p.id);
+    if (was && j(syncedProfile(m)) === j(syncedProfile(was))) {
+      // Only switched on or off, bound to a tab or timed here: the incoming content, with that.
+      profiles.push({ ...p, enabled: m.enabled, tab: m.tab, offAt: m.offAt });
+      continue;
+    }
+    profiles.push(m);
     // Changed there too (not just switched on or off, or a tab let go): keep that version as well.
     if (was && j(syncedProfile(p)) !== j(syncedProfile(was)) && j(syncedProfile(p)) !== j(syncedProfile(m))) {
       profiles.push({ ...p, id: `${p.id}~${fingerprint(stable(syncedProfile(p)))}`, enabled: false, tab: undefined, offAt: undefined, title: t('syncConflictTitle', { title: p.title }) });
