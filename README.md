@@ -21,6 +21,12 @@ Setting headers in Selenium, Playwright or Puppeteer tests (where `chrome-modhea
 There is an [automation build](https://protemir.github.io/headerwise/automation.html) with a fixed id
 and a URL to set headers from your test.
 
+Sharing a profile with a teammate? "Share…" makes a link that carries the profile
+itself, after the `#`, which browsers never send to a server; secret values are left
+out and it arrives switched off. On several computers? Tick sync and the browser's own
+sync (your Google or Microsoft account) carries the profiles; Headerwise still has no
+server, and secret values stay on each computer.
+
 ## Status
 
 Free, and staying free. Install it from the

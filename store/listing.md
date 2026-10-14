@@ -33,9 +33,11 @@ WHAT YOU CAN DO
 • Variables: {{uuid}}, {{timestamp}}, {{date}} and others, filled in on every edit and refreshed every minute.
 • Secrets stay hidden: tokens and cookies show as dots until you click the eye, handy when you share your screen.
 • On for a while: switch a profile on for 15 minutes up to 8 hours and it switches itself off, so a token or a production header isn't left on by accident.
+• Share by link: Share… gives a link to the profile for a teammate. The profile travels inside the link, not through a server; secret values are left out, and it arrives switched off.
+• Sync across your computers, if you want it: profiles follow you through the browser's own sync (your Google or Microsoft account). Headerwise has no server. Secret values, and which profiles are on, stay on each computer.
 • Export and import profiles as JSON. Secret values are left out unless you ask for them. Exports from Requestly and Simple Modify Headers import too.
 • Automated tests: a separate build for Selenium, Playwright and Puppeteer sets headers from your test, and runs tests written for ModHeader with only the extension swapped. Download and setup: https://protemir.github.io/headerwise/automation.html
-• Light and dark theme.
+• In your language: English, Spanish, Portuguese, German, French, Japanese, Chinese and Russian. Light and dark theme.
 
 COMING FROM MODHEADER?
 ModHeader was removed from the Chrome and Edge stores in July 2026. If your browser turned it off, its Export button is gone too, but your profiles are still on your disk. Headerwise reads ModHeader's folder right in the page (nothing is uploaded) and brings the profiles over, filters included. Exported ModHeader JSON files work too.
@@ -99,4 +101,4 @@ The package carries a translated name and summary for es, pt_BR, de, fr, ja,
 zh_CN and ru (`public/_locales`), so the store can show a localized listing.
 Full descriptions to paste for each language: `store/translations/<locale>.txt`.
 In the dashboard: Store listing → language selector → pick the language →
-paste the description. Screenshots can stay the same (the UI is in English).
+paste the description. Screenshots can stay the same (they show the English UI; the extension itself follows the browser's language).
