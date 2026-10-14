@@ -334,7 +334,9 @@ export function withEditsKept(saved: State, here: State, incoming: State): State
     if (!m && before.has(p.id)) continue; // deleted here
     if (!m || j(m) === before.get(p.id)) { profiles.push(p); continue; } // not edited here
     const was = saved.profiles.find(x => x.id === p.id);
-    if (was && j(syncedProfile(m)) === j(syncedProfile(was))) {
+    // (Compared with secret values: a new token typed here is an edit.)
+    const content = (x: Profile) => j({ ...x, enabled: undefined, tab: undefined, offAt: undefined });
+    if (was && content(m) === content(was)) {
       // Only switched on or off, bound to a tab or timed here: the incoming content, with that.
       profiles.push({ ...p, enabled: m.enabled, tab: m.tab, offAt: m.offAt });
       continue;

@@ -434,6 +434,15 @@ describe('sync', () => {
     expect(out.profiles.map(x => [x.title, x.enabled])).toEqual([['One renamed on B', true]]);
   });
 
+  it('the popup, pasting a new token while any change to that profile arrives, keeps the token', () => {
+    const saved = st(p('1', 'Api', { requestHeaders: [h('t', 'Authorization', 'Bearer OLD')] }));
+    const here = structuredClone(saved);
+    here.profiles[0].requestHeaders[0].value = 'Bearer NEW';
+    const incoming = structuredClone(saved);
+    incoming.profiles[0].enabled = false; // the timer, a released tab, a shortcut
+    expect(withEditsKept(saved, here, incoming).profiles[0].requestHeaders[0].value).toBe('Bearer NEW');
+  });
+
   it('switched off: nothing is read or written', async () => {
     const c = cloud();
     const a = c.computer(st(p('1', 'One')), false);
