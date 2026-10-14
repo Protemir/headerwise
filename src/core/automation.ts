@@ -24,6 +24,7 @@ import { newId, type HeaderMod, type State } from './model.ts';
  */
 
 export const AUTOMATION_ID = 'automation';
+export const AUTOMATION_TITLE = 'Automation';
 
 // RFC 9110 token: what a header name may be made of.
 const TOKEN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
@@ -96,7 +97,7 @@ export function applyQuery(state: State, query: string): AutomationResult {
   if (request.length || response.length) {
     next.profiles.unshift({
       id: AUTOMATION_ID,
-      title: 'Automation',
+      title: AUTOMATION_TITLE,
       enabled: true,
       requestHeaders: request,
       responseHeaders: response,

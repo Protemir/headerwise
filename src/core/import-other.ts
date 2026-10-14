@@ -1,4 +1,5 @@
 import { APPENDABLE_REQUEST_HEADERS } from './dnr.ts';
+import { t, tn } from './i18n.ts';
 import type { ImportResult } from './import-modheader.ts';
 import { newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type HeaderOp, type Profile, type UrlFilter } from './model.ts';
 
@@ -67,9 +68,9 @@ export function importSimpleModifyHeaders(data: unknown): ImportResult {
   const targets = str(d.target_page).split(';').map(s => s.trim()).filter(s => s && s !== '*' && s !== '<all_urls>');
   const siteFilters: UrlFilter[] = [];
   let siteLost = false;
-  for (const t of targets) {
-    const f = matchPatternFilter(t);
-    if (f === undefined) { warnings.push(`"${t}" in the page list isn't a match pattern Headerwise can read.`); siteLost = true; }
+  for (const target of targets) {
+    const f = matchPatternFilter(target);
+    if (f === undefined) { warnings.push(t('imp_badMatchPattern', { pattern: target })); siteLost = true; }
     else if (f) siteFilters.push(filter('include', f, true));
   }
 
@@ -88,7 +89,7 @@ export function importSimpleModifyHeaders(data: unknown): ImportResult {
     if (!groups.has(contains)) groups.set(contains, { request: [], response: [] });
     groups.get(contains)![str(h.apply_on) === 'res' ? 'response' : 'request'].push(row);
   }
-  if (cookies) warnings.push(`${cookies} cookie row${cookies === 1 ? '' : 's'} skipped: Simple Modify Headers can only do those in Firefox.`);
+  if (cookies) warnings.push(tn('imp_smhCookies', cookies));
 
   const profiles: Profile[] = [];
   for (const [contains, { request, response }] of groups) {
@@ -97,7 +98,7 @@ export function importSimpleModifyHeaders(data: unknown): ImportResult {
     // Both a page list and "URL contains" must match there; Headerwise ORs its
     // "only on" patterns, so such a profile comes in off for the user to check.
     const both = parts.length > 0 && siteFilters.length > 0;
-    if (both) warnings.push(`"${named}": it applied only where the page list and "URL contains" both match. Headerwise can't say "both", so it is imported switched off with the "URL contains" patterns; check its filters.`);
+    if (both) warnings.push(t('imp_smhBoth', { profile: named }));
     profiles.push({
       id: newId(),
       title: named,
@@ -107,8 +108,8 @@ export function importSimpleModifyHeaders(data: unknown): ImportResult {
       filters: parts.length ? parts.map(p => filter('include', `*${p}*`, false)) : siteFilters.map(f => ({ ...f, id: newId() })),
     });
   }
-  if (siteLost) warnings.push('Profiles are imported switched off: part of the page list could not be read, and without it they would apply more widely.');
-  if (!profiles.length) warnings.push('No headers found in the file.');
+  if (siteLost) warnings.push(t('imp_smhSiteLost'));
+  if (!profiles.length) warnings.push(t('imp_noHeaders'));
   return { profiles, warnings };
 }
 
@@ -179,8 +180,8 @@ function requestlyRedirects(rule: Json, type: 'Redirect' | 'Replace', title: str
       }
     }
   }
-  if (skipped) warnings.push(`"${title}": ${skipped} ${type === 'Redirect' ? 'redirect to a local file or mock' : 'replacement'}${skipped === 1 ? '' : 's'} skipped: Headerwise can only send requests to another URL.`);
-  if (narrowed) warnings.push(`"${title}": Requestly replaced the text only on URLs matching its condition; Headerwise replaces it wherever it appears, so this rule comes in switched off. Check it before switching it on.`);
+  if (skipped) warnings.push(tn(type === 'Redirect' ? 'imp_fileRedirectsSkipped' : 'imp_replacementsSkipped', skipped, { profile: title }));
+  if (narrowed) warnings.push(t('imp_requestlyNarrowed', { profile: title }));
   if (!redirects.length) return undefined;
   return {
     id: newId(),
@@ -233,16 +234,16 @@ function requestlyScope(source: Json, title: string, warnings: string[]): Scope 
   }
   for (const flt of objs(source.filters)) {
     for (const m of (Array.isArray(flt.requestMethod) ? flt.requestMethod : []).map(x => str(x).toLowerCase())) {
-      if (REQUEST_METHODS.includes(m)) scope.requestMethods.push(m); else scope.narrowingLost.push(`method ${m.toUpperCase()}`);
+      if (REQUEST_METHODS.includes(m)) scope.requestMethods.push(m); else scope.narrowingLost.push(t('imp_lostMethod', { method: m.toUpperCase() }));
     }
-    for (const t of (Array.isArray(flt.resourceType) ? flt.resourceType : []).map(str)) {
-      if (RESOURCE_TYPES.some(r => r.id === t)) scope.resourceTypes.push(t); else scope.narrowingLost.push(`request type ${t}`);
+    for (const type of (Array.isArray(flt.resourceType) ? flt.resourceType : []).map(str)) {
+      if (RESOURCE_TYPES.some(r => r.id === type)) scope.resourceTypes.push(type); else scope.narrowingLost.push(t('imp_lostType', { type }));
     }
     for (const d of (Array.isArray(flt.pageDomains) ? flt.pageDomains : []).map(str)) if (d.trim()) scope.initiatorDomains.push(d.trim());
-    if (obj(flt.pageUrl) && str(flt.pageUrl.value)) scope.narrowingLost.push('page URL filter');
-    if (flt.requestPayload && (obj(flt.requestPayload) ? Object.keys(flt.requestPayload).length : true)) scope.narrowingLost.push('request payload filter');
+    if (obj(flt.pageUrl) && str(flt.pageUrl.value)) scope.narrowingLost.push(t('imp_lostPageUrl'));
+    if (flt.requestPayload && (obj(flt.requestPayload) ? Object.keys(flt.requestPayload).length : true)) scope.narrowingLost.push(t('imp_lostPayload'));
   }
-  if (scope.narrowingLost.length) warnings.push(`"${title}": ${[...new Set(scope.narrowingLost)].join(', ')} can't be imported, so this rule comes in switched off.`);
+  if (scope.narrowingLost.length) warnings.push(t('imp_narrowingLost', { profile: title, what: [...new Set(scope.narrowingLost)].join(', ') }));
   return scope;
 }
 
@@ -255,7 +256,7 @@ function requestlyHeader(m: Json, direction: 'request' | 'response', warnings: s
   const op: HeaderOp = type === 'remove' ? 'remove'
     : type === 'add' && (direction === 'response' || APPENDABLE_REQUEST_HEADERS.has(name.toLowerCase())) ? 'append'
     : 'set';
-  if (/rq_request_initiator_origin\(\)/.test(value)) warnings.push(`"${title}": ${name} uses Requestly's rq_request_initiator_origin(), which Headerwise sends as plain text.`);
+  if (/rq_request_initiator_origin\(\)/.test(value)) warnings.push(t('imp_initiatorOrigin', { profile: title, name }));
   return header(name, value, op);
 }
 
@@ -309,8 +310,8 @@ export function importRequestly(data: unknown): ImportResult {
     });
   }
   if (skippedTypes.size) {
-    warnings.push(`Skipped Requestly rules that aren't about headers: ${[...skippedTypes].map(([t, n]) => `${n} ${t}`).join(', ')}.`);
+    warnings.push(t('imp_requestlyOther', { list: [...skippedTypes].map(([type, n]) => `${n} ${type}`).join(', ') }));
   }
-  if (!profiles.length) warnings.push('No header rules found in the file.');
+  if (!profiles.length) warnings.push(t('imp_noHeaderRules'));
   return { profiles, warnings };
 }

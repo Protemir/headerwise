@@ -38,6 +38,11 @@ export async function automationChecks({ page, port }, { extId, base, saw }, che
   r = await go(`chrome-extension://${ID}/automation.html?@nope=1`);
   check('automation: mistakes are reported, nothing changes', r.status === 'error' && /Unknown option @nope/.test(r.text) && (await visit('/auto-only-2'))['x-auto'] === 'two', r.text);
 
+  // A pattern Chrome can't use turns the profile off: the page must say so, in any
+  // browser language (the run can be repeated with HW_LANG=ru).
+  r = await go(`chrome-extension://${ID}/automation.html?X-Auto=three&@url=${encodeURIComponent('||*foo')}`);
+  check('automation: a profile the browser can\'t apply is an error', r.status === 'error' && (await page.evaluate(`document.getElementById('status').textContent`)).includes('Automation'), r.text);
+
   r = await go(`chrome-extension://${ID}/automation.html?@clear`);
   got = await visit('/auto-only-3');
   check('automation: @clear', r.status === 'ready' && !got['x-auto'] && /No headers are changed/.test(r.text), JSON.stringify({ text: r.text, got }));

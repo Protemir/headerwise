@@ -74,7 +74,7 @@ describe('engine', () => {
     await createEngine(b.api).queueSync();
     expect(b.dynamic).toHaveLength(1);
     expect(b.badge).toEqual({ text: '2', color: '#2563eb', title: 'Headerwise: Staging' });
-    expect(b.stored.warnings).toEqual([]);
+    expect([b.stored.warnings, b.stored.lost, b.stored.failed]).toEqual([[], [], false]);
   });
 
   it('does not touch the browser rules when nothing changed (a rename, say)', async () => {
@@ -131,11 +131,14 @@ describe('engine', () => {
     expect([b.dynamic.length, b.session.length, b.badge.text]).toEqual([0, 0, '!']);
     const refusedA = (w: string) => /refused the rules of "A" \(Internal error\), so that profile is off/.test(w);
     expect((b.stored.warnings as string[]).some(refusedA)).toBe(true);
+    // which profiles lost something, for the automation page (warnings are translated)
+    expect(b.stored.lost).toEqual(['A']);
     // the same profiles again (a variable refresh, a rename): no new attempt, same warning
     b.calls.length = 0;
     await e.queueSync();
     expect(b.calls.filter(c => c.startsWith('update'))).toEqual([]);
     expect((b.stored.warnings as string[]).some(refusedA)).toBe(true);
+    expect(b.stored.lost).toEqual(['A']);
     expect(b.badge.text).toBe('!');
     // an edit: tried again
     b.state = st([p('A', { requestHeaders: [h('X-A', '2')] })]);
@@ -148,6 +151,7 @@ describe('engine', () => {
     await createEngine(b.api).queueSync();
     expect(b.dynamic.map(valueOf).sort()).toEqual(['1', '1']);
     expect((b.stored.warnings as string[]).some(w => /refused the rules of "Bad"/.test(w))).toBe(true);
+    expect(b.stored.lost).toEqual(['Bad']);
     expect(b.badge.text).toBe('!');
   });
 
@@ -199,6 +203,7 @@ describe('engine', () => {
     await createEngine(b.api).queueSync();
     expect(b.badge.text).toBe('!');
     expect(String((b.stored.warnings as string[])[0])).toMatch(/could not apply/);
+    expect(b.stored.failed).toBe(true);
   });
 
   it('drops a profile whose "never on" regex the browser can\'t use, and keeps the rest', async () => {
@@ -206,6 +211,7 @@ describe('engine', () => {
     await createEngine(b.api).queueSync();
     expect(b.dynamic.filter(r => r.action.type === 'modifyHeaders')).toHaveLength(1);
     expect((b.stored.warnings as string[]).some(w => /"Bad": "never on" regex/.test(w))).toBe(true);
+    expect(b.stored.lost).toEqual(['Bad']);
   });
 
   it('pause turns everything off with an "off" badge', async () => {

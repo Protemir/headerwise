@@ -34,6 +34,8 @@ const binary = process.env.HW_BROWSER ?? BINARIES[browser];
 const dist = resolve('dist');
 const ECHO_PORT = 8787;
 const CDP_PORT = 9334;
+// Only the automation run reads no translated UI: HW_LANG=ru npm run test:live -- --only automation
+const LANG = process.env.HW_LANG ?? 'en-US';
 const urls = { base: `http://localhost:${ECHO_PORT}`, ip: `http://127.0.0.1:${ECHO_PORT}` };
 
 if (!existsSync(join(dist, 'manifest.json'))) throw new Error('dist/ not found, run npm run build first');
@@ -118,7 +120,7 @@ async function launchWithFlag(dir, ext) {
     `--load-extension=${ext}`,
     `--remote-debugging-port=${CDP_PORT}`,
     '--no-first-run',
-    '--lang=en-US', // the checks read the English UI
+    `--lang=${LANG}`, // the checks read the English UI (see LANG)
     '--no-default-browser-check',
     'about:blank',
   ], { stdio: 'ignore', detached: true }).unref();
@@ -147,7 +149,7 @@ async function launchWithPipe(dir, ext) {
     `--remote-debugging-port=${CDP_PORT}`,
     '--enable-unsafe-extension-debugging',
     '--no-first-run',
-    '--lang=en-US', // the checks read the English UI
+    `--lang=${LANG}`, // the checks read the English UI (see LANG)
     '--no-default-browser-check',
     'about:blank',
   ], { stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe'] });

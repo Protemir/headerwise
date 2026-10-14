@@ -1,4 +1,4 @@
-import { applyQuery } from '../core/automation.ts';
+import { applyQuery, AUTOMATION_TITLE } from '../core/automation.ts';
 import { loadState, saveState } from '../core/storage.ts';
 import './automation.css';
 
@@ -25,15 +25,18 @@ async function run() {
   if (result.state) await saveState(result.state);
   // The background applies the rules and answers once the browser has them.
   await chrome.runtime.sendMessage({ type: 'sync' });
-  const { warnings = [] } = await chrome.storage.session.get('warnings') as { warnings?: string[] };
+  const { warnings = [], lost = [], failed = false } = (await chrome.storage.session.get(['warnings', 'lost', 'failed'])) as
+    { warnings?: string[]; lost?: string[]; failed?: boolean };
   list('summary', result.summary.length ? result.summary : ['No headers are changed.']);
   list('warnings', [...result.warnings, ...warnings]);
   // "ready" only if the browser really took the headers: a test that goes on
   // without them would fail somewhere far from the cause.
   // Only about the test's own headers: a profile of the user's that the browser
-  // refused doesn't make this run fail.
-  const broken = warnings.find(w => (w.startsWith('"Automation"') && /skipped|is off/.test(w))
-    || /refused the rules of [^.]*"Automation"/.test(w) || /could not apply/.test(w));
+  // refused doesn't make this run fail. Warnings are in the browser's language, so
+  // the background says which profiles lost something.
+  const broken = failed ? warnings[0]
+    : lost.includes(AUTOMATION_TITLE) ? warnings.find(w => w.includes(AUTOMATION_TITLE)) ?? warnings[0]
+    : undefined;
   if (result.error) done(false, result.error);
   else if (broken) done(false, broken);
   else done(true, result.state ? 'Done. In effect now:' : 'Nothing changed. In effect now:');

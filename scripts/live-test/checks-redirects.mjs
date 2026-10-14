@@ -56,9 +56,13 @@ export async function redirectChecks({ ctl, page, port }, { base, extId, request
     inputs[0].value = 'prod.example.com'; inputs[0].dispatchEvent(new Event('input')); inputs[0].dispatchEvent(new Event('change'));
     inputs[1].value = 'staging.example.com'; inputs[1].dispatchEvent(new Event('input')); inputs[1].dispatchEvent(new Event('change')); // leaving the field switches the new redirect on
   })()`);
-  await sleep(900);
+  // The save and the rule update take a moment, longer on a busy machine.
+  let rules = 0;
+  for (let i = 0; i < 25 && !rules; i++) {
+    await sleep(200);
+    rules = await ctl.evaluate(`chrome.declarativeNetRequest.getDynamicRules().then(r => r.filter(x => x.action.type === 'redirect').length)`);
+  }
   const saved = await ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state.profiles[0].redirects)`);
-  const rules = await ctl.evaluate(`chrome.declarativeNetRequest.getDynamicRules().then(r => r.filter(x => x.action.type === 'redirect').length)`);
   check('redirect: added in the popup, saved and turned into a rule',
     saved?.length === 1 && saved[0].from === 'prod.example.com' && saved[0].to === 'staging.example.com' && rules === 1, JSON.stringify({ saved, rules }));
   await popup.send('Page.close').catch(() => {});

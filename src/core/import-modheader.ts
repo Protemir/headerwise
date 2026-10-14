@@ -1,3 +1,4 @@
+import { t, tn, type MessageKey } from './i18n.ts';
 import { unknownVariables } from './variables.ts';
 import { APPENDABLE_REQUEST_HEADERS } from './dnr.ts';
 import { newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type HeaderOp, type Profile, type Redirect, type UrlFilter } from './model.ts';
@@ -59,12 +60,12 @@ export interface ImportResult {
 }
 
 // Things Headerwise can't do yet, in the words the user knows them by in ModHeader.
-const UNSUPPORTED: Record<string, string> = {
-  cspHeaders: 'CSP rules',
-  tabFilters: 'tab filters',
-  tabGroupFilters: 'tab group filters',
-  windowFilters: 'window filters',
-  timeFilters: 'time limits',
+const UNSUPPORTED: Record<string, MessageKey> = {
+  cspHeaders: 'imp_cspRules',
+  tabFilters: 'imp_tabFilters',
+  tabGroupFilters: 'imp_tabGroupFilters',
+  windowFilters: 'imp_windowFilters',
+  timeFilters: 'imp_timeFilters',
 };
 
 // Filters that narrow where a profile applies. Dropping one would make the profile
@@ -115,8 +116,8 @@ function cookieRules(p: MhProfile, title: string, warnings: string[]): { request
     if (cap(c.priority)) parts.push(`Priority=${cap(c.priority)}`);
     response.push({ id: newId(), enabled: c.enabled !== false, name: 'Set-Cookie', value: parts.join('; '), op: 'append' });
   }
-  if (request.length) warnings.push(`"${title}": request cookies are added to the Cookie header, so a cookie the site set with the same name is still sent too.`);
-  if (skipped) warnings.push(`"${title}": ${skipped} cookie rule${skipped === 1 ? '' : 's'} matching names by regex or removing a cookie skipped: headers can't express that.`);
+  if (request.length) warnings.push(t('imp_cookiesAppended', { profile: title }));
+  if (skipped) warnings.push(tn('imp_cookiesSkipped', skipped, { profile: title }));
   return { request, response };
 }
 
@@ -151,7 +152,7 @@ function headers(list: MhHeader[] | undefined, profile: MhProfile, direction: 'r
       ...(typeof h.comment === 'string' && h.comment ? { comment: h.comment } : {}),
     });
   }
-  if (setInstead.length) warnings.push(`"${title}": Chrome can't append to ${setInstead.join(', ')}, so ${setInstead.length === 1 ? 'it is' : 'they are'} set instead.`);
+  if (setInstead.length) warnings.push(tn('imp_setInstead', setInstead.length, { profile: title, names: setInstead.join(', ') }));
   return out;
 }
 
@@ -178,20 +179,20 @@ function urlFilter(f: MhUrlFilter, kind: UrlFilter['kind']): UrlFilter | null {
 function parse(text: string): { list?: MhProfile[]; error?: string } {
   const trimmed = text.trim();
   if (/^https?:\/\//i.test(trimmed)) {
-    return { error: 'This is a ModHeader share link. Open it, export the profile as JSON and paste or pick that file instead.' };
+    return { error: t('imp_shareLink') };
   }
   let data: unknown;
   try {
     data = JSON.parse(trimmed);
   } catch {
-    return { error: 'Not valid JSON.' };
+    return { error: t('imp_notJson') };
   }
   if (Array.isArray(data)) return { list: objs<MhProfile>(data) };
   if (data && typeof data === 'object') {
     const wrapped = (data as { profiles?: unknown }).profiles;
     return { list: Array.isArray(wrapped) ? objs<MhProfile>(wrapped) : [data as MhProfile] };
   }
-  return { error: 'Unexpected format: expected a ModHeader profile export.' };
+  return { error: t('imp_notModHeader') };
 }
 
 /** `active`: index of the profile to switch on (the one selected in ModHeader). */
@@ -201,7 +202,7 @@ export function importModHeader(text: string, { active = 0 }: { active?: number 
   if (!list) return { profiles: [], warnings: [error!] };
 
   const profiles = list.map((p, i): Profile => {
-    const title = asText(p.title).trim() || asText(p.shortTitle).trim() || `Imported ${i + 1}`;
+    const title = asText(p.title).trim() || asText(p.shortTitle).trim() || t('imp_untitled', { n: i + 1 });
     const filters: UrlFilter[] = [];
     const skipped: string[] = [];
     let narrowingSkipped = false;
@@ -226,19 +227,20 @@ export function importModHeader(text: string, { active = 0 }: { active?: number 
     const methods = objs<{ enabled?: boolean; methods?: unknown }>(p.requestMethodFilters).filter(f => f.enabled !== false).flatMap(f => many(f.methods)).map(m => asText(m).toLowerCase());
     const known = new Set(RESOURCE_TYPES.map(t => t.id));
     const unknownTypes = [...new Set(types.filter(t => !known.has(t)))];
-    if (unknownTypes.length) warnings.push(`"${title}": resource types ${unknownTypes.join(', ')} are not supported, the rest is kept.`);
+    if (unknownTypes.length) warnings.push(t('imp_unknownTypes', { profile: title, types: unknownTypes.join(', ') }));
     const resourceTypes = [...new Set(types.filter(t => known.has(t)))];
     const requestMethods = [...new Set(methods.filter(m => REQUEST_METHODS.includes(m)))];
     // A type/method filter that lost all its values would widen the profile.
     if ((types.length && !resourceTypes.length) || (methods.length && !requestMethods.length)) narrowingSkipped = true;
 
-    for (const [field, label] of Object.entries(UNSUPPORTED)) {
+    for (const [field, key] of Object.entries(UNSUPPORTED)) {
       if (!hasItems(p[field])) continue;
+      const label = t(key);
       if (!skipped.includes(label)) skipped.push(label);
       if (NARROWING.has(field)) narrowingSkipped = true;
     }
-    if (skipped.length) warnings.push(`"${title}": skipped ${skipped.join(', ')}. Headerwise can't do these yet.`);
-    if (narrowingSkipped) warnings.push(`"${title}" is imported switched off: without those filters it would apply to more requests than in ModHeader.`);
+    if (skipped.length) warnings.push(t('imp_skipped', { profile: title, what: skipped.join(', ') }));
+    if (narrowingSkipped) warnings.push(t('imp_importedOff', { profile: title }));
 
     const cookies = cookieRules(p, title, warnings);
     const requestHeaders = [...headers(p.headers, p, 'request', title, warnings), ...cookieAppends(p.reqCookieAppend), ...cookies.request];
@@ -246,7 +248,7 @@ export function importModHeader(text: string, { active = 0 }: { active?: number 
     const redirects = redirectsOf(p.urlReplacements);
     const unknown = [...new Set([...requestHeaders, ...responseHeaders].flatMap(h => unknownVariables(h.value)))];
     if (unknown.length) {
-      warnings.push(`"${title}": ${unknown.map(n => `{{${n}}}`).join(', ')} is not a Headerwise variable and will be sent as plain text.`);
+      warnings.push(t('imp_unknownVariable', { profile: title, variables: unknown.map(n => `{{${n}}}`).join(', ') }));
     }
 
     return {
@@ -263,6 +265,6 @@ export function importModHeader(text: string, { active = 0 }: { active?: number 
     };
   });
 
-  if (profiles.length === 0) warnings.push('No profiles found in the file.');
+  if (profiles.length === 0) warnings.push(t('imp_noProfiles'));
   return { profiles, warnings };
 }

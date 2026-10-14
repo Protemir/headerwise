@@ -1,3 +1,4 @@
+import { t } from './i18n.ts';
 import { importModHeader, type ImportResult } from './import-modheader.ts';
 import { importRequestly, importSimpleModifyHeaders, isRequestly, isSimpleModifyHeaders } from './import-other.ts';
 import { isSecret, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type HeaderOp, type Profile, type Redirect, type UrlFilter } from './model.ts';
@@ -93,7 +94,7 @@ export function importProfiles(text: string): ImportResult {
 
   const d = data as { version?: unknown; profiles?: unknown };
   const warnings: string[] = [];
-  if (typeof d.version === 'number' && d.version > 1) warnings.push(`This file is from a newer Headerwise (format version ${d.version}); some settings may be missing.`);
+  if (typeof d.version === 'number' && d.version > 1) warnings.push(t('imp_newerVersion', { version: d.version }));
   const profiles = (Array.isArray(d.profiles) ? d.profiles : []).map(profile).filter((p): p is Profile => p !== null);
   // An export without secrets has them empty. Switched on, an empty Authorization
   // or Cookie would be sent everywhere and log the user out, so they come in off.
@@ -101,7 +102,7 @@ export function importProfiles(text: string): ImportResult {
     .filter(h => h.secret && h.value === '' && h.op !== 'remove')
     .map(h => { const was = h.enabled; h.enabled = false; return was ? `"${p.title}" → ${h.name}` : ''; })
     .filter(Boolean));
-  if (emptied.length) warnings.push(`Secret values were not in the file, so these headers are switched off until you fill them in: ${emptied.join(', ')}.`);
-  if (profiles.length === 0) warnings.push('No profiles found in the file.');
+  if (emptied.length) warnings.push(t('imp_secretsEmptied', { headers: emptied.join(', ') }));
+  if (profiles.length === 0) warnings.push(t('imp_noProfiles'));
   return { profiles, warnings };
 }

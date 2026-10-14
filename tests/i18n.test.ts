@@ -2,6 +2,8 @@ import { describe, it } from 'node:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { expect } from './expect.ts';
 import { t, tn } from '../src/core/i18n.ts';
+import { toDnrRules } from '../src/core/dnr.ts';
+import { importProfiles } from '../src/core/export.ts';
 
 // Every translation has every message, with the same {placeholders}, and the
 // plural forms its language needs. A missing key would fall back to English in
@@ -53,4 +55,23 @@ describe('translations', () => {
     expect([tn('imported', 1), tn('imported', 4)]).toEqual(['Imported 1 profile.', 'Imported 4 profiles.']);
     expect(t('redirectToRegexPlaceholder')).toBe('e.g. /v$1-beta/');
   });
+
+  it('warnings from the engine and the importers come in the browser\'s language', () => {
+    const ru = read('ru');
+    const g = globalThis as { chrome?: unknown };
+    g.chrome = { i18n: { getMessage: (k: string) => ru[k]?.message.replace(/\$\$/g, '$') ?? '', getUILanguage: () => 'ru' } };
+    try {
+      const bad = { id: 'h', enabled: true, name: 'Bad Name', value: 'v', op: 'set' as const };
+      const out = toDnrRules({ version: 1, paused: false, profiles: [{ id: 'p', title: 'Тест', enabled: true, requestHeaders: [bad], responseHeaders: [], filters: [] }] });
+      expect(out.warnings).toEqual([fill(ru.w_badHeaderName.message, { where: fill(ru.w_requestHeader.message, { profile: 'Тест', name: 'Bad Name' }) })]);
+      // the automation page goes by this, not by the text
+      expect(out.lost).toEqual(['Тест']);
+      expect(importProfiles('{').warnings).toEqual([ru.imp_notJson.message]);
+      expect(importProfiles('[]').warnings).toEqual([ru.imp_noProfiles.message]);
+    } finally {
+      delete g.chrome;
+    }
+  });
 });
+
+const fill = (s: string, vars: Record<string, string>) => s.replace(/\{(\w+)\}/g, (m, k: string) => vars[k] ?? m);
