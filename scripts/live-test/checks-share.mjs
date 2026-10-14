@@ -34,7 +34,7 @@ export async function shareChecks({ ctl, page, port }, { base, ip, extId }, chec
   check('share: the popup makes a link to the share page', link.startsWith(`${SHARE_PAGE}#1.`), link);
 
   // The test copy of the extension lets localhost message it, as the real one lets the site.
-  const at = origin => link.replace(SHARE_PAGE, `${origin}/headerwise/share.html?id=${extId}`);
+  const at = (origin, l = link) => l.replace(SHARE_PAGE, `${origin}/headerwise/share.html?id=${extId}`);
   await page.send('Page.navigate', { url: at(base) });
   await sleep(1200);
   const text = await page.evaluate('document.body.innerText');
@@ -80,5 +80,19 @@ export async function shareChecks({ ctl, page, port }, { base, ip, extId }, chec
   const notes = await popup.evaluate(`[...document.querySelectorAll('.notes li')].map(li => li.innerText).join(' ')`);
   check('share: a link pasted into Import JSON comes in switched off, and says so',
     after.length === 2 && after[1].title === 'Shared' && after[1].on === false && /switched off: check their headers and redirects/.test(notes), JSON.stringify({ after, notes }));
+
+  // "Share…" at the bottom of the popup: a link with just the profile on screen.
+  await save(ctl, [prof('First', { requestHeaders: [hdr('X-1', '1')] }), prof('Second', { requestHeaders: [hdr('X-2', '2')] })]);
+  await popup.send('Page.reload');
+  await sleep(1200);
+  const one = await popup.evaluate(`(async () => {
+    [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Share…').click();
+    for (let i = 0; i < 30 && !document.querySelector('.share-url'); i++) await new Promise(r => setTimeout(r, 100));
+    return document.querySelector('.share-url')?.value ?? '';
+  })()`);
+  await page.send('Page.navigate', { url: at(base, one) });
+  await sleep(1200);
+  const shown = await page.evaluate('document.body.innerText');
+  check('share: "Share…" links just the profile on screen', /Shared profile: First/.test(shown) && /X-1/.test(shown) && !/X-2/.test(shown), shown.slice(0, 300));
   await popup.send('Page.close').catch(() => {});
 }

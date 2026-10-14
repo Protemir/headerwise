@@ -705,5 +705,7 @@
   "linkCopied": { "message": "Link kopiert. Geheime Werte bleiben draußen, und wer ihn öffnet, bekommt die Profile ausgeschaltet." },
   "shareLinkLabel": { "message": "Teilen-Link" },
   "shareLinkBroken": { "message": "Dieser Link ist beschädigt oder abgeschnitten. Lass ihn dir noch einmal schicken oder eine Exportdatei." },
-  "sharedOff": { "message": "Profile aus einem Link kommen ausgeschaltet an: prüfe ihre Header und Weiterleitungen und schalte sie dann ein." }
+  "sharedOff": { "message": "Profile aus einem Link kommen ausgeschaltet an: prüfe ihre Header und Weiterleitungen und schalte sie dann ein." },
+  "share": { "message": "Teilen…" },
+  "shareTitle": { "message": "Ein Link mit diesem Profil für Kollegen, ohne geheime Werte" }
 }

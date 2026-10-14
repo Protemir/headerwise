@@ -297,5 +297,7 @@
   "linkCopied": { "message": "Link copied. Secret values are left out, and whoever opens it gets the profiles switched off." },
   "shareLinkLabel": { "message": "Share link" },
   "shareLinkBroken": { "message": "This share link is damaged or cut off. Ask for it again, or for an exported file." },
-  "sharedOff": { "message": "Profiles from a link come in switched off: check their headers and redirects, then switch them on." }
+  "sharedOff": { "message": "Profiles from a link come in switched off: check their headers and redirects, then switch them on." },
+  "share": { "message": "Share…" },
+  "shareTitle": { "message": "A link with this profile for a teammate, secret values left out" }
 }

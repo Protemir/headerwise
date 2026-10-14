@@ -472,6 +472,14 @@ async function copyShareLink() {
   } catch { /* copied by hand from the field */ }
 }
 
+// "Share…": the export panel with only this profile picked, and its link made.
+async function shareCurrent() {
+  showImport.value = false;
+  showExport.value = true;
+  exportPicked.value = Object.fromEntries(state.value.profiles.map(p => [p.id, p.id === profile.value?.id]));
+  await copyShareLink();
+}
+
 // Opened by the share page's "Add to Headerwise" button (see background.ts).
 async function openShared() {
   const { sharedLink } = await chrome.storage.session.get('sharedLink') as { sharedLink?: string };
@@ -731,6 +739,7 @@ async function importFile(e: Event) {
       <button class="link" @click="openMigrate">{{ t('moveFromModHeader') }}</button>
       <button class="link" @click="showImport = !showImport; showExport = false">{{ t('importJson') }}</button>
       <button class="link" @click="showExport = !showExport; showImport = false; exportDone = ''; shareUrl = ''">{{ t('export') }}</button>
+      <button v-if="profile" class="link" :title="t('shareTitle')" @click="shareCurrent">{{ t('share') }}</button>
       <div v-if="showImport" class="import">
         <input type="file" accept=".json,application/json" @change="importFile" />
         <textarea v-model="importText" rows="5" :placeholder="t('importPlaceholder')"></textarea>

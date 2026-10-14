@@ -744,5 +744,7 @@
   "linkCopied": { "message": "Enlace copiado. Los valores secretos se quedan fuera, y quien lo abra recibe los perfiles desactivados." },
   "shareLinkLabel": { "message": "Enlace compartido" },
   "shareLinkBroken": { "message": "Este enlace está dañado o cortado. Pide que te lo envíen de nuevo, o un archivo exportado." },
-  "sharedOff": { "message": "Los perfiles de un enlace llegan desactivados: revisa sus encabezados y redirecciones y luego actívalos." }
+  "sharedOff": { "message": "Los perfiles de un enlace llegan desactivados: revisa sus encabezados y redirecciones y luego actívalos." },
+  "share": { "message": "Compartir…" },
+  "shareTitle": { "message": "Un enlace con este perfil para un compañero, sin los valores secretos" }
 }

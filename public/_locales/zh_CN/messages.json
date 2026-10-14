@@ -667,5 +667,7 @@
   "linkCopied": { "message": "链接已复制。不含机密值，打开链接的人收到的配置文件处于关闭状态。" },
   "shareLinkLabel": { "message": "分享链接" },
   "shareLinkBroken": { "message": "这个分享链接已损坏或被截断。请对方重新发送，或发送导出文件。" },
-  "sharedOff": { "message": "来自链接的配置文件已添加但处于关闭状态：请先检查其中的请求头和重定向，再开启。" }
+  "sharedOff": { "message": "来自链接的配置文件已添加但处于关闭状态：请先检查其中的请求头和重定向，再开启。" },
+  "share": { "message": "分享…" },
+  "shareTitle": { "message": "包含此配置文件的链接，可发给同事（不含机密值）" }
 }

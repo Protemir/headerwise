@@ -744,5 +744,7 @@
   "linkCopied": { "message": "Lien copié. Les valeurs secrètes sont laissées de côté, et qui l’ouvre reçoit les profils désactivés." },
   "shareLinkLabel": { "message": "Lien de partage" },
   "shareLinkBroken": { "message": "Ce lien de partage est abîmé ou coupé. Redemandez-le, ou demandez un fichier exporté." },
-  "sharedOff": { "message": "Les profils venus d’un lien arrivent désactivés : vérifiez leurs en-têtes et redirections, puis activez-les." }
+  "sharedOff": { "message": "Les profils venus d’un lien arrivent désactivés : vérifiez leurs en-têtes et redirections, puis activez-les." },
+  "share": { "message": "Partager…" },
+  "shareTitle": { "message": "Un lien avec ce profil pour un collègue, sans les valeurs secrètes" }
 }
