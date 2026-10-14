@@ -117,7 +117,8 @@
       return new TextDecoder('utf-8', { fatal: true }).decode(await new Blob(parts).arrayBuffer());
     }
 
-    const list = v => (Array.isArray(v) ? v : []);
+    // The link comes from anyone: every entry is checked before it is read.
+    const list = v => (Array.isArray(v) ? v.filter(x => x && typeof x === 'object' || typeof x === 'string') : []);
     const str = v => (typeof v === 'string' ? v : '');
 
     function table(rows) {
@@ -188,8 +189,15 @@
       if (!runtime || !runtime.sendMessage) return notInstalled();
       $('status').className = '';
       $('status').textContent = 'Opening Headerwise…';
+      $('add').disabled = true;
       runtime.sendMessage(ID, { type: 'share', link: location.href }, ok => {
-        if (runtime.lastError || ok !== true) return notInstalled();
+        $('add').disabled = false;
+        if (runtime.lastError) return notInstalled();
+        if (ok !== true) {
+          $('status').className = 'bad';
+          $('status').textContent = 'Headerwise could not take this link: it may be too large or damaged. Ask for an exported file instead.';
+          return;
+        }
         $('status').textContent = 'Done: Headerwise opened in a new tab with these profiles added, switched off.';
       });
     });
@@ -207,7 +215,11 @@
       const profiles = list(data.profiles).filter(p => p && typeof p === 'object');
       $('title').textContent = profiles.length === 1 ? `Shared profile: ${str(profiles[0].title) || 'untitled'}` : `${profiles.length} shared header profiles`;
       document.title = `${$('title').textContent} · Headerwise`;
-      render(profiles);
+      try {
+        render(profiles);
+      } catch {
+        return fail('This link is damaged', 'Its profiles could not be read. Ask for it again, or for an exported file.');
+      }
       // No page can tell whether an extension is installed, unless the extension
       // lets that page talk to it: chrome.runtime is there only then.
       if (!(globalThis.chrome && chrome.runtime && chrome.runtime.sendMessage)) notInstalled();

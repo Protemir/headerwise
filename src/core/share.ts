@@ -15,11 +15,12 @@ import type { Profile } from './model.ts';
 
 export const SHARE_PAGE = 'https://protemir.github.io/headerwise/share';
 const VERSION = '1.';
-const LINK = /\/share(?:\.html)?\/?(?:\?[^#\s]*)?#1\.([A-Za-z0-9_-]*)$/;
+// Anywhere in the text: pasted from a chat it may have words, brackets or a full stop around it.
+const LINK = /https?:\/\/[^\s#]{1,300}?\/share(?:\.html)?\/?(?:\?[^#\s]{0,300})?#1\.([A-Za-z0-9_-]*)/;
 // A link is pasted into chats and issues; and a small link must not unpack into
 // something huge.
 export const MAX_LINK = 200_000;
-const MAX_UNPACKED = 5_000_000;
+export const MAX_UNPACKED = 5_000_000;
 
 function base64url(bytes: Uint8Array): string {
   let s = '';
@@ -55,24 +56,25 @@ const unpack = (bytes: Uint8Array) => readAll(new Blob([bytes as BlobPart]).stre
 // Ids are made afresh on import, so the link doesn't carry them.
 const withoutIds = (key: string, value: unknown) => (key === 'id' ? undefined : value);
 
-/** A link holding these profiles, secret values left out. */
-export async function shareLink(profiles: Profile[]): Promise<string> {
+/** A link holding these profiles, secret values left out; undefined if too big to open. */
+export async function shareLink(profiles: Profile[]): Promise<string | undefined> {
   const json = JSON.stringify(JSON.parse(exportProfiles(profiles)), withoutIds);
-  return `${SHARE_PAGE}#${VERSION}${base64url(await pack(json))}`;
+  if (new TextEncoder().encode(json).length > MAX_UNPACKED) return undefined;
+  const link = `${SHARE_PAGE}#${VERSION}${base64url(await pack(json))}`;
+  return link.length > MAX_LINK ? undefined : link;
 }
 
 /** Whether the text is a share link (not whether it is a good one). */
 export function isShareLink(text: string): boolean {
-  return LINK.test(text.trim());
+  return text.length <= MAX_LINK + 1000 && LINK.test(text);
 }
 
 /** The profiles in a share link, switched off; undefined if the text isn't one. */
 export async function importShareLink(text: string): Promise<ImportResult | undefined> {
-  const m = LINK.exec(text.trim());
+  const m = text.length <= MAX_LINK + 1000 ? LINK.exec(text) : null;
   if (!m) return undefined;
   let json: string;
   try {
-    if (text.length > MAX_LINK) throw new Error('too long');
     json = new TextDecoder('utf-8', { fatal: true }).decode(await unpack(fromBase64url(m[1])));
     if ((JSON.parse(json) as { format?: unknown })?.format !== EXPORT_FORMAT) throw new Error('not a Headerwise export');
   } catch {

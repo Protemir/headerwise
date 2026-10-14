@@ -96,11 +96,13 @@ export interface State {
 }
 
 // Names whose values are usually credentials.
-const SECRET_NAME = /^(authorization|proxy-authorization|cookie|set-cookie)$|token|secret|api[-_]?key|password|passwd|session|credential|signature/i;
+const SECRET_NAME = /^(authorization|proxy-authorization|cookie|set-cookie)$|auth(?!ors?$)|token|secret|api[-_]?key|password|passwd|session|credential|signature/i;
+// Values that are credentials whatever the header is called: "Bearer …", "Basic …", a JWT.
+const SECRET_VALUE = /^\s*(bearer|basic|digest|negotiate|token)\s+\S|\beyJ[\w-]{6,}\.[\w-]{6,}\./i;
 
-/** Should the value be hidden in the UI? */
-export function isSecret(h: Pick<HeaderMod, 'name' | 'secret'>): boolean {
-  return h.secret ?? SECRET_NAME.test(h.name.trim());
+/** Should the value be hidden in the UI (and left out of exports and share links)? */
+export function isSecret(h: Pick<HeaderMod, 'name' | 'secret'> & { value?: string }): boolean {
+  return h.secret ?? (SECRET_NAME.test(h.name.trim()) || SECRET_VALUE.test(h.value ?? ''));
 }
 
 /** "Bearer eyJh…" -> "Bear•••••", for places that show values read-only. */

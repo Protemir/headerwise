@@ -178,7 +178,8 @@ function urlFilter(f: MhUrlFilter, kind: UrlFilter['kind']): UrlFilter | null {
 
 function parse(text: string): { list?: MhProfile[]; error?: string } {
   const trimmed = text.trim();
-  if (/^https?:\/\//i.test(trimmed)) {
+  // ModHeader's share links (modheader.com, and bewisse.com/modheader before that).
+  if (/^https?:\/\/([\w-]+\.)*(modheader\.com|bewisse\.com)\//i.test(trimmed)) {
     return { error: t('imp_shareLink') };
   }
   let data: unknown;

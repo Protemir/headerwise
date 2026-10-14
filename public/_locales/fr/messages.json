@@ -746,5 +746,6 @@
   "shareLinkBroken": { "message": "Ce lien de partage est abîmé ou coupé. Redemandez-le, ou demandez un fichier exporté." },
   "sharedOff": { "message": "Les profils venus d’un lien arrivent désactivés : vérifiez leurs en-têtes et redirections, puis activez-les." },
   "share": { "message": "Partager…" },
-  "shareTitle": { "message": "Un lien avec ce profil pour un collègue, sans les valeurs secrètes" }
+  "shareTitle": { "message": "Un lien avec ce profil pour un collègue, sans les valeurs secrètes" },
+  "shareTooBig": { "message": "Ces profils sont trop gros pour un lien. Téléchargez-les et envoyez le fichier." }
 }

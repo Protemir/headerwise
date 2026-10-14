@@ -746,5 +746,6 @@
   "shareLinkBroken": { "message": "Este enlace está dañado o cortado. Pide que te lo envíen de nuevo, o un archivo exportado." },
   "sharedOff": { "message": "Los perfiles de un enlace llegan desactivados: revisa sus encabezados y redirecciones y luego actívalos." },
   "share": { "message": "Compartir…" },
-  "shareTitle": { "message": "Un enlace con este perfil para un compañero, sin los valores secretos" }
+  "shareTitle": { "message": "Un enlace con este perfil para un compañero, sin los valores secretos" },
+  "shareTooBig": { "message": "Estos perfiles son demasiado grandes para un enlace. Descárgalos y envía el archivo." }
 }

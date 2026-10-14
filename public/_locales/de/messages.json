@@ -707,5 +707,6 @@
   "shareLinkBroken": { "message": "Dieser Link ist beschädigt oder abgeschnitten. Lass ihn dir noch einmal schicken oder eine Exportdatei." },
   "sharedOff": { "message": "Profile aus einem Link kommen ausgeschaltet an: prüfe ihre Header und Weiterleitungen und schalte sie dann ein." },
   "share": { "message": "Teilen…" },
-  "shareTitle": { "message": "Ein Link mit diesem Profil für Kollegen, ohne geheime Werte" }
+  "shareTitle": { "message": "Ein Link mit diesem Profil für Kollegen, ohne geheime Werte" },
+  "shareTooBig": { "message": "Diese Profile sind zu groß für einen Link. Lade sie herunter und schicke die Datei." }
 }

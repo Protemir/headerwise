@@ -45,8 +45,8 @@ export interface ConversionResult {
   rules: DnrRule[];
   warnings: string[];
   /**
-   * Titles of the profiles that lost something (a header, a redirect, a filter)
-   * or are off because of a warning. The automation page fails a run on its own
+   * Ids of the profiles that lost something (a header, a redirect, a filter) or
+   * are off because of a warning. The automation page fails a run on its own
    * profile by this, whatever language the warnings are in.
    */
   lost: string[];
@@ -74,9 +74,9 @@ export const APPENDABLE_REQUEST_HEADERS = new Set([
 type Notes = Pick<ConversionResult, 'warnings' | 'lost'>;
 
 /** A warning about something of the profile left out (or the whole profile). */
-function lose(notes: Notes, title: string, warning: string): void {
+function lose(notes: Notes, profileId: string, warning: string): void {
   notes.warnings.push(warning);
-  if (!notes.lost.includes(title)) notes.lost.push(title);
+  if (!notes.lost.includes(profileId)) notes.lost.push(profileId);
 }
 
 // Chrome limits; checked here so the user sees a warning instead of a silent failure.
@@ -137,7 +137,7 @@ export function fixUrlFilter(pattern: string): string | undefined {
 function convertHeaders(
   headers: HeaderMod[],
   direction: 'request' | 'response',
-  profileTitle: string,
+  profile: Pick<Profile, 'id' | 'title'>,
   notes: Notes,
 ): DnrHeaderInfo[] {
   const out: DnrHeaderInfo[] = [];
@@ -145,19 +145,19 @@ function convertHeaders(
     if (!h.enabled) continue;
     const name = h.name.trim();
     if (name === '') continue;
-    const where = t(direction === 'request' ? 'w_requestHeader' : 'w_responseHeader', { profile: profileTitle, name });
+    const where = t(direction === 'request' ? 'w_requestHeader' : 'w_responseHeader', { profile: profile.title, name });
     if (!TOKEN.test(name)) {
-      lose(notes, profileTitle, t('w_badHeaderName', { where }));
+      lose(notes, profile.id, t('w_badHeaderName', { where }));
       continue;
     }
     if (h.op !== 'remove' && /[\r\n]/.test(h.value)) {
-      lose(notes, profileTitle, t('w_lineBreak', { where }));
+      lose(notes, profile.id, t('w_lineBreak', { where }));
       continue;
     }
     const unknown = h.op === 'remove' ? [] : unknownVariables(h.value);
     if (unknown.length) notes.warnings.push(t('w_unknownVariable', { where, variables: unknown.map(n => `{{${n}}}`).join(', ') }));
     if (h.op === 'append' && direction === 'request' && !APPENDABLE_REQUEST_HEADERS.has(name.toLowerCase())) {
-      lose(notes, profileTitle, t('w_cantAppend', { where, set: t('op_set') }));
+      lose(notes, profile.id, t('w_cantAppend', { where, set: t('op_set') }));
       continue;
     }
     out.push(h.op === 'remove'
@@ -225,7 +225,7 @@ function convertRedirects(p: Profile, notes: Notes): ProfileParts['redirects'] {
     const pattern = r.isRegex ? from : escapeRegExp(from);
     const groups = r.isRegex ? groupCount(pattern) : 0;
     if (groups + 2 > 9) {
-      lose(notes, p.title, t('w_tooManyGroups', { where }));
+      lose(notes, p.id, t('w_tooManyGroups', { where }));
       continue;
     }
     // An empty "to" cuts the match out of the address (?utm=1 -> nothing). The
@@ -235,7 +235,7 @@ function convertRedirects(p: Profile, notes: Notes): ProfileParts['redirects'] {
     // Chrome matches regexFilter case-insensitively.
     try { check = new RegExp(pattern, 'i'); } catch { /* left to Chrome's own regex check */ }
     if (check && to !== '' && check.test(to)) {
-      lose(notes, p.title, t('w_redirectLoop', { where }));
+      lose(notes, p.id, t('w_redirectLoop', { where }));
       continue;
     }
     const replacement = to
@@ -255,13 +255,13 @@ const NO_REDIRECT_TYPES = ['websocket', 'webtransport'];
  * "never from" would let in the one it was meant to keep out. So it turns the
  * profile off (undefined), with a warning saying which entry.
  */
-function domains(list: string[] | undefined, which: 'only' | 'never', title: string, notes: Notes): string[] | undefined {
+function domains(list: string[] | undefined, which: 'only' | 'never', { id, title }: Pick<Profile, 'id' | 'title'>, notes: Notes): string[] | undefined {
   const out: string[] = [];
   for (const raw of list ?? []) {
     if (raw.trim() === '') continue;
     const d = normalizeDomain(raw);
     if (d === undefined) {
-      lose(notes, title, t(which === 'only' ? 'w_notASiteOnlyFrom' : 'w_notASiteNeverFrom', { profile: title, entry: raw }));
+      lose(notes, id, t(which === 'only' ? 'w_notASiteOnlyFrom' : 'w_notASiteNeverFrom', { profile: title, entry: raw }));
       return undefined;
     }
     if (!out.includes(d)) out.push(d);
@@ -271,8 +271,8 @@ function domains(list: string[] | undefined, which: 'only' | 'never', title: str
 
 /** Tab, initiator, method and resource type limits, shared by all of a profile's rules. Undefined: the profile is off. */
 function profileScope(p: Profile, notes: Notes) {
-  const initiators = domains(p.initiatorDomains, 'only', p.title, notes);
-  const notInitiators = domains(p.excludedInitiatorDomains, 'never', p.title, notes);
+  const initiators = domains(p.initiatorDomains, 'only', p, notes);
+  const notInitiators = domains(p.excludedInitiatorDomains, 'never', p, notes);
   if (!initiators || !notInitiators) return undefined;
   const known = new Set(RESOURCE_TYPES.map(t => t.id));
   const types = (p.resourceTypes ?? []).filter(t => known.has(t));
@@ -303,7 +303,7 @@ function profileConditions(p: Profile, notes: Notes, combineIncludes: boolean): 
     else {
       const urlFilter = fixUrlFilter(pattern);
       if (urlFilter === undefined) {
-        lose(notes, p.title, t('w_neverOnUnusable', { profile: p.title, pattern }));
+        lose(notes, p.id, t('w_neverOnUnusable', { profile: p.title, pattern }));
         return undefined;
       }
       allowConditions.push({ urlFilter, ...scope });
@@ -320,13 +320,13 @@ function profileConditions(p: Profile, notes: Notes, combineIncludes: boolean): 
     if (!f.enabled || f.kind !== 'include' || pattern === '') continue;
     if (f.isRegex) { includes.push({ regexFilter: pattern }); continue; }
     const urlFilter = fixUrlFilter(pattern);
-    if (urlFilter === undefined) lose(notes, p.title, t('w_onlyOnUnusable', { profile: p.title, pattern }));
+    if (urlFilter === undefined) lose(notes, p.id, t('w_onlyOnUnusable', { profile: p.title, pattern }));
     else includes.push({ urlFilter });
   }
   const hadIncludes = p.filters.some(f => f.enabled && f.kind === 'include' && f.pattern.trim() !== '');
   if (hadIncludes && includes.length === 0) {
     // Not "everywhere": the user asked for some places only.
-    lose(notes, p.title, t('w_noOnlyOnUsable', { profile: p.title }));
+    lose(notes, p.id, t('w_noOnlyOnUsable', { profile: p.title }));
     return undefined;
   }
   let conditions: DnrRule['condition'][];
@@ -371,8 +371,8 @@ export function toDnrRules(state: State): ConversionResult {
   const parts: ProfileParts[] = [];
   state.profiles.forEach((p, index) => {
     if (!p.enabled) return;
-    const requestHeaders = convertHeaders(p.requestHeaders, 'request', p.title, notes);
-    const responseHeaders = convertHeaders(p.responseHeaders, 'response', p.title, notes);
+    const requestHeaders = convertHeaders(p.requestHeaders, 'request', p, notes);
+    const responseHeaders = convertHeaders(p.responseHeaders, 'response', p, notes);
     const redirects = convertRedirects(p, notes);
     if (requestHeaders.length === 0 && responseHeaders.length === 0 && redirects.length === 0) return;
     const appends = [...requestHeaders, ...responseHeaders].some(h => h.operation === 'append');
@@ -403,7 +403,7 @@ export function toDnrRules(state: State): ConversionResult {
     // filters; the profile's other limits and its "never on" patterns still count
     // (at equal priority Chrome lets an allow rule win over a redirect).
     const redirectTypes = x.base.resourceTypes.filter(t => !NO_REDIRECT_TYPES.includes(t));
-    if (x.redirects.length && redirectTypes.length === 0) lose(notes, x.title, t('w_noWebSocketRedirect', { profile: x.title }));
+    if (x.redirects.length && redirectTypes.length === 0) lose(notes, x.id, t('w_noWebSocketRedirect', { profile: x.title }));
     for (const r of redirectTypes.length ? x.redirects : []) {
       info[rules.length + 1] = { profileId: x.id, kind: 'redirect', pattern: r.from };
       rules.push({
@@ -445,7 +445,7 @@ export function toDnrRules(state: State): ConversionResult {
  * said "never" is worse than not applying them.
  */
 export async function dropUnsupportedRegexes(
-  { rules, warnings, lost, titles }: ConversionResult,
+  { rules, warnings, lost, titles, info }: ConversionResult,
   isSupported: (regex: string) => Promise<{ isSupported: boolean; reason?: string }>,
 ): Promise<DnrRule[]> {
   const badRules = new Set<DnrRule>();
@@ -456,13 +456,14 @@ export async function dropUnsupportedRegexes(
     const res = await isSupported(regex);
     if (res.isSupported) continue;
     const why = res.reason ? ` (${res.reason})` : '';
+    const id = info[r.id]?.profileId ?? '';
     if (r.action.type === 'allow') {
       badPriorities.add(r.priority);
-      lose({ warnings, lost }, titles[r.priority], t('w_neverOnRegex', { profile: titles[r.priority], regex, why }));
+      lose({ warnings, lost }, id, t('w_neverOnRegex', { profile: titles[r.priority], regex, why }));
     } else {
       badRules.add(r);
       const key = r.action.type === 'redirect' ? 'w_redirectRegex' : 'w_onlyOnRegex';
-      lose({ warnings, lost }, titles[r.priority], t(key, { profile: titles[r.priority], regex, why }));
+      lose({ warnings, lost }, id, t(key, { profile: titles[r.priority], regex, why }));
     }
   }
   // Ids stay as they are (gaps are fine for Chrome), so `info` still matches.

@@ -39,7 +39,8 @@ onMounted(async () => {
   }
   chrome.storage.session.onChanged.addListener(refreshWarnings);
   chrome.storage.local.onChanged.addListener(onStateChanged);
-  if (stateLoaded && new URLSearchParams(location.search).has('shared')) await openShared();
+  const shared = new URLSearchParams(location.search).get('shared');
+  if (stateLoaded && shared?.startsWith('shared-')) await openShared(shared);
 });
 
 // Saving. Edits are saved 250 ms after the last keystroke, and right away when
@@ -465,7 +466,10 @@ async function copyExport() {
 const shareUrl = ref('');
 async function copyShareLink() {
   exportDone.value = '';
-  shareUrl.value = await shareLink(exportChosen.value);
+  shareUrl.value = '';
+  const link = await shareLink(exportChosen.value);
+  if (!link) { exportDone.value = t('shareTooBig'); return; }
+  shareUrl.value = link;
   try {
     await navigator.clipboard.writeText(shareUrl.value);
     exportDone.value = t('linkCopied');
@@ -481,9 +485,9 @@ async function shareCurrent() {
 }
 
 // Opened by the share page's "Add to Headerwise" button (see background.ts).
-async function openShared() {
-  const { sharedLink } = await chrome.storage.session.get('sharedLink') as { sharedLink?: string };
-  await chrome.storage.session.remove('sharedLink');
+async function openShared(key: string) {
+  const { [key]: sharedLink } = await chrome.storage.session.get(key) as Record<string, string | undefined>;
+  await chrome.storage.session.remove(key);
   if (!sharedLink) return;
   importText.value = sharedLink;
   await doImport();

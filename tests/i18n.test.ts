@@ -65,7 +65,7 @@ describe('translations', () => {
       const out = toDnrRules({ version: 1, paused: false, profiles: [{ id: 'p', title: 'Тест', enabled: true, requestHeaders: [bad], responseHeaders: [], filters: [] }] });
       expect(out.warnings).toEqual([fill(ru.w_badHeaderName.message, { where: fill(ru.w_requestHeader.message, { profile: 'Тест', name: 'Bad Name' }) })]);
       // the automation page goes by this, not by the text
-      expect(out.lost).toEqual(['Тест']);
+      expect(out.lost).toEqual(['p']);
       expect(importProfiles('{').warnings).toEqual([ru.imp_notJson.message]);
       expect(importProfiles('[]').warnings).toEqual([ru.imp_noProfiles.message]);
     } finally {

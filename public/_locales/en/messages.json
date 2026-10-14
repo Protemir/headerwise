@@ -299,5 +299,6 @@
   "shareLinkBroken": { "message": "This share link is damaged or cut off. Ask for it again, or for an exported file." },
   "sharedOff": { "message": "Profiles from a link come in switched off: check their headers and redirects, then switch them on." },
   "share": { "message": "Share…" },
-  "shareTitle": { "message": "A link with this profile for a teammate, secret values left out" }
+  "shareTitle": { "message": "A link with this profile for a teammate, secret values left out" },
+  "shareTooBig": { "message": "These profiles are too big for a link. Use Download and send the file instead." }
 }

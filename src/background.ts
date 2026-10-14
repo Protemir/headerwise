@@ -64,11 +64,17 @@ chrome.runtime.onMessage.addListener((message, _sender, reply) => {
 });
 // The share page (docs/share.html) hands over a share link when its "Add to
 // Headerwise" button is clicked; only that site can (externally_connectable in the
-// manifest). The editor opens in a tab and adds the profiles, switched off.
-chrome.runtime.onMessageExternal?.addListener((message, _sender, reply) => {
-  if (message?.type !== 'share' || typeof message.link !== 'string' || !isShareLink(message.link) || message.link.length > MAX_LINK) return false;
-  chrome.storage.session.set({ sharedLink: message.link })
-    .then(() => chrome.tabs.create({ url: chrome.runtime.getURL('src/popup/index.html?view=tab&shared=1') }))
+// manifest). The editor opens in a tab and adds the profiles, switched off. Each
+// link gets its own key, so two quick clicks open two tabs with one link each.
+// Firefox has no externally_connectable: there any extension could send this, so
+// the listener isn't there at all (the page then offers "paste into Import").
+if (!isFirefox) chrome.runtime.onMessageExternal.addListener((message, _sender, reply) => {
+  if (message?.type !== 'share') return false;
+  // An answer either way: no answer would read on the page as "not installed".
+  if (typeof message.link !== 'string' || message.link.length > MAX_LINK || !isShareLink(message.link)) { reply(false); return false; }
+  const key = `shared-${crypto.randomUUID()}`;
+  chrome.storage.session.set({ [key]: message.link })
+    .then(() => chrome.tabs.create({ url: chrome.runtime.getURL(`src/popup/index.html?view=tab&shared=${key}`) }))
     .then(() => reply(true), () => reply(false));
   return true;
 });

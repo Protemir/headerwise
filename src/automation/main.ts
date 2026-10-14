@@ -1,4 +1,4 @@
-import { applyQuery, AUTOMATION_TITLE } from '../core/automation.ts';
+import { applyQuery, AUTOMATION_ID, AUTOMATION_TITLE } from '../core/automation.ts';
 import { loadState, saveState } from '../core/storage.ts';
 import './automation.css';
 
@@ -35,7 +35,7 @@ async function run() {
   // refused doesn't make this run fail. Warnings are in the browser's language, so
   // the background says which profiles lost something.
   const broken = failed ? warnings[0]
-    : lost.includes(AUTOMATION_TITLE) ? warnings.find(w => w.includes(AUTOMATION_TITLE)) ?? warnings[0]
+    : lost.includes(AUTOMATION_ID) ? warnings.find(w => w.includes(AUTOMATION_TITLE)) ?? warnings[0]
     : undefined;
   if (result.error) done(false, result.error);
   else if (broken) done(false, broken);

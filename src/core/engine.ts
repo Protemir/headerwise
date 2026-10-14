@@ -81,7 +81,7 @@ export function createEngine(api: EngineApi) {
     const stored = await api.session.get(['rulesKey', 'structureKey', 'refused']);
     // Profiles the browser refused last time, for these same rules: left out right
     // away, instead of failing again and rebuilding one by one on every sync.
-    const before = stored.refused as { structureKey: string; profiles: string[]; titles?: string[]; warning: string } | undefined;
+    const before = stored.refused as { structureKey: string; profiles: string[]; warning: string } | undefined;
     const known = before?.structureKey === structureKey ? before : undefined;
     const filled = fillRules(rules, api.variables())
       .filter(r => !known?.profiles.includes(converted.info[r.id]?.profileId ?? ''));
@@ -90,7 +90,7 @@ export function createEngine(api: EngineApi) {
     if (known) {
       rejected = true;
       warnings.push(known.warning);
-      lost.push(...(known.titles ?? []));
+      lost.push(...known.profiles);
     }
     // "Only this tab" rules need tabIds, which are allowed in session rules only.
     // Old rules go and new ones come in one call per kind: Chrome applies such an
@@ -129,28 +129,25 @@ export function createEngine(api: EngineApi) {
         const kept: DnrRule[] = [];
         const refusedIds: string[] = [];
         const refused: string[] = [];
-        const refusedTitles: string[] = [];
         for (const [id, group] of byProfile) {
           try {
             await replace([...kept, ...group]);
             kept.push(...group);
           } catch (err) {
             refusedIds.push(id);
-            const title = converted.titles[group[0].priority] ?? '?';
-            refusedTitles.push(title);
-            refused.push(`"${title}" (${err instanceof Error ? err.message : String(err)})`);
+            refused.push(`"${converted.titles[group[0].priority] ?? '?'}" (${err instanceof Error ? err.message : String(err)})`);
           }
         }
         if (kept.length === 0) await replace([]).catch(() => {});
         rejected = refused.length > 0 || !!known;
         const warning = tn('w_refused', refused.length, { profiles: refused.join(', ') });
-        if (refused.length) { warnings.push(warning); lost.push(...refusedTitles); }
+        if (refused.length) { warnings.push(warning); lost.push(...refusedIds); }
         await api.session.set({
           rulesKey: JSON.stringify(kept),
           structureKey,
           ruleInfo: converted.info,
           rulesUpdatedAt: api.now(),
-          refused: refused.length ? { structureKey, profiles: [...(known?.profiles ?? []), ...refusedIds], titles: [...(known?.titles ?? []), ...refusedTitles], warning } : null,
+          refused: refused.length ? { structureKey, profiles: [...(known?.profiles ?? []), ...refusedIds], warning } : null,
         });
       }
     } else if (stored.structureKey !== structureKey) {
