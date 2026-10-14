@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, toRaw, watch } from 'vue';
 import { clockTime, defaultState, duplicateProfile, emptyHeader, emptyProfile, isSecret, moveProfile, maskValue, newId, REQUEST_METHODS, RESOURCE_TYPES, type HeaderMod, type Profile, type Redirect, type State } from '../core/model.ts';
 import { exportFileName, exportProfiles, importProfiles } from '../core/export.ts';
+import { importShareLink, shareLink } from '../core/share.ts';
 import { VARIABLES } from '../core/variables.ts';
 import { loadMeta, loadState, saveMeta, saveState, STATE_KEY } from '../core/storage.ts';
 import type { RuleInfo } from '../core/dnr.ts';
@@ -38,6 +39,7 @@ onMounted(async () => {
   }
   chrome.storage.session.onChanged.addListener(refreshWarnings);
   chrome.storage.local.onChanged.addListener(onStateChanged);
+  if (stateLoaded && new URLSearchParams(location.search).has('shared')) await openShared();
 });
 
 // Saving. Edits are saved 250 ms after the last keystroke, and right away when
@@ -459,14 +461,33 @@ async function copyExport() {
   await navigator.clipboard.writeText(exportText());
   exportDone.value = t('copied');
 }
+// A share link (src/core/share.ts): shown as well, in case the clipboard says no.
+const shareUrl = ref('');
+async function copyShareLink() {
+  exportDone.value = '';
+  shareUrl.value = await shareLink(exportChosen.value);
+  try {
+    await navigator.clipboard.writeText(shareUrl.value);
+    exportDone.value = t('linkCopied');
+  } catch { /* copied by hand from the field */ }
+}
+
+// Opened by the share page's "Add to Headerwise" button (see background.ts).
+async function openShared() {
+  const { sharedLink } = await chrome.storage.session.get('sharedLink') as { sharedLink?: string };
+  await chrome.storage.session.remove('sharedLink');
+  if (!sharedLink) return;
+  importText.value = sharedLink;
+  await doImport();
+}
 
 // Kept apart from the background script's warnings, which are refreshed on every save.
 const importNotes = ref<string[]>([]);
 
-function doImport() {
+async function doImport() {
   let res: ReturnType<typeof importProfiles>;
   try {
-    res = importProfiles(importText.value);
+    res = (await importShareLink(importText.value)) ?? importProfiles(importText.value);
   } catch (e) {
     importNotes.value = [t('cantRead', { error: e instanceof Error ? e.message : String(e) })];
     return;
@@ -709,7 +730,7 @@ async function importFile(e: Event) {
     <section>
       <button class="link" @click="openMigrate">{{ t('moveFromModHeader') }}</button>
       <button class="link" @click="showImport = !showImport; showExport = false">{{ t('importJson') }}</button>
-      <button class="link" @click="showExport = !showExport; showImport = false; exportDone = ''">{{ t('export') }}</button>
+      <button class="link" @click="showExport = !showExport; showImport = false; exportDone = ''; shareUrl = ''">{{ t('export') }}</button>
       <div v-if="showImport" class="import">
         <input type="file" accept=".json,application/json" @change="importFile" />
         <textarea v-model="importText" rows="5" :placeholder="t('importPlaceholder')"></textarea>
@@ -728,8 +749,10 @@ async function importFile(e: Event) {
         <div class="row">
           <button :disabled="!exportChosen.length" @click="downloadExport">{{ tn('download', exportChosen.length) }}</button>
           <button :disabled="!exportChosen.length" @click="copyExport">{{ t('copy') }}</button>
+          <button :disabled="!exportChosen.length" :title="t('copyLinkTitle')" @click="copyShareLink">{{ t('copyLink') }}</button>
           <span class="dim">{{ exportDone }}</span>
         </div>
+        <input v-if="shareUrl" class="share-url" readonly :value="shareUrl" :aria-label="t('shareLinkLabel')" @focus="($event.target as HTMLInputElement).select()" />
       </div>
     </section>
 

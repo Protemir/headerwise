@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shared Headerwise profiles</title>
+  <meta name="description" content="Header profiles someone shared with you through Headerwise. They travel inside the link and are read in your browser." />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="icon-128.png" />
+  <!--
+    The profiles are in the part of the link after "#", which browsers never send
+    to the server: this page reads them here and sends nothing anywhere. Format and
+    decoding as in src/core/share.ts. "Add to Headerwise" hands the link to the
+    extension, which lets only this site message it (externally_connectable).
+  -->
+  <style>
+    :root { color-scheme: light dark; --bg: #fbfbfc; --surface: #ffffff; --fg: #17181c; --muted: #5a6170; --line: #e3e6ec; --accent: #2557d6; --accent-ink: #ffffff; --tint: #eef2fb; --warn-bg: #fff4e5; --warn-line: #f0b35a; --bad: #b42318; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #131417; --surface: #1b1c20; --fg: #ececef; --muted: #a2a8b3; --line: #2b2e35; --accent: #7aa7ff; --accent-ink: #0d1424; --tint: #1c2233; --warn-bg: #2a2114; --warn-line: #8a6a2e; --bad: #ff8a80; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 28px 16px 64px; }
+    header { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+    header img { width: 30px; height: 30px; }
+    header a { color: inherit; text-decoration: none; font-weight: 600; }
+    h1 { font-size: clamp(28px, 4vw, 38px); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 12px; }
+    h2 { font-size: 21px; margin: 0 0 4px; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+    h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 6px; }
+    p { margin: 0 0 12px; }
+    .lead { color: var(--muted); font-size: 19px; }
+    a { color: var(--accent); }
+    code, td.mono { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 14px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 24px 0 8px; }
+    button, a.button { font: inherit; font-size: 16px; padding: 10px 18px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+    a.button { display: inline-block; text-decoration: none; }
+    button.primary, a.button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: .55; cursor: default; }
+    #status { color: var(--muted); min-height: 1.6em; }
+    #status.bad { color: var(--bad); }
+    .note { color: var(--muted); font-size: 15px; }
+    .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-line); padding: 10px 14px; border-radius: 8px; margin: 12px 0; font-size: 15px; }
+    .profile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin: 20px 0; }
+    .scope { color: var(--muted); font-size: 15px; margin: 0; }
+    .table { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+    td { padding: 5px 10px 5px 0; vertical-align: top; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+    td.op { color: var(--muted); white-space: nowrap; width: 76px; font-size: 14px; }
+    td:nth-child(2) { width: 42%; }
+    tr.off td { opacity: .5; }
+    /* A phone: the value goes under the name. */
+    @media (max-width: 560px) {
+      tr { display: grid; grid-template-columns: 64px 1fr; border-top: 1px solid var(--line); padding: 4px 0; }
+      td { border: 0; padding: 1px 8px 1px 0; width: auto !important; }
+      td:nth-child(3) { grid-column: 2; }
+      td:empty { display: none; }
+    }
+    .dim { color: var(--muted); font-style: italic; }
+    [hidden] { display: none !important; }
+    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px; }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <header><img src="icon-128.png" alt="" /><a href="./">Headerwise</a></header>
+
+    <h1 id="title">Shared header profiles</h1>
+    <p class="lead" id="lead">Someone sent you these Headerwise profiles. They are inside this link itself, in the part after "#", which your browser never sends to a server. This page reads them right here.</p>
+
+    <div id="ready" hidden>
+      <div class="actions">
+        <button class="primary" id="add">Add to Headerwise</button>
+        <a class="button primary" id="get" hidden href="https://chromewebstore.google.com/detail/jedoaeaapdofoldmkacjbpojbnpapkna">Install Headerwise</a>
+        <button id="copy">Copy link</button>
+      </div>
+      <p id="status" role="status"></p>
+      <div id="install" hidden>
+        <p>Headerwise isn't installed in this browser. It's free, from the Chrome Web Store (Chrome, Edge, Brave); once it's in, open this link again.</p>
+        <p class="note">Already have it, or using another browser? Copy this link and paste it into Headerwise: Import JSON, then Import.</p>
+      </div>
+      <p class="note">The profiles come in switched off, so you can look them over first. Secret values such as tokens and cookies are never in a share link: fill in your own.</p>
+      <div id="profiles"></div>
+    </div>
+
+    <footer>
+      <a href="./">Headerwise</a> is a free, open source header editor for Chrome and Edge that sends nothing anywhere.
+      <a href="https://github.com/Protemir/headerwise">Source</a> &nbsp; <a href="privacy.html">Privacy</a>
+    </footer>
+  </main>
+
+  <script>
+    const STORE_ID = 'jedoaeaapdofoldmkacjbpojbnpapkna';
+    // The live test serves this page from localhost with its own extension id.
+    const local = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const ID = (local && new URLSearchParams(location.search).get('id')) || STORE_ID;
+    const MAX_UNPACKED = 5000000;
+    const $ = id => document.getElementById(id);
+    const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+
+    function fail(title, text) {
+      $('title').textContent = title;
+      $('lead').textContent = text;
+    }
+
+    async function unpack(data) {
+      const bytes = Uint8Array.from(atob(data.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+      const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
+      const parts = [];
+      let size = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.length;
+        if (size > MAX_UNPACKED) { reader.cancel(); throw new Error('too large'); }
+        parts.push(value);
+      }
+      return new TextDecoder('utf-8', { fatal: true }).decode(await new Blob(parts).arrayBuffer());
+    }
+
+    const list = v => (Array.isArray(v) ? v : []);
+    const str = v => (typeof v === 'string' ? v : '');
+
+    function table(rows) {
+      return el('div', { className: 'table' }, el('table', {}, ...rows.map(([cells, off]) => {
+        const tr = el('tr', { className: off ? 'off' : '' });
+        for (const [text, cls] of cells) tr.append(el('td', { className: cls ?? '' }, text));
+        return tr;
+      })));
+    }
+
+    function headerRows(headers) {
+      return list(headers).map(h => {
+        const op = ['set', 'append', 'remove'].includes(h.op) ? h.op : 'set';
+        const value = op === 'remove' ? el('span', { className: 'dim' }, 'removed')
+          : h.secret && !str(h.value) ? el('span', { className: 'dim' }, 'secret, not in the link')
+          : str(h.value);
+        return [[[op, 'op'], [str(h.name), 'mono'], [value, 'mono']], h.enabled === false];
+      });
+    }
+
+    function render(profiles) {
+      const box = $('profiles');
+      for (const p of profiles) {
+        const card = el('section', { className: 'profile' }, el('h2', {}, str(p.title) || 'Untitled profile'));
+        const scope = [
+          list(p.initiatorDomains).length && `only from ${list(p.initiatorDomains).join(', ')}`,
+          list(p.excludedInitiatorDomains).length && `never from ${list(p.excludedInitiatorDomains).join(', ')}`,
+          list(p.resourceTypes).length && `only ${list(p.resourceTypes).join(', ')} requests`,
+          list(p.requestMethods).length && `only ${list(p.requestMethods).map(m => str(m).toUpperCase()).join(', ')}`,
+        ].filter(Boolean);
+        if (scope.length) card.append(el('p', { className: 'scope' }, scope.join(' · ')));
+        if (list(p.requestHeaders).length) card.append(el('h3', {}, 'Request headers'), table(headerRows(p.requestHeaders)));
+        if (list(p.responseHeaders).length) card.append(el('h3', {}, 'Response headers'), table(headerRows(p.responseHeaders)));
+        const redirects = list(p.redirects);
+        if (redirects.length) {
+          card.append(el('h3', {}, 'Redirects'),
+            el('div', { className: 'warn' }, 'This profile sends requests to other addresses. Check where they go before you switch it on.'),
+            table(redirects.map(r => [[[r.isRegex ? 'regex' : 'replace', 'op'], [str(r.from), 'mono'], ['→ ' + str(r.to), 'mono']], r.enabled === false])));
+        }
+        const filters = list(p.filters);
+        if (filters.length) {
+          card.append(el('h3', {}, 'Only on / never on'),
+            table(filters.map(f => [[[f.kind === 'exclude' ? 'never on' : 'only on', 'op'], [str(f.pattern), 'mono'], [f.isRegex ? el('span', { className: 'dim' }, 'regex') : '']], f.enabled === false])));
+        }
+        box.append(card);
+      }
+    }
+
+    function notInstalled() {
+      $('add').hidden = true;
+      $('get').hidden = false;
+      $('status').textContent = '';
+      $('install').hidden = false;
+    }
+
+    $('copy').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(location.href);
+        $('status').className = '';
+        $('status').textContent = 'Link copied.';
+      } catch {
+        $('status').textContent = 'Copy the link from the address bar.';
+      }
+    });
+
+    $('add').addEventListener('click', () => {
+      const runtime = globalThis.chrome && chrome.runtime;
+      if (!runtime || !runtime.sendMessage) return notInstalled();
+      $('status').className = '';
+      $('status').textContent = 'Opening Headerwise…';
+      runtime.sendMessage(ID, { type: 'share', link: location.href }, ok => {
+        if (runtime.lastError || ok !== true) return notInstalled();
+        $('status').textContent = 'Done: Headerwise opened in a new tab with these profiles added, switched off.';
+      });
+    });
+
+    (async () => {
+      const m = /^#1\.([A-Za-z0-9_-]+)$/.exec(location.hash);
+      if (!m) return fail('No profiles in this link', 'A Headerwise share link has the profiles after "#". This one has none: it may have been cut off when it was pasted.');
+      let data;
+      try {
+        data = JSON.parse(await unpack(m[1]));
+        if (data.format !== 'headerwise' || !list(data.profiles).length) throw new Error('not a Headerwise export');
+      } catch {
+        return fail('This link is damaged', 'It may have been cut off when it was pasted. Ask for it again, or for an exported file.');
+      }
+      const profiles = list(data.profiles).filter(p => p && typeof p === 'object');
+      $('title').textContent = profiles.length === 1 ? `Shared profile: ${str(profiles[0].title) || 'untitled'}` : `${profiles.length} shared header profiles`;
+      document.title = `${$('title').textContent} · Headerwise`;
+      render(profiles);
+      // No page can tell whether an extension is installed, unless the extension
+      // lets that page talk to it: chrome.runtime is there only then.
+      if (!(globalThis.chrome && chrome.runtime && chrome.runtime.sendMessage)) notInstalled();
+      $('ready').hidden = false;
+    })();
+  </script>
+</body>
+</html>

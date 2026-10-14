@@ -23,6 +23,7 @@ import { listChecks, variableChecks, welcomeChecks } from './checks-ux.mjs';
 import { redirectChecks } from './checks-redirects.mjs';
 import { supportChecks } from './checks-support.mjs';
 import { automationChecks } from './checks-automation.mjs';
+import { shareChecks } from './checks-share.mjs';
 
 const args = process.argv.slice(2);
 const browser = args.includes('--browser') ? args[args.indexOf('--browser') + 1] : 'chrome';
@@ -46,6 +47,12 @@ const headersByPath = new Map(); // what each path got, for requests whose answe
 const echo = createServer((req, res) => {
   requests.push(req.url);
   headersByPath.set(req.url, { ...req.headers, ':method': req.method });
+  // The site's pages (docs/), as GitHub Pages serves them under /headerwise/.
+  const doc = req.url.startsWith('/headerwise/') && join('docs', new URL(req.url, urls.base).pathname.slice('/headerwise/'.length));
+  if (doc && existsSync(doc)) {
+    res.setHeader('Content-Type', doc.endsWith('.html') ? 'text/html; charset=utf-8' : 'image/png');
+    return res.end(readFileSync(doc));
+  }
   res.setHeader('X-Server', 'echo');
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify({ url: req.url, headers: req.headers }));
@@ -83,6 +90,8 @@ async function launch(name, grantAccess, source = dist) {
     manifest.host_permissions = ['<all_urls>'];
     // and getMatchedRules for any tab, which the real popup gets from activeTab on click.
     manifest.permissions.push('declarativeNetRequestFeedback');
+    // and the share page served from localhost may hand it links, as the site may.
+    manifest.externally_connectable.matches.push(`${urls.base}/*`);
     writeFileSync(join(ext, 'manifest.json'), JSON.stringify(manifest, null, 2));
   }
   mkdirSync(join(dir, 'profile'), { recursive: true });
@@ -191,6 +200,7 @@ const both = async (tabs, ctx, check) => {
   await secretChecks(tabs, ctx, check);
   await filterChecks(tabs, ctx, check);
   await exportChecks(tabs, ctx, check);
+  await shareChecks(tabs, ctx, check);
   await otherImportChecks(tabs, ctx, check);
   await corsAndSecretChecks(tabs, ctx, check);
   await websocketChecks(tabs, ctx, check);

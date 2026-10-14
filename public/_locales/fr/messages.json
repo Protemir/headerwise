@@ -452,7 +452,7 @@
     "message": "Exporter…"
   },
   "importPlaceholder": {
-    "message": "…ou collez un export de Headerwise, ModHeader, Requestly ou Simple Modify Headers"
+    "message": "…ou collez un lien de partage, ou un export de Headerwise, ModHeader, Requestly ou Simple Modify Headers"
   },
   "import": {
     "message": "Importer"
@@ -737,5 +737,12 @@
   "imp_requestlyOther": { "message": "Règles Requestly ignorées car elles ne portent pas sur les en-têtes : {list}." },
   "imp_noHeaderRules": { "message": "Aucune règle d'en-tête trouvée dans le fichier." },
   "imp_newerVersion": { "message": "Ce fichier provient d'une version plus récente de Headerwise (version de format {version}) ; certains réglages peuvent manquer." },
-  "imp_secretsEmptied": { "message": "Les valeurs secrètes n'étaient pas dans le fichier, ces en-têtes sont donc désactivés jusqu'à ce que vous les remplissiez : {headers}." }
+  "imp_secretsEmptied": { "message": "Les valeurs secrètes n'étaient pas dans le fichier, ces en-têtes sont donc désactivés jusqu'à ce que vous les remplissiez : {headers}." },
+
+  "copyLink": { "message": "Copier le lien" },
+  "copyLinkTitle": { "message": "Un lien avec les profils choisis, pour un collègue. Les valeurs secrètes sont laissées de côté. Les profils voyagent dans le lien lui-même, sans passer par un serveur." },
+  "linkCopied": { "message": "Lien copié. Les valeurs secrètes sont laissées de côté, et qui l’ouvre reçoit les profils désactivés." },
+  "shareLinkLabel": { "message": "Lien de partage" },
+  "shareLinkBroken": { "message": "Ce lien de partage est abîmé ou coupé. Redemandez-le, ou demandez un fichier exporté." },
+  "sharedOff": { "message": "Les profils venus d’un lien arrivent désactivés : vérifiez leurs en-têtes et redirections, puis activez-les." }
 }

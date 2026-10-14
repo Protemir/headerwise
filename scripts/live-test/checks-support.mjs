@@ -90,8 +90,11 @@ export async function supportChecks({ ctl, port }, { extId, base }, check) {
   await sleep(600);
   const pauseShown = await popup.evaluate(`document.querySelector('.pause input').checked`);
   await popup.evaluate(`(() => { const i = document.querySelector('input[aria-label="Profile name"]'); i.value = 'Renamed'; i.dispatchEvent(new Event('input')); })()`);
-  await sleep(700);
-  let stored = await ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state)`);
+  let stored;
+  for (let i = 0; i < 20 && stored?.profiles[0].title !== 'Renamed'; i++) {
+    await sleep(200);
+    stored = await ctl.evaluate(`chrome.storage.local.get('state').then(s => s.state)`);
+  }
   check('popup: takes in a change made elsewhere, its own edit keeps it', pauseShown && stored.paused === true && stored.profiles[0].title === 'Renamed', JSON.stringify({ pauseShown, paused: stored.paused, title: stored.profiles[0].title }));
 
   // An edit right before the popup closes (Chrome closes it on any outside click) is kept.

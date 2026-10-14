@@ -422,7 +422,7 @@
     "message": "エクスポート…"
   },
   "importPlaceholder": {
-    "message": "…または Headerwise、ModHeader、Requestly、Simple Modify Headers のエクスポートを貼り付け"
+    "message": "…または共有リンク、もしくは Headerwise、ModHeader、Requestly、Simple Modify Headers のエクスポートを貼り付け"
   },
   "import": {
     "message": "インポート"
@@ -660,5 +660,12 @@
   "imp_requestlyOther": { "message": "ヘッダーに関係しない Requestly ルールをスキップしました：{list}。" },
   "imp_noHeaderRules": { "message": "ファイルにヘッダーのルールが見つかりません。" },
   "imp_newerVersion": { "message": "このファイルは新しいバージョンの Headerwise（形式バージョン {version}）のものです。一部の設定が失われている可能性があります。" },
-  "imp_secretsEmptied": { "message": "ファイルにシークレット値が含まれていなかったため、次のヘッダーは値を入力するまでオフになります：{headers}。" }
+  "imp_secretsEmptied": { "message": "ファイルにシークレット値が含まれていなかったため、次のヘッダーは値を入力するまでオフになります：{headers}。" },
+
+  "copyLink": { "message": "リンクをコピー" },
+  "copyLinkTitle": { "message": "選んだプロファイルを同僚に渡すリンクです。シークレット値は含まれません。プロファイルはリンク自体に入っていて、サーバーを通りません。" },
+  "linkCopied": { "message": "リンクをコピーしました。シークレット値は含まれず、開いた人にはプロファイルがオフの状態で追加されます。" },
+  "shareLinkLabel": { "message": "共有リンク" },
+  "shareLinkBroken": { "message": "この共有リンクは壊れているか、途中で切れています。もう一度送ってもらうか、エクスポートファイルをもらってください。" },
+  "sharedOff": { "message": "リンクから追加したプロファイルはオフになっています。ヘッダーとリダイレクトを確認してからオンにしてください。" }
 }

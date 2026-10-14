@@ -155,7 +155,7 @@
   "moveFromModHeader": { "message": "Move from ModHeader (turned off in Chrome)" },
   "importJson": { "message": "Import JSON" },
   "export": { "message": "Export…" },
-  "importPlaceholder": { "message": "…or paste an export from Headerwise, ModHeader, Requestly or Simple Modify Headers" },
+  "importPlaceholder": { "message": "…or paste a share link, or an export from Headerwise, ModHeader, Requestly or Simple Modify Headers" },
   "import": { "message": "Import" },
   "cantRead": { "message": "Couldn't read that: {error}" },
   "imported_one": { "message": "Imported {n} profile." },
@@ -290,5 +290,12 @@
   "imp_requestlyOther": { "message": "Skipped Requestly rules that aren't about headers: {list}.", "description": "{list} is like: 2 Script, 1 Delay (Requestly's own rule names)" },
   "imp_noHeaderRules": { "message": "No header rules found in the file." },
   "imp_newerVersion": { "message": "This file is from a newer Headerwise (format version {version}); some settings may be missing." },
-  "imp_secretsEmptied": { "message": "Secret values were not in the file, so these headers are switched off until you fill them in: {headers}." }
+  "imp_secretsEmptied": { "message": "Secret values were not in the file, so these headers are switched off until you fill them in: {headers}." },
+
+  "copyLink": { "message": "Copy link", "description": "Button in the export panel: copies a share link" },
+  "copyLinkTitle": { "message": "A link with the chosen profiles, for a teammate. Secret values are left out. The profiles travel inside the link, not through a server." },
+  "linkCopied": { "message": "Link copied. Secret values are left out, and whoever opens it gets the profiles switched off." },
+  "shareLinkLabel": { "message": "Share link" },
+  "shareLinkBroken": { "message": "This share link is damaged or cut off. Ask for it again, or for an exported file." },
+  "sharedOff": { "message": "Profiles from a link come in switched off: check their headers and redirects, then switch them on." }
 }

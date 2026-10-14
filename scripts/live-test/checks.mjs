@@ -14,8 +14,9 @@ function harness({ ctl, page }) {
   return {
     // Saves the state the way the popup does, then reads back what the background script did.
     async apply(state) {
-      await ctl.evaluate(`chrome.storage.local.set({ state: ${JSON.stringify(state)} })`);
-      await sleep(700);
+      // The background answers a "sync" once it has applied everything before it
+      // (what the automation page waits for): no guessing how long that takes.
+      await ctl.evaluate(`chrome.storage.local.set({ state: ${JSON.stringify(state)} }).then(() => chrome.runtime.sendMessage({ type: 'sync' }))`);
       return ctl.evaluate(`(async () => ({
         rules: await chrome.declarativeNetRequest.getDynamicRules(),
         warnings: (await chrome.storage.session.get('warnings')).warnings ?? [],

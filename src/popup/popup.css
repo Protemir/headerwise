@@ -77,3 +77,4 @@ html.in-tab body { width: auto; max-width: 880px; margin: 0 auto; padding: 16px 
 .bar h1 { font-size: 13px; font-weight: 700; margin: 0; }
 .undo { margin: 0 0 8px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; }
 .secret-hint { color: var(--warn); }
+.share-url { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }

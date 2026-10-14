@@ -30,6 +30,9 @@
     "activeTab",
     "alarms"
   ],
+  "externally_connectable": {
+    "matches": ["https://protemir.github.io/headerwise/*"]
+  },
   "optional_host_permissions": [
     "<all_urls>"
   ],

@@ -15,6 +15,8 @@ export function firefoxManifest(chrome) {
   const m = structuredClone(chrome);
   m.background = { scripts: [chrome.background.service_worker], type: 'module' };
   delete m.minimum_chrome_version;
+  // Firefox doesn't let pages message extensions; its share page offers "paste into Import" instead.
+  delete m.externally_connectable;
   m.browser_specific_settings = {
     gecko: {
       id: GECKO_ID,

@@ -452,7 +452,7 @@
     "message": "Exportar…"
   },
   "importPlaceholder": {
-    "message": "…o pega una exportación de Headerwise, ModHeader, Requestly o Simple Modify Headers"
+    "message": "…o pega un enlace compartido o una exportación de Headerwise, ModHeader, Requestly o Simple Modify Headers"
   },
   "import": {
     "message": "Importar"
@@ -737,5 +737,12 @@
   "imp_requestlyOther": { "message": "Se omitieron reglas de Requestly que no son de encabezados: {list}." },
   "imp_noHeaderRules": { "message": "No se encontraron reglas de encabezados en el archivo." },
   "imp_newerVersion": { "message": "Este archivo es de una versión más reciente de Headerwise (versión de formato {version}); puede que falten algunos ajustes." },
-  "imp_secretsEmptied": { "message": "Los valores secretos no estaban en el archivo, así que estos encabezados quedan desactivados hasta que los rellenes: {headers}." }
+  "imp_secretsEmptied": { "message": "Los valores secretos no estaban en el archivo, así que estos encabezados quedan desactivados hasta que los rellenes: {headers}." },
+
+  "copyLink": { "message": "Copiar enlace" },
+  "copyLinkTitle": { "message": "Un enlace con los perfiles elegidos, para un compañero. Los valores secretos se quedan fuera. Los perfiles viajan dentro del propio enlace, sin pasar por un servidor." },
+  "linkCopied": { "message": "Enlace copiado. Los valores secretos se quedan fuera, y quien lo abra recibe los perfiles desactivados." },
+  "shareLinkLabel": { "message": "Enlace compartido" },
+  "shareLinkBroken": { "message": "Este enlace está dañado o cortado. Pide que te lo envíen de nuevo, o un archivo exportado." },
+  "sharedOff": { "message": "Los perfiles de un enlace llegan desactivados: revisa sus encabezados y redirecciones y luego actívalos." }
 }

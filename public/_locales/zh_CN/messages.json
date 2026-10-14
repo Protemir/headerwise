@@ -422,7 +422,7 @@
     "message": "导出…"
   },
   "importPlaceholder": {
-    "message": "…或粘贴从 Headerwise、ModHeader、Requestly 或 Simple Modify Headers 导出的内容"
+    "message": "…或粘贴分享链接，或从 Headerwise、ModHeader、Requestly 或 Simple Modify Headers 导出的内容"
   },
   "import": {
     "message": "导入"
@@ -660,5 +660,12 @@
   "imp_requestlyOther": { "message": "已跳过与请求头或响应头无关的 Requestly 规则：{list}。" },
   "imp_noHeaderRules": { "message": "文件中未找到修改请求头或响应头的规则。" },
   "imp_newerVersion": { "message": "此文件来自更新版本的 Headerwise（格式版本 {version}），部分设置可能缺失。" },
-  "imp_secretsEmptied": { "message": "文件中不包含机密值，因此在你填写之前，以下头将保持关闭：{headers}。" }
+  "imp_secretsEmptied": { "message": "文件中不包含机密值，因此在你填写之前，以下头将保持关闭：{headers}。" },
+
+  "copyLink": { "message": "复制链接" },
+  "copyLinkTitle": { "message": "包含所选配置文件的链接，可发给同事。不含机密值。配置文件就在链接本身里，不经过任何服务器。" },
+  "linkCopied": { "message": "链接已复制。不含机密值，打开链接的人收到的配置文件处于关闭状态。" },
+  "shareLinkLabel": { "message": "分享链接" },
+  "shareLinkBroken": { "message": "这个分享链接已损坏或被截断。请对方重新发送，或发送导出文件。" },
+  "sharedOff": { "message": "来自链接的配置文件已添加但处于关闭状态：请先检查其中的请求头和重定向，再开启。" }
 }

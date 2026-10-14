@@ -437,7 +437,7 @@
     "message": "Exportieren…"
   },
   "importPlaceholder": {
-    "message": "…oder füge einen Export aus Headerwise, ModHeader, Requestly oder Simple Modify Headers ein"
+    "message": "…oder füge einen Teilen-Link oder einen Export aus Headerwise, ModHeader, Requestly oder Simple Modify Headers ein"
   },
   "import": {
     "message": "Importieren"
@@ -698,5 +698,12 @@
   "imp_requestlyOther": { "message": "Requestly-Regeln übersprungen, die nichts mit Headern zu tun haben: {list}." },
   "imp_noHeaderRules": { "message": "Keine Header-Regeln in der Datei gefunden." },
   "imp_newerVersion": { "message": "Diese Datei stammt aus einer neueren Headerwise-Version (Formatversion {version}); manche Einstellungen fehlen eventuell." },
-  "imp_secretsEmptied": { "message": "Geheime Werte waren nicht in der Datei, daher sind diese Header ausgeschaltet, bis du sie ausfüllst: {headers}." }
+  "imp_secretsEmptied": { "message": "Geheime Werte waren nicht in der Datei, daher sind diese Header ausgeschaltet, bis du sie ausfüllst: {headers}." },
+
+  "copyLink": { "message": "Link kopieren" },
+  "copyLinkTitle": { "message": "Ein Link mit den gewählten Profilen für Kollegen. Geheime Werte bleiben draußen. Die Profile stecken im Link selbst, kein Server dazwischen." },
+  "linkCopied": { "message": "Link kopiert. Geheime Werte bleiben draußen, und wer ihn öffnet, bekommt die Profile ausgeschaltet." },
+  "shareLinkLabel": { "message": "Teilen-Link" },
+  "shareLinkBroken": { "message": "Dieser Link ist beschädigt oder abgeschnitten. Lass ihn dir noch einmal schicken oder eine Exportdatei." },
+  "sharedOff": { "message": "Profile aus einem Link kommen ausgeschaltet an: prüfe ihre Header und Weiterleitungen und schalte sie dann ein." }
 }

@@ -1,6 +1,7 @@
 import { FIREFOX_UNSUPPORTED_TYPES } from './core/dnr.ts';
 import { createEngine, REFRESH_ALARM, TIMER_ALARM } from './core/engine.ts';
 import { systemSource } from './core/variables.ts';
+import { isShareLink, MAX_LINK } from './core/share.ts';
 import { loadMeta, loadState, saveMeta, saveState, STATE_KEY } from './core/storage.ts';
 
 // Wires the engine (src/core/engine.ts) to the browser. Headerwise makes no
@@ -59,6 +60,16 @@ chrome.runtime.onInstalled.addListener(details => {
 chrome.runtime.onMessage.addListener((message, _sender, reply) => {
   if (message?.type !== 'sync') return false;
   engine.queueSync().then(() => reply(true));
+  return true;
+});
+// The share page (docs/share.html) hands over a share link when its "Add to
+// Headerwise" button is clicked; only that site can (externally_connectable in the
+// manifest). The editor opens in a tab and adds the profiles, switched off.
+chrome.runtime.onMessageExternal?.addListener((message, _sender, reply) => {
+  if (message?.type !== 'share' || typeof message.link !== 'string' || !isShareLink(message.link) || message.link.length > MAX_LINK) return false;
+  chrome.storage.session.set({ sharedLink: message.link })
+    .then(() => chrome.tabs.create({ url: chrome.runtime.getURL('src/popup/index.html?view=tab&shared=1') }))
+    .then(() => reply(true), () => reply(false));
   return true;
 });
 chrome.runtime.onStartup.addListener(() => { engine.release(); });
