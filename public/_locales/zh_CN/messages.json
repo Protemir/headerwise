@@ -685,5 +685,13 @@
   "syncBusy": { "message": "一次性更改太多，浏览器同步暂时无法处理；几分钟后重试" },
   "footerLocalSynced": { "message": "完全在本地运行。无需账号，没有统计分析。配置文件通过浏览器自己的账户同步，除此之外不发送任何数据。" },
   "imp_limitsLost": { "message": "“{profile}”：其部分限制（网站、请求类型或方法）无法读取，因此以关闭状态导入：开启前请检查其过滤条件。" },
-  "imp_requestlyMixedLimits": { "message": "“{profile}”：其规则的限制（网站、请求类型或方法）各不相同，而一个配置文件的所有重定向共用一套限制，因此以关闭状态导入。开启前请先检查。" }
+  "imp_requestlyMixedLimits": { "message": "“{profile}”：其规则的限制（网站、请求类型或方法）各不相同，而一个配置文件的所有重定向共用一套限制，因此以关闭状态导入。开启前请先检查。" },
+
+  "locale": { "message": "zh-CN", "description": "This language's BCP 47 tag, for plural rules and <html lang>" },
+  "title_paused": { "message": "Headerwise：已暂停" },
+  "title_allOff": { "message": "Headerwise：所有配置文件已关闭" },
+  "title_on": { "message": "Headerwise：{profiles}" },
+  "title_until": { "message": "{title}（至 {time}）" },
+  "copyFailed": { "message": "无法复制：{error}" },
+  "loadFailed": { "message": "无法加载你的配置文件（{error}）。此处的更改现在不会保存：请关闭弹窗后重新打开。" }
 }

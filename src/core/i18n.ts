@@ -28,7 +28,9 @@ export function t(key: MessageKey, vars?: Vars): string {
 
 /** The UI language, for plural rules: "1 profile, 2 profiles" is not how every language counts. */
 export function uiLanguage(): string {
-  return globalThis.chrome?.i18n?.getUILanguage?.() ?? 'en';
+  // The language of the messages in use, not the browser's: for a language without
+  // a translation Chrome shows English, and English plurals must go with it.
+  return raw('locale') || 'en';
 }
 
 /**

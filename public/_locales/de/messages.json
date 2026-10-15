@@ -723,5 +723,13 @@
   "syncBusy": { "message": "zu viele Änderungen auf einmal für die Synchronisierung des Browsers; neuer Versuch in ein paar Minuten" },
   "footerLocalSynced": { "message": "Läuft lokal. Kein Konto, keine Analyse. Profile werden über das Konto des Browsers synchronisiert, sonst wird nichts irgendwohin gesendet." },
   "imp_limitsLost": { "message": "„{profile}“: Einige seiner Einschränkungen (Websites, Anfragetypen oder Methoden) ließen sich nicht lesen, daher kommt es ausgeschaltet an: Prüfe seine Filter, bevor du es einschaltest." },
-  "imp_requestlyMixedLimits": { "message": "„{profile}“: Seine Regeln hatten unterschiedliche Einschränkungen (Websites, Anfragetypen oder Methoden), ein Profil hat aber eine für alle Weiterleitungen, daher kommt es ausgeschaltet an. Prüfe es, bevor du es einschaltest." }
+  "imp_requestlyMixedLimits": { "message": "„{profile}“: Seine Regeln hatten unterschiedliche Einschränkungen (Websites, Anfragetypen oder Methoden), ein Profil hat aber eine für alle Weiterleitungen, daher kommt es ausgeschaltet an. Prüfe es, bevor du es einschaltest." },
+
+  "locale": { "message": "de", "description": "This language's BCP 47 tag, for plural rules and <html lang>" },
+  "title_paused": { "message": "Headerwise: pausiert" },
+  "title_allOff": { "message": "Headerwise: alle Profile aus" },
+  "title_on": { "message": "Headerwise: {profiles}" },
+  "title_until": { "message": "{title} (bis {time})" },
+  "copyFailed": { "message": "Kopieren fehlgeschlagen: {error}" },
+  "loadFailed": { "message": "Deine Profile ließen sich nicht laden ({error}). Änderungen hier werden jetzt nicht gespeichert: Schließe das Popup und öffne es neu." }
 }

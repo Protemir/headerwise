@@ -315,5 +315,13 @@
   "syncBusy": { "message": "too many changes for the browser's sync at once; trying again in a few minutes" },
   "footerLocalSynced": { "message": "Runs locally. No account, no analytics. Profiles sync through your browser's own account; nothing else is sent anywhere." },
   "imp_limitsLost": { "message": "\"{profile}\": some of its limits (sites, request types or methods) couldn't be read, so it comes in switched off: check its filters before you switch it on." },
-  "imp_requestlyMixedLimits": { "message": "\"{profile}\": its rules had different limits (sites, request types or methods), and a profile has one set for all its redirects, so it comes in switched off. Check it before switching it on." }
+  "imp_requestlyMixedLimits": { "message": "\"{profile}\": its rules had different limits (sites, request types or methods), and a profile has one set for all its redirects, so it comes in switched off. Check it before switching it on." },
+
+  "locale": { "message": "en", "description": "This language's BCP 47 tag, for plural rules and <html lang>" },
+  "title_paused": { "message": "Headerwise: paused" },
+  "title_allOff": { "message": "Headerwise: all profiles off" },
+  "title_on": { "message": "Headerwise: {profiles}" },
+  "title_until": { "message": "{title} (until {time})" },
+  "copyFailed": { "message": "Couldn't copy: {error}" },
+  "loadFailed": { "message": "Couldn't load your profiles ({error}). Changes made here now won't be saved: close the popup and open it again." }
 }

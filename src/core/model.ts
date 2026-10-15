@@ -195,9 +195,12 @@ export function nextProfile(state: State): string | undefined {
 
 /** For the toolbar button's tooltip. */
 export function statusTitle(state: State): string {
-  if (state.paused) return 'Headerwise: paused';
-  const on = state.profiles.filter(p => p.enabled).map(p => `${p.title || 'Untitled'}${p.offAt ? ` (until ${clockTime(p.offAt)})` : ''}`);
-  return on.length ? `Headerwise: ${on.join(', ')}` : 'Headerwise: all profiles off';
+  if (state.paused) return t('title_paused');
+  const on = state.profiles.filter(p => p.enabled).map(p => {
+    const title = p.title || t('untitled');
+    return p.offAt ? t('title_until', { title, time: clockTime(p.offAt) }) : title;
+  });
+  return on.length ? t('title_on', { profiles: on.join(', ') }) : t('title_allOff');
 }
 
 export function newId(): string {

@@ -23,12 +23,12 @@ export async function syncChecks({ ctl, port }, { extId }, check) {
   await sleep(800);
   const popup = await openTab(port, `chrome-extension://${extId}/src/popup/index.html`);
   await sleep(1200);
-  await popup.evaluate(`document.querySelector('label.sync input').click()`);
+  await popup.evaluate(`document.querySelector('.sync input').click()`);
   const synced = await until(() => ctl.evaluate(`chrome.storage.sync.get(null).then(s => s['hw:p:a'] ? s : null)`));
   check('sync: switched on in the popup, the profile goes to sync storage without its secret',
     synced?.['hw:order']?.order?.join() === 'a' && synced['hw:p:a'].requestHeaders.map(h => h.value).join('|') === '|staging' && !JSON.stringify(synced).includes('top-secret') && !('enabled' in synced['hw:p:a']),
     JSON.stringify(synced));
-  const line = await until(() => popup.evaluate(`document.querySelector('label.sync .dim')?.textContent ?? ''`));
+  const line = await until(() => popup.evaluate(`document.querySelector('.sync .dim')?.textContent ?? ''`));
   check('sync: the popup says when it last synced', /synced at/.test(line), line);
 
   // "Another computer": renames this profile and adds one.
@@ -50,7 +50,7 @@ export async function syncChecks({ ctl, port }, { extId }, check) {
   // Switched off: an edit here stays here.
   await popup.send('Page.reload');
   await sleep(1200);
-  await popup.evaluate(`document.querySelector('label.sync input').click()`);
+  await popup.evaluate(`document.querySelector('.sync input').click()`);
   await sleep(500);
   await ctl.evaluate(`chrome.storage.local.get('state').then(s => { s.state.profiles[0].title = 'Local only'; return chrome.storage.local.set(s); })`);
   await sleep(2500);

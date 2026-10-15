@@ -24,7 +24,9 @@ const showImport = ref(false);
 
 const profile = computed(() => state.value.profiles[selected.value]);
 
+const loadError = ref('');
 onMounted(async () => {
+  chrome.storage.local.onChanged.addListener(onStateChanged);
   try {
     state.value = await loadState();
     lastSaved = JSON.stringify(state.value);
@@ -33,13 +35,15 @@ onMounted(async () => {
     await refreshWarnings();
     await refreshTab();
   } catch (e) {
-    // Show the editor anyway: a blank popup helps nobody.
-    tabNote.value = t('cantCheckTab', { error: e instanceof Error ? e.message : String(e) });
+    // Show the editor anyway: a blank popup helps nobody. If the profiles themselves
+    // didn't load, edits here aren't saved (that would wipe them): say so.
+    const error = e instanceof Error ? e.message : String(e);
+    if (stateLoaded) tabNote.value = t('cantCheckTab', { error });
+    else loadError.value = t('loadFailed', { error });
   } finally {
     loaded.value = true;
   }
   chrome.storage.session.onChanged.addListener(refreshWarnings);
-  chrome.storage.local.onChanged.addListener(onStateChanged);
   const shared = new URLSearchParams(location.search).get('shared');
   if (stateLoaded && shared?.startsWith('shared-')) await openShared(shared);
 });
@@ -73,6 +77,7 @@ addEventListener('visibilitychange', () => { if (document.visibilityState === 'h
 // sync from another computer. Take that in, or the next edit here would save
 // the old state over it.
 function onStateChanged(changes: Record<string, chrome.storage.StorageChange>) {
+  if (!stateLoaded) return; // still loading: it reads the newest state anyway
   const next = changes[STATE_KEY]?.newValue as State | undefined;
   if (!next || JSON.stringify(next) === lastSaved) return; // our own save
   const current = state.value.profiles[selected.value]?.id;
@@ -131,6 +136,7 @@ const exact = ref(true);
 
 async function refreshTab() {
   const forced = Number(new URLSearchParams(location.search).get('tab'));
+  if (inTab && !forced) return; // no page behind it: nothing to say "On this tab"
   const current = forced ? await chrome.tabs.get(forced) : (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
   if (!current?.id || !current.url) return;
   if (!/^https?:/.test(current.url)) {
@@ -225,11 +231,29 @@ function addPasted() {
   showPaste.value = false;
 }
 
-const presetChoice = ref('');
-function onPreset() {
-  const preset = PRESETS.find(x => x.id === presetChoice.value);
+function onPreset(select: HTMLSelectElement) {
+  const preset = PRESETS.find(x => x.id === select.value);
+  select.value = '';
   if (preset) applyPreset(profile.value, preset);
-  presetChoice.value = '';
+}
+
+// The presets and "On for…" act as soon as something is picked. On Windows the
+// arrow keys change a closed <select> and fire "change" at every step: there a
+// step only counts once Enter confirms it.
+let stepping = false;
+function picked(e: Event, act: (select: HTMLSelectElement) => void) {
+  if (!stepping) act(e.target as HTMLSelectElement);
+}
+function pickKeys(e: KeyboardEvent, act: (select: HTMLSelectElement) => void) {
+  if (e.key === 'Enter' && stepping) {
+    stepping = false;
+    e.preventDefault();
+    act(e.target as HTMLSelectElement);
+  } else stepping = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key) && !e.altKey;
+}
+function pickDone(e: Event) {
+  stepping = false;
+  (e.target as HTMLSelectElement).value = '';
 }
 
 // "Rate Headerwise": once, two weeks after install; never again once clicked or closed.
@@ -273,8 +297,12 @@ async function copyDiagnostics() {
     'Warnings:',
     ...(warnings.value.length ? warnings.value.map(w => `  ${w}`) : ['  none']),
   ].join('\n');
-  await navigator.clipboard.writeText(text);
-  diagnosticsDone.value = t('diagnosticsCopied');
+  try {
+    await navigator.clipboard.writeText(text);
+    diagnosticsDone.value = t('diagnosticsCopied');
+  } catch (e) {
+    diagnosticsDone.value = t('copyFailed', { error: e instanceof Error ? e.message : String(e) });
+  }
 }
 function reportProblem() {
   chrome.tabs.create({ url: ISSUES_URL });
@@ -320,13 +348,14 @@ function addHeader(list: HeaderMod[]) {
 
 // "On for an hour": the background switches the profile off when the time is up.
 const TIMER_MINUTES = [15, 60, 240, 480];
-function setTimer(e: Event) {
-  const select = e.target as HTMLSelectElement;
+function setTimer(select: HTMLSelectElement) {
   const minutes = Number(select.value);
   select.value = '';
   if (!minutes) return;
   profile.value.enabled = true;
   profile.value.offAt = Date.now() + minutes * 60_000;
+  // The select gives way to the chip: keep the keyboard there.
+  nextTick(() => document.querySelector<HTMLButtonElement>('.chip.timer button.x')?.focus());
 }
 // Ticking the profile on or off by hand, or the chip's ×: no timer any more.
 function clearTimer() {
@@ -465,15 +494,25 @@ function downloadExport() {
   exportDone.value = t('saved', { file: a.download });
 }
 async function copyExport() {
-  await navigator.clipboard.writeText(exportText());
-  exportDone.value = t('copied');
+  try {
+    await navigator.clipboard.writeText(exportText());
+    exportDone.value = t('copied');
+  } catch (e) {
+    exportDone.value = t('copyFailed', { error: e instanceof Error ? e.message : String(e) });
+  }
 }
 // A share link (src/core/share.ts): shown as well, in case the clipboard says no.
 const shareUrl = ref('');
 async function copyShareLink() {
   exportDone.value = '';
   shareUrl.value = '';
-  const link = await shareLink(exportChosen.value);
+  let link: string | undefined;
+  try {
+    link = await shareLink(exportChosen.value);
+  } catch (e) {
+    exportDone.value = t('copyFailed', { error: e instanceof Error ? e.message : String(e) });
+    return;
+  }
   if (!link) { exportDone.value = t('shareTooBig'); return; }
   shareUrl.value = link;
   try {
@@ -629,14 +668,15 @@ async function importFile(e: Event) {
     </p>
 
     <section v-if="profile" :class="{ paused: state.paused }">
-      <div class="row">
+      <p v-if="loadError" class="notice">{{ loadError }}</p>
+      <div class="row profile-row">
         <input type="checkbox" v-model="profile.enabled" :title="t('profileOnOff')" :aria-label="t('profileOnOff')" @change="clearTimer" />
         <input class="grow" v-model="profile.title" :placeholder="t('profileName')" :aria-label="t('profileName')" />
         <span v-if="profile.enabled && profile.offAt" class="chip timer" :title="t('timerOffAt', { time: clockTime(profile.offAt) })">
           {{ t('timerUntil', { time: clockTime(profile.offAt) }) }}
           <button class="x" :title="t('keepItOn')" :aria-label="t('keepItOn')" @click="clearTimer">×</button>
         </span>
-        <select v-else class="timer" value="" :title="t('timerSelectTitle')" :aria-label="t('timerSelectLabel')" @change="setTimer">
+        <select v-else class="timer" value="" :title="t('timerSelectTitle')" :aria-label="t('timerSelectLabel')" @change="picked($event, setTimer)" @keydown="pickKeys($event, setTimer)" @mousedown="stepping = false" @blur="pickDone">
           <option value="">{{ t('onFor') }}</option>
           <option v-for="m in TIMER_MINUTES" :key="m" :value="m">{{ duration(m) }}</option>
         </select>
@@ -673,7 +713,7 @@ async function importFile(e: Event) {
       <div class="row">
         <button class="link" @click="addHeader(profile.requestHeaders)">{{ t('addRequestHeader') }}</button>
         <button class="link" @click="showPaste = !showPaste">{{ t('pasteFromDevTools') }}</button>
-        <select class="preset" v-model="presetChoice" @change="onPreset" :title="t('presetTitle')" :aria-label="t('presetLabel')">
+        <select class="preset" value="" @change="picked($event, onPreset)" @keydown="pickKeys($event, onPreset)" @mousedown="stepping = false" @blur="pickDone" :title="t('presetTitle')" :aria-label="t('presetLabel')">
           <option value="">{{ t('presetPick') }}</option>
           <option v-for="x in PRESETS" :key="x.id" :value="x.id">{{ presetLabel(x.id) }}</option>
         </select>
@@ -790,11 +830,13 @@ async function importFile(e: Event) {
         </div>
         <input v-if="shareUrl" class="share-url" readonly :value="shareUrl" :aria-label="t('shareLinkLabel')" @focus="($event.target as HTMLInputElement).select()" />
       </div>
-      <label class="sync" :title="t('syncTitle')">
-        <input type="checkbox" :checked="syncOn" @change="setSync(($event.target as HTMLInputElement).checked)" />
-        {{ t('syncLabel') }}
+      <div class="sync">
+        <label :title="t('syncTitle')">
+          <input type="checkbox" :checked="syncOn" @change="setSync(($event.target as HTMLInputElement).checked)" />
+          {{ t('syncLabel') }}
+        </label>
         <span v-if="syncOn && syncLine" class="dim" :class="{ bad: syncStatus?.error || syncStatus?.tooBig?.length || syncStatus?.conflicts?.length }">· {{ syncLine }}</span>
-      </label>
+      </div>
     </section>
 
     <datalist id="request-names"><option v-for="n in REQUEST_HEADER_NAMES" :key="n" :value="n" /></datalist>

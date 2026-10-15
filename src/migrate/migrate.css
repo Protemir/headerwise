@@ -24,7 +24,9 @@ button, .pick span { font: inherit; padding: 4px 12px; border: 1px solid var(--l
 button.primary, .pick span { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 button:disabled { opacity: .4; cursor: default; }
 .pick { display: inline-block; margin-right: 8px; }
-.pick input { display: none; }
+/* Out of sight but still reachable by keyboard and screen readers. */
+.pick input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.pick:focus-within span { outline: 2px solid var(--accent); outline-offset: 2px; }
 .steps ol { margin: 0; padding-left: 20px; }
 .steps li { margin: 6px 0; }
 .steps button { margin-left: 6px; }

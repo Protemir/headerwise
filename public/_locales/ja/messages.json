@@ -685,5 +685,13 @@
   "syncBusy": { "message": "ブラウザーの同期には一度の変更が多すぎます。数分後にもう一度試します" },
   "footerLocalSynced": { "message": "ローカルで動作します。アカウント不要、アクセス解析なし。プロファイルはブラウザー自体のアカウントで同期され、それ以外はどこにも送信しません。" },
   "imp_limitsLost": { "message": "「{profile}」：制限（サイト、リクエストの種類、メソッド）の一部を読み取れなかったため、オフの状態で追加されました。オンにする前にフィルターを確認してください。" },
-  "imp_requestlyMixedLimits": { "message": "「{profile}」：ルールごとに制限（サイト、リクエストの種類、メソッド）が異なっていましたが、プロファイルの制限はすべてのリダイレクトで共通のため、オフの状態で追加されました。オンにする前に確認してください。" }
+  "imp_requestlyMixedLimits": { "message": "「{profile}」：ルールごとに制限（サイト、リクエストの種類、メソッド）が異なっていましたが、プロファイルの制限はすべてのリダイレクトで共通のため、オフの状態で追加されました。オンにする前に確認してください。" },
+
+  "locale": { "message": "ja", "description": "This language's BCP 47 tag, for plural rules and <html lang>" },
+  "title_paused": { "message": "Headerwise：一時停止中" },
+  "title_allOff": { "message": "Headerwise：すべてのプロファイルがオフ" },
+  "title_on": { "message": "Headerwise：{profiles}" },
+  "title_until": { "message": "{title}（{time} まで）" },
+  "copyFailed": { "message": "コピーできませんでした：{error}" },
+  "loadFailed": { "message": "プロファイルを読み込めませんでした（{error}）。ここでの変更は保存されません。ポップアップを閉じて開き直してください。" }
 }

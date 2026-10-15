@@ -78,6 +78,11 @@ html.in-tab body { width: auto; max-width: 880px; margin: 0 auto; padding: 16px 
 .undo { margin: 0 0 8px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; }
 .secret-hint { color: var(--warn); }
 .share-url { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
-.sync { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; margin-top: 8px; }
+.sync { display: flex; flex-wrap: wrap; gap: 0 6px; align-items: baseline; margin-top: 8px; }
+.sync label { display: inline-flex; gap: 6px; align-items: baseline; }
 .sync .bad { color: var(--warn); opacity: 1; }
 .tools { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 12px; }
+/* The profile's own row: chips (one tab, a timer) wrap to the next line instead of squeezing the name. */
+.profile-row { flex-wrap: wrap; }
+.profile-row > input.grow { min-width: 140px; }
+.profile-row .chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }

@@ -762,5 +762,13 @@
   "syncBusy": { "message": "trop de changements à la fois pour la synchronisation du navigateur ; nouvel essai dans quelques minutes" },
   "footerLocalSynced": { "message": "Fonctionne en local. Pas de compte, pas de statistiques. Les profils se synchronisent via le compte du navigateur ; rien d’autre n’est envoyé nulle part." },
   "imp_limitsLost": { "message": "« {profile} » : certaines de ses limites (sites, types de requêtes ou méthodes) n’ont pas pu être lues, il arrive donc désactivé : vérifiez ses filtres avant de l’activer." },
-  "imp_requestlyMixedLimits": { "message": "« {profile} » : ses règles avaient des limites différentes (sites, types de requêtes ou méthodes), et un profil n’en a qu’un jeu pour toutes ses redirections, il arrive donc désactivé. Vérifiez-le avant de l’activer." }
+  "imp_requestlyMixedLimits": { "message": "« {profile} » : ses règles avaient des limites différentes (sites, types de requêtes ou méthodes), et un profil n’en a qu’un jeu pour toutes ses redirections, il arrive donc désactivé. Vérifiez-le avant de l’activer." },
+
+  "locale": { "message": "fr", "description": "This language's BCP 47 tag, for plural rules and <html lang>" },
+  "title_paused": { "message": "Headerwise : en pause" },
+  "title_allOff": { "message": "Headerwise : tous les profils désactivés" },
+  "title_on": { "message": "Headerwise : {profiles}" },
+  "title_until": { "message": "{title} (jusqu’à {time})" },
+  "copyFailed": { "message": "Copie impossible : {error}" },
+  "loadFailed": { "message": "Impossible de charger vos profils ({error}). Les changements faits ici ne seront pas enregistrés : fermez la fenêtre et rouvrez-la." }
 }

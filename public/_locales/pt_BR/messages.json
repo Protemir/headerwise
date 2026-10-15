@@ -762,5 +762,13 @@
   "syncBusy": { "message": "mudanças demais de uma vez para a sincronização do navegador; nova tentativa em alguns minutos" },
   "footerLocalSynced": { "message": "Roda localmente. Sem conta, sem analytics. Os perfis sincronizam pela conta do próprio navegador; nada mais é enviado a lugar nenhum." },
   "imp_limitsLost": { "message": "“{profile}”: alguns dos seus limites (sites, tipos de requisição ou métodos) não puderam ser lidos, então ele chega desativado: confira os filtros antes de ativá-lo." },
-  "imp_requestlyMixedLimits": { "message": "“{profile}”: as regras tinham limites diferentes (sites, tipos de requisição ou métodos), e um perfil tem um só conjunto para todos os redirecionamentos, então ele chega desativado. Confira antes de ativá-lo." }
+  "imp_requestlyMixedLimits": { "message": "“{profile}”: as regras tinham limites diferentes (sites, tipos de requisição ou métodos), e um perfil tem um só conjunto para todos os redirecionamentos, então ele chega desativado. Confira antes de ativá-lo." },
+
+  "locale": { "message": "pt-BR", "description": "This language's BCP 47 tag, for plural rules and <html lang>" },
+  "title_paused": { "message": "Headerwise: pausado" },
+  "title_allOff": { "message": "Headerwise: todos os perfis desativados" },
+  "title_on": { "message": "Headerwise: {profiles}" },
+  "title_until": { "message": "{title} (até {time})" },
+  "copyFailed": { "message": "Não foi possível copiar: {error}" },
+  "loadFailed": { "message": "Não foi possível carregar seus perfis ({error}). As mudanças feitas aqui agora não serão salvas: feche o popup e abra de novo." }
 }
