@@ -57,7 +57,8 @@ describe('export', () => {
       { title: 'Ok', requestHeaders: [{ name: 'X-A', value: 1, op: 'explode' }, { value: 'no name' }, 'nonsense'], filters: [{ kind: 'sometimes', pattern: 'x' }], resourceTypes: ['image', 'telepathy'], requestMethods: ['GET', 'TELEPORT'] },
       42,
     ] }));
-    expect(warnings).toEqual([]);
+    // a filter and a type and a method it had are gone: it would apply more widely, so it says so (and comes in off)
+    expect(warnings).toEqual([`"Ok": some of its limits (sites, request types or methods) couldn't be read, so it comes in switched off: check its filters before you switch it on.`]);
     expect(profiles).toHaveLength(1);
     const [p] = profiles;
     expect([p.enabled, p.requestHeaders.map(h => [h.name, h.value, h.op]), p.filters, p.resourceTypes, p.requestMethods])

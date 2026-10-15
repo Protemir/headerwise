@@ -1,5 +1,5 @@
 import { t } from './i18n.ts';
-import { EXPORT_FORMAT, exportProfiles, importProfiles } from './export.ts';
+import { exportProfiles, importHeaderwise, isHeaderwiseExport } from './export.ts';
 import type { ImportResult } from './import-modheader.ts';
 import type { Profile } from './model.ts';
 
@@ -73,14 +73,15 @@ export function isShareLink(text: string): boolean {
 export async function importShareLink(text: string): Promise<ImportResult | undefined> {
   const m = text.length <= MAX_LINK + 1000 ? LINK.exec(text) : null;
   if (!m) return undefined;
-  let json: string;
+  let data: unknown;
   try {
-    json = new TextDecoder('utf-8', { fatal: true }).decode(await unpack(fromBase64url(m[1])));
-    if ((JSON.parse(json) as { format?: unknown })?.format !== EXPORT_FORMAT) throw new Error('not a Headerwise export');
+    data = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await unpack(fromBase64url(m[1]))));
+    if (!isHeaderwiseExport(data)) throw new Error('not a Headerwise export');
   } catch {
     return { profiles: [], warnings: [t('shareLinkBroken')] };
   }
-  const res = importProfiles(json);
+  // Read as the share page reads it: as a Headerwise export, nothing else.
+  const res = importHeaderwise(data);
   if (!res.profiles.length) return res;
   for (const p of res.profiles) p.enabled = false;
   return { profiles: res.profiles, warnings: [t('sharedOff'), ...res.warnings] };

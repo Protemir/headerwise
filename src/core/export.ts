@@ -67,15 +67,21 @@ function profile(raw: unknown, i: number): Profile | null {
   const list = <T>(v: unknown, f: (x: unknown) => T | null) => (Array.isArray(v) ? v.map(f).filter((x): x is T => x !== null) : []);
   const types = strings(p.resourceTypes).filter(t => RESOURCE_TYPES.some(x => x.id === t));
   const methods = strings(p.requestMethods).map(m => m.toLowerCase()).filter(m => REQUEST_METHODS.includes(m));
+  // Limits it had that can't be read here: without them it would apply more widely.
+  const count = (v: unknown) => (Array.isArray(v) ? v.length : 0);
+  const filters = list(p.filters, filter);
+  const lostLimits = filters.length < count(p.filters) || types.length < count(p.resourceTypes) || methods.length < count(p.requestMethods)
+    || strings(p.initiatorDomains).length < count(p.initiatorDomains);
   const initiators = strings(p.initiatorDomains);
   const notInitiators = strings(p.excludedInitiatorDomains);
   return {
     id: newId(),
     title: str(p.title).trim() || `Imported ${i + 1}`,
-    enabled: p.enabled === true,
+    enabled: p.enabled === true && !lostLimits,
+    ...(lostLimits ? { limitsLost: true } : {}),
     requestHeaders: list(p.requestHeaders, header),
     responseHeaders: list(p.responseHeaders, header),
-    filters: list(p.filters, filter),
+    filters,
     ...(Array.isArray(p.redirects) && p.redirects.length ? { redirects: list(p.redirects, redirect) } : {}),
     ...(initiators.length ? { initiatorDomains: initiators } : {}),
     ...(notInitiators.length ? { excludedInitiatorDomains: notInitiators } : {}),
@@ -88,14 +94,30 @@ function profile(raw: unknown, i: number): Profile | null {
 export function importProfiles(text: string): ImportResult {
   let data: unknown;
   try { data = JSON.parse(text.trim()); } catch { /* not JSON: let the ModHeader importer explain */ }
+  // Its own format first: a file that says it is a Headerwise export is read as one,
+  // whatever other fields it carries (a share page shows it read this way).
+  if (isHeaderwiseExport(data)) return importHeaderwise(data);
   if (isRequestly(data)) return importRequestly(data);
   if (isSimpleModifyHeaders(data)) return importSimpleModifyHeaders(data);
-  if (!data || typeof data !== 'object' || (data as { format?: unknown }).format !== EXPORT_FORMAT) return importModHeader(text);
+  return importModHeader(text);
+}
 
+export function isHeaderwiseExport(data: unknown): boolean {
+  return !!data && typeof data === 'object' && (data as { format?: unknown }).format === EXPORT_FORMAT;
+}
+
+/** A Headerwise export, already parsed. */
+export function importHeaderwise(data: unknown): ImportResult {
   const d = data as { version?: unknown; profiles?: unknown };
   const warnings: string[] = [];
   if (typeof d.version === 'number' && d.version > 1) warnings.push(t('imp_newerVersion', { version: d.version }));
-  const profiles = (Array.isArray(d.profiles) ? d.profiles : []).map(profile).filter((p): p is Profile => p !== null);
+  const read = (Array.isArray(d.profiles) ? d.profiles : []).map(profile).filter((p): p is Profile & { limitsLost?: true } => p !== null);
+  for (const p of read) {
+    if (!p.limitsLost) continue;
+    delete p.limitsLost;
+    warnings.push(t('imp_limitsLost', { profile: p.title }));
+  }
+  const profiles: Profile[] = read;
   // An export without secrets has them empty. Switched on, an empty Authorization
   // or Cookie would be sent everywhere and log the user out, so they come in off.
   const emptied = profiles.flatMap(p => [...p.requestHeaders, ...p.responseHeaders]

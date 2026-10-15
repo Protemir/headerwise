@@ -18,7 +18,7 @@ Headerwise does not collect, store or send any personal data.
   only shown in the popup and is not stored.
 - "Move from ModHeader" reads only the folder you pick, inside that page. The
   files are not uploaded or kept; only the profiles you choose to import are saved.
-- "Copy link" (in Export) puts the chosen profiles, without secret values, into
+- "Share…" (and "Copy link" in Export) puts the chosen profiles, without secret values, into
   the link itself, after "#". Browsers don't send that part to any server: the
   share page on protemir.github.io reads it in your browser. Its "Add to
   Headerwise" button hands the link to the extension; only that site can, and

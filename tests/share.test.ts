@@ -55,6 +55,20 @@ describe('share links', () => {
     }
   });
 
+  it('a crafted link imports what the share page shows: read as a Headerwise export, nothing else', async () => {
+    // A Headerwise export that also carries Simple Modify Headers fields, and limits that can't be read.
+    const json = JSON.stringify({
+      format: 'headerwise', version: 1,
+      profiles: [{ title: 'Harmless', requestHeaders: [{ name: 'X-Env', value: 'dev' }], filters: [{ kind: 'only', pattern: '||example.com^' }] }],
+      format_version: '1.2', target_page: '', headers: [{ header_name: 'X-Evil', header_value: '1', status: 'on', apply_on: 'req', action: 'add' }],
+    });
+    const packed = new Uint8Array(await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+    const data = btoa(String.fromCharCode(...packed)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const res = (await importShareLink(`${SHARE_PAGE}#1.${data}`))!;
+    expect(res.profiles.map(p => [p.title, p.requestHeaders.map(h => h.name), p.enabled])).toEqual([['Harmless', ['X-Env'], false]]);
+    expect(res.warnings.some(w => /limits .* couldn't be read/.test(w))).toBe(true);
+  });
+
   it('profiles too big for a link are refused when it is made, not when it is opened', async () => {
     const many = Array.from({ length: 3 }, () => ({ ...profile(), title: 'x'.repeat(3_000_000) }));
     expect(await shareLink(many)).toBe(undefined);

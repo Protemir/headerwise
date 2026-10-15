@@ -42,4 +42,7 @@ async function run() {
   else done(true, result.state ? 'Done. In effect now:' : 'Nothing changed. In effect now:');
 }
 
-run().catch(e => done(false, e instanceof Error ? e.message : String(e)));
+// A test opens this page itself (driver.get, or ModHeader's URLs redirected here).
+// Framed by a page, or opened from a link on one, it changes nothing.
+if (window.top !== window || document.referrer !== '') done(false, 'Opened from another page: nothing changed.');
+else run().catch(e => done(false, e instanceof Error ? e.message : String(e)));

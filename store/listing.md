@@ -61,11 +61,12 @@ Modify HTTP request and response headers in the browser, organized in profiles t
 | Permission | Justification to paste |
 |---|---|
 | declarativeNetRequest | Applies the user's header changes as browser rules. This is the extension's only function; the browser applies the rules, the extension never sees request or page content. |
-| storage | Saves the user's profiles on the user's computer (chrome.storage.local). Nothing is synced or sent anywhere. |
+| storage | Saves the user's profiles on the user's computer (chrome.storage.local). Only if the user ticks "Sync profiles across my computers", they are also kept in the browser's own sync (chrome.storage.sync), without secret values; the extension has no server and sends nothing itself. |
 | activeTab | When the user clicks the toolbar button, the popup reads the current tab's address and asks the browser which of the extension's rules matched there, to show "On this tab". Nothing is stored or sent. |
-| alarms | When a header value uses a variable such as {{uuid}} or {{timestamp}}, refreshes the value once a minute. No alarm runs otherwise. |
+| alarms | Switches a profile off at the time the user chose ("On for 1 hour"), refreshes values that use a variable such as {{uuid}} once a minute, and retries the browser's sync after it failed. Nothing else. |
 | Host permission `<all_urls>` (optional) | The browser only lets an extension change headers on sites it has access to. Requested at runtime, only after the user clicks "Allow on all sites"; the user can revoke it any time. |
 | Remote code | No. All code is in the package; the extension's content security policy forbids network requests. |
+| `externally_connectable` (no permission prompt; for reviewers) | Lets only https://protemir.github.io/headerwise/ (the project's share page) hand a share link to the extension when the user clicks "Add to Headerwise". The extension opens its editor and adds the profiles switched off. No other site or extension can send messages. |
 
 ## Data usage (Chrome "Privacy practices" tab)
 
@@ -90,10 +91,10 @@ Modify HTTP request and response headers in the browser, organized in profiles t
 
 ## Before submitting
 
-1. Version in `public/manifest.json` and `package.json`: 1.0.4 in main, 1.0.0 in review (raise it for every later upload, the stores reject a repeated version).
+1. Version in `public/manifest.json` and `package.json`: raise it for every upload (the stores reject a repeated version). 1.0.6 is in the store; main is 1.1.0.
 2. `npm run build`, `npm test`, `npm run test:live` (and `-- --browser edge`).
 3. Upload the zip CI builds from `dist/` (Actions → latest run → artifact).
-4. After approval: put the listing URLs into the install buttons in `docs/index.html` (they search the stores for now).
+4. After approval: merge the site changes waiting for that version (for 1.1.0: branch `site-1.1.0`).
 
 ## Other languages (from 1.0.1)
 

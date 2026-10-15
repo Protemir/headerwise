@@ -22,7 +22,7 @@
     header { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
     header img { width: 30px; height: 30px; }
     header a { color: inherit; text-decoration: none; font-weight: 600; }
-    h1 { font-size: clamp(28px, 4vw, 38px); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 12px; }
+    h1 { font-size: clamp(28px, 4vw, 38px); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 12px; overflow-wrap: anywhere; }
     h2 { font-size: 21px; margin: 0 0 4px; letter-spacing: -0.01em; overflow-wrap: anywhere; }
     h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 6px; }
     p { margin: 0 0 12px; }
@@ -117,9 +117,39 @@
       return new TextDecoder('utf-8', { fatal: true }).decode(await new Blob(parts).arrayBuffer());
     }
 
-    // The link comes from anyone: every entry is checked before it is read.
-    const list = v => (Array.isArray(v) ? v.filter(x => x && typeof x === 'object' || typeof x === 'string') : []);
+    // The link as it was opened: a page that opened this one could change the part
+    // after "#" later, and what is added must be what was shown.
+    const LINK = location.href;
+    addEventListener('hashchange', () => location.reload());
+
+    // The link comes from anyone. Read it with the extension's own rules
+    // (src/core/export.ts), so the page shows exactly what will be added.
     const str = v => (typeof v === 'string' ? v : '');
+    const objs = v => (Array.isArray(v) ? v.filter(x => x && typeof x === 'object' && !Array.isArray(x)) : []);
+    const strs = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string') : []);
+    const count = v => (Array.isArray(v) ? v.length : 0);
+    const TYPES = ['main_frame', 'sub_frame', 'xmlhttprequest', 'script', 'stylesheet', 'image', 'font', 'media', 'websocket', 'ping', 'other'];
+    const METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'];
+    function readProfile(p) {
+      const headers = v => objs(v).filter(h => str(h.name).trim()).map(h => ({ name: str(h.name).trim(), value: str(h.value), op: ['set', 'append', 'remove'].includes(h.op) ? h.op : 'set', enabled: h.enabled !== false, secret: h.secret === true }));
+      const filters = objs(p.filters).filter(f => str(f.pattern).trim() && (f.kind === 'include' || f.kind === 'exclude')).map(f => ({ kind: f.kind, pattern: str(f.pattern), isRegex: f.isRegex === true, enabled: f.enabled !== false }));
+      const types = strs(p.resourceTypes).filter(t => TYPES.includes(t));
+      const methods = strs(p.requestMethods).map(m => m.toLowerCase()).filter(m => METHODS.includes(m));
+      const out = {
+        title: str(p.title).trim(),
+        requestHeaders: headers(p.requestHeaders),
+        responseHeaders: headers(p.responseHeaders),
+        redirects: objs(p.redirects).filter(r => str(r.from).trim()).map(r => ({ from: str(r.from), to: str(r.to), isRegex: r.isRegex === true, enabled: r.enabled !== false })),
+        filters, types, methods,
+        from: strs(p.initiatorDomains), notFrom: strs(p.excludedInitiatorDomains),
+      };
+      // Limits that can't be read: without them the profile would apply more widely.
+      out.limitsLost = filters.length < count(p.filters) || types.length < count(p.resourceTypes)
+        || methods.length < count(p.requestMethods) || out.from.length < count(p.initiatorDomains);
+      out.partsLost = out.limitsLost || out.requestHeaders.length < count(p.requestHeaders) || out.responseHeaders.length < count(p.responseHeaders)
+        || out.redirects.length < count(p.redirects) || out.notFrom.length < count(p.excludedInitiatorDomains);
+      return out;
+    }
 
     function table(rows) {
       return el('div', { className: 'table' }, el('table', {}, ...rows.map(([cells, off]) => {
@@ -130,38 +160,37 @@
     }
 
     function headerRows(headers) {
-      return list(headers).map(h => {
-        const op = ['set', 'append', 'remove'].includes(h.op) ? h.op : 'set';
-        const value = op === 'remove' ? el('span', { className: 'dim' }, 'removed')
-          : h.secret && !str(h.value) ? el('span', { className: 'dim' }, 'secret, not in the link')
-          : str(h.value);
-        return [[[op, 'op'], [str(h.name), 'mono'], [value, 'mono']], h.enabled === false];
+      return headers.map(h => {
+        const value = h.op === 'remove' ? el('span', { className: 'dim' }, 'removed')
+          : h.secret && !h.value ? el('span', { className: 'dim' }, 'secret, not in the link')
+          : h.value;
+        return [[[h.op, 'op'], [h.name, 'mono'], [value, 'mono']], !h.enabled];
       });
     }
 
     function render(profiles) {
       const box = $('profiles');
       for (const p of profiles) {
-        const card = el('section', { className: 'profile' }, el('h2', {}, str(p.title) || 'Untitled profile'));
+        const card = el('section', { className: 'profile' }, el('h2', {}, p.title || 'Untitled profile'));
         const scope = [
-          list(p.initiatorDomains).length && `only from ${list(p.initiatorDomains).join(', ')}`,
-          list(p.excludedInitiatorDomains).length && `never from ${list(p.excludedInitiatorDomains).join(', ')}`,
-          list(p.resourceTypes).length && `only ${list(p.resourceTypes).join(', ')} requests`,
-          list(p.requestMethods).length && `only ${list(p.requestMethods).map(m => str(m).toUpperCase()).join(', ')}`,
+          p.from.length && `only from ${p.from.join(', ')}`,
+          p.notFrom.length && `never from ${p.notFrom.join(', ')}`,
+          p.types.length && `only ${p.types.join(', ')} requests`,
+          p.methods.length && `only ${p.methods.map(m => m.toUpperCase()).join(', ')}`,
         ].filter(Boolean);
         if (scope.length) card.append(el('p', { className: 'scope' }, scope.join(' · ')));
-        if (list(p.requestHeaders).length) card.append(el('h3', {}, 'Request headers'), table(headerRows(p.requestHeaders)));
-        if (list(p.responseHeaders).length) card.append(el('h3', {}, 'Response headers'), table(headerRows(p.responseHeaders)));
-        const redirects = list(p.redirects);
-        if (redirects.length) {
+        if (p.limitsLost) card.append(el('div', { className: 'warn' }, 'Some of its limits (sites, request types or methods) are not something Headerwise can read, so they are left out and the profile would apply more widely than shown in the link. Check its filters before you switch it on.'));
+        else if (p.partsLost) card.append(el('p', { className: 'note' }, 'Some entries in the link are not something Headerwise can read; they are left out.'));
+        if (p.requestHeaders.length) card.append(el('h3', {}, 'Request headers'), table(headerRows(p.requestHeaders)));
+        if (p.responseHeaders.length) card.append(el('h3', {}, 'Response headers'), table(headerRows(p.responseHeaders)));
+        if (p.redirects.length) {
           card.append(el('h3', {}, 'Redirects'),
             el('div', { className: 'warn' }, 'This profile sends requests to other addresses. Check where they go before you switch it on.'),
-            table(redirects.map(r => [[[r.isRegex ? 'regex' : 'replace', 'op'], [str(r.from), 'mono'], ['→ ' + str(r.to), 'mono']], r.enabled === false])));
+            table(p.redirects.map(r => [[[r.isRegex ? 'regex' : 'replace', 'op'], [r.from, 'mono'], ['→ ' + r.to, 'mono']], !r.enabled])));
         }
-        const filters = list(p.filters);
-        if (filters.length) {
+        if (p.filters.length) {
           card.append(el('h3', {}, 'Only on / never on'),
-            table(filters.map(f => [[[f.kind === 'exclude' ? 'never on' : 'only on', 'op'], [str(f.pattern), 'mono'], [f.isRegex ? el('span', { className: 'dim' }, 'regex') : '']], f.enabled === false])));
+            table(p.filters.map(f => [[[f.kind === 'exclude' ? 'never on' : 'only on', 'op'], [f.pattern, 'mono'], [f.isRegex ? el('span', { className: 'dim' }, 'regex') : '']], !f.enabled])));
         }
         box.append(card);
       }
@@ -176,7 +205,7 @@
 
     $('copy').addEventListener('click', async () => {
       try {
-        await navigator.clipboard.writeText(location.href);
+        await navigator.clipboard.writeText(LINK);
         $('status').className = '';
         $('status').textContent = 'Link copied.';
       } catch {
@@ -190,7 +219,7 @@
       $('status').className = '';
       $('status').textContent = 'Opening Headerwise…';
       $('add').disabled = true;
-      runtime.sendMessage(ID, { type: 'share', link: location.href }, ok => {
+      runtime.sendMessage(ID, { type: 'share', link: LINK }, ok => {
         $('add').disabled = false;
         if (runtime.lastError) return notInstalled();
         if (ok !== true) {
@@ -203,19 +232,20 @@
     });
 
     (async () => {
-      const m = /^#1\.([A-Za-z0-9_-]+)$/.exec(location.hash);
+      const m = /#1\.([A-Za-z0-9_-]+)$/.exec(LINK);
       if (!m) return fail('No profiles in this link', 'A Headerwise share link has the profiles after "#". This one has none: it may have been cut off when it was pasted.');
       let data;
       try {
         data = JSON.parse(await unpack(m[1]));
-        if (data.format !== 'headerwise' || !list(data.profiles).length) throw new Error('not a Headerwise export');
+        if (data.format !== 'headerwise' || !objs(data.profiles).length) throw new Error('not a Headerwise export');
       } catch {
         return fail('This link is damaged', 'It may have been cut off when it was pasted. Ask for it again, or for an exported file.');
       }
-      const profiles = list(data.profiles).filter(p => p && typeof p === 'object');
-      $('title').textContent = profiles.length === 1 ? `Shared profile: ${str(profiles[0].title) || 'untitled'}` : `${profiles.length} shared header profiles`;
-      document.title = `${$('title').textContent} · Headerwise`;
+      let profiles;
       try {
+        profiles = objs(data.profiles).map(readProfile);
+        $('title').textContent = profiles.length === 1 ? `Shared profile: ${profiles[0].title || 'untitled'}` : `${profiles.length} shared header profiles`;
+        document.title = `${$('title').textContent} · Headerwise`;
         render(profiles);
       } catch {
         return fail('This link is damaged', 'Its profiles could not be read. Ask for it again, or for an exported file.');

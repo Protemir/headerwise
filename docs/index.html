@@ -204,7 +204,7 @@
   <span class="k">"extension_pages"</span>: <span class="s">"default-src 'self'; img-src 'self' data:; <span class="em">connect-src 'none'</span>; object-src 'none'; base-uri 'none'; form-action 'none'"</span>
 }</pre>
         <div class="facts">
-          <p><b>No network access</b>This line in the manifest covers every page of the extension and its background worker. A test checks it in a real browser on every change.</p>
+          <p><b>No network access</b>This line in the manifest covers every page of the extension and its background worker. The test suite checks it in a real browser (fetch, image, beacon, worker).</p>
           <p><b>Never reads your pages</b>Chrome applies the header rules itself through declarativeNetRequest. Headerwise never sees page content or request bodies.</p>
           <p><b>No account, no analytics</b>Your profiles stay in your browser's local storage. Nothing is synced to a server, because there is no server.</p>
           <p><b>Open code</b>Read it, build it, and compare it with what the store ships. Site access is asked for only when you click "Allow".</p>
@@ -348,7 +348,7 @@
           </details>
           <details>
             <summary>Which browsers does it work in?</summary>
-            <p>Chrome and Edge are tested on every change. Install it from the Chrome Web Store in any of them: Edge asks to "Allow extensions from other stores" the first time. Brave and Vivaldi work the same way. Firefox is planned.</p>
+            <p>Every release is tested in Chrome and Edge. Install it from the Chrome Web Store in any of them: Edge asks to "Allow extensions from other stores" the first time. Brave and Vivaldi work the same way. Firefox is planned.</p>
           </details>
           <details>
             <summary>How do I move from ModHeader?</summary>

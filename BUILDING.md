@@ -14,7 +14,8 @@ npm run build:firefox     # Firefox build in dist-firefox/ and headerwise-firefo
 `npm run build` runs Vite (vite.config.ts): it compiles the TypeScript and Vue
 files in `src/` and minifies them; nothing is obfuscated. `scripts/firefox.mjs`
 copies `dist/` and changes only `manifest.json` (background as an event page,
-Firefox add-on id, data collection declared as none), then zips it.
+Firefox add-on id, data collection declared as none; `minimum_chrome_version` and
+`externally_connectable`, which Firefox doesn't have, removed), then zips it.
 
 The Chrome Web Store zip is `dist/` zipped as is. CI builds both on every push
 (`.github/workflows/ci.yml`) and keeps them as run artifacts.
