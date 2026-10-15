@@ -157,7 +157,7 @@ function convertHeaders(
     // A secret value left out of an export or sync and not filled in here yet: an
     // empty Authorization or Cookie would log the user out wherever it went.
     if (h.op !== 'remove' && h.secret === true && h.value === '') {
-      notes.warnings.push(t('w_secretEmpty', { where }));
+      lose(notes, profile.id, t('w_secretEmpty', { where }));
       continue;
     }
     const unknown = h.op === 'remove' ? [] : unknownVariables(h.value);
@@ -240,7 +240,9 @@ function convertRedirects(p: Profile, notes: Notes): ProfileParts['redirects'] {
     let check: RegExp | undefined;
     // Chrome matches regexFilter case-insensitively.
     try { check = new RegExp(pattern, 'i'); } catch { /* left to Chrome's own regex check */ }
-    if (check && to !== '' && check.test(to)) {
+    // The new address matching again means a loop; with $1… in it, try a few things a group could hold.
+    const filled = r.isRegex && /\$\d/.test(to) ? ['1', 'a', 'x1'].map(s => to.replace(/\$\d/g, s)) : [to];
+    if (check && to !== '' && filled.some(x => check!.test(x))) {
       lose(notes, p.id, t('w_redirectLoop', { where }));
       continue;
     }
@@ -439,7 +441,7 @@ export function toDnrRules(state: State): ConversionResult {
     }
   });
 
-  limitRules(rules, warnings);
+  limitRules(rules, notes, info);
   return { rules, warnings, lost, titles, info };
 }
 
@@ -476,10 +478,18 @@ export async function dropUnsupportedRegexes(
   return rules.filter(r => !badRules.has(r) && !badPriorities.has(r.priority));
 }
 
-function limitRules(rules: DnrRule[], warnings: string[]): void {
+function limitRules(rules: DnrRule[], notes: Notes, info: Record<number, RuleInfo>): void {
+  const { warnings } = notes;
   if (rules.length > MAX_DYNAMIC_RULES) {
     warnings.push(t('w_tooManyRules', { n: rules.length, max: MAX_DYNAMIC_RULES }));
-    rules.length = MAX_DYNAMIC_RULES;
+    // At a profile's edge: half a profile could keep its headers and lose its "never on".
+    let cut = MAX_DYNAMIC_RULES;
+    while (cut > 0 && rules[cut - 1].priority === rules[cut].priority) cut--;
+    for (const r of rules.slice(cut)) {
+      const id = info[r.id]?.profileId;
+      if (id && !notes.lost.includes(id)) notes.lost.push(id);
+    }
+    rules.length = cut;
   }
   const regexCount = rules.filter(r => r.condition.regexFilter).length;
   if (regexCount > MAX_REGEX_RULES) {

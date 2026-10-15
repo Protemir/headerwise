@@ -125,11 +125,11 @@ describe('engine', () => {
   });
 
   it('says so when the browser refuses a profile, and tries again only once the profiles change', async () => {
-    const b = fakeBrowser(st([p('A')]), { rejectWith: 'Internal error' });
+    const b = fakeBrowser(st([p('A')]), { rejectWith: 'Rule with id 1 is bad' });
     const e = createEngine(b.api);
     await e.queueSync();
     expect([b.dynamic.length, b.session.length, b.badge.text]).toEqual([0, 0, '!']);
-    const refusedA = (w: string) => /refused the rules of "A" \(Internal error\), so that profile is off/.test(w);
+    const refusedA = (w: string) => /refused the rules of "A" \(Rule with id 1 is bad\), so that profile is off/.test(w);
     expect((b.stored.warnings as string[]).some(refusedA)).toBe(true);
     // which profiles lost something, for the automation page (warnings are translated)
     expect(b.stored.lost).toEqual(['A']);
@@ -143,6 +143,16 @@ describe('engine', () => {
     // an edit: tried again
     b.state = st([p('A', { requestHeaders: [h('X-A', '2')] })]);
     await e.queueSync();
+    expect(b.calls.filter(c => c.startsWith('update')).length > 0).toBe(true);
+  });
+
+  it('a failure that names no rule (an internal error) is tried again a minute later, not remembered', async () => {
+    const b = fakeBrowser(st([p('A')]), { rejectWith: 'Internal error while updating dynamic rules.' });
+    const e = createEngine(b.api);
+    await e.queueSync();
+    expect([b.badge.text, b.alarms.has('rules-retry')]).toEqual(['!', true]);
+    b.calls.length = 0;
+    await e.queueSync(); // the retry alarm
     expect(b.calls.filter(c => c.startsWith('update')).length > 0).toBe(true);
   });
 

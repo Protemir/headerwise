@@ -42,7 +42,8 @@ describe('export', () => {
     expect(profiles).toHaveLength(1);
     const [p] = profiles;
     expect(p.id === 'p1').toBe(false);
-    expect([p.title, p.enabled, p.tab]).toEqual(['Staging', true, undefined]);
+    // it was on only in one tab: on everywhere would be more than it was, so it comes in off
+    expect([p.title, p.enabled, p.tab]).toEqual(['Staging', false, undefined]);
     expect(p.requestHeaders.map(h => [h.name, h.value, h.enabled, h.secret ?? null, h.comment ?? null])).toEqual([
       ['Authorization', '', false, true, null], ['X-Env', 'staging', false, null, 'routes to staging'], ['X-Team', '', false, true, null],
     ]);

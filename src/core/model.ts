@@ -97,12 +97,16 @@ export interface State {
 
 // Names whose values are usually credentials.
 const SECRET_NAME = /^(authorization|proxy-authorization|cookie|set-cookie)$|auth(?!ors?$)|token|secret|api[-_]?key|password|passwd|session|credential|signature/i;
-// Values that are credentials whatever the header is called: "Bearer …", "Basic …", a JWT.
-const SECRET_VALUE = /^\s*(bearer|basic|digest|negotiate|token)\s+\S|\beyJ[\w-]{6,}\.[\w-]{6,}\./i;
+// Standard headers that only talk about credentials (CORS, auth challenges).
+const NOT_SECRET_NAME = /^(access-control-[\w-]*|www-authenticate|proxy-authenticate|authentication-info|proxy-authentication-info)$/i;
+// Values that are credentials whatever the header is called: "Bearer <token>", "Basic <base64>", a JWT.
+const SECRET_VALUE = /^\s*(bearer|token)\s+[\w.~+/=-]{12,}\s*$|^\s*basic\s+[A-Za-z0-9+/]{8,}={0,2}\s*$|^\s*(digest|negotiate)\s+\S{8,}|\beyJ[\w-]{6,}\.[\w-]{6,}\./i;
 
 /** Should the value be hidden in the UI (and left out of exports and share links)? */
 export function isSecret(h: Pick<HeaderMod, 'name' | 'secret'> & { value?: string }): boolean {
-  return h.secret ?? (SECRET_NAME.test(h.name.trim()) || SECRET_VALUE.test(h.value ?? ''));
+  if (h.secret !== undefined) return h.secret;
+  const name = h.name.trim();
+  return !NOT_SECRET_NAME.test(name) && (SECRET_NAME.test(name) || SECRET_VALUE.test(h.value ?? ''));
 }
 
 /** "Bearer eyJh…" -> "Bear•••••", for places that show values read-only. */
@@ -226,7 +230,7 @@ export function activeHeaderCount(state: State): number {
   for (const p of state.profiles) {
     if (!p.enabled) continue;
     for (const h of [...p.requestHeaders, ...p.responseHeaders]) {
-      if (h.enabled && h.name.trim() !== '') n++;
+      if (h.enabled && h.name.trim() !== '' && !(h.secret === true && h.value === '' && h.op !== 'remove')) n++;
     }
     n += activeRedirects(p).length;
   }

@@ -78,11 +78,14 @@ describe('share links', () => {
     const p = profile();
     p.requestHeaders = [
       { id: 'a', enabled: true, name: 'X-Authorization', value: 'abc123', op: 'set' },
-      { id: 'b', enabled: true, name: 'X-Forwarded-User', value: 'Bearer abc.def', op: 'set' },
+      { id: 'b', enabled: true, name: 'X-Forwarded-User', value: 'Bearer abc.def.ghi-123456', op: 'set' },
       { id: 'c', enabled: true, name: 'X-Debug', value: 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0MiJ9.c2ln', op: 'set' },
       { id: 'd', enabled: true, name: 'X-Author', value: 'ann', op: 'set' },
+      // about credentials, not credentials
+      { id: 'e', enabled: true, name: 'Access-Control-Allow-Credentials', value: 'true', op: 'set' },
+      { id: 'f', enabled: true, name: 'X-Plan', value: 'Basic tier', op: 'set' },
     ];
     const res = (await importShareLink((await shareLink([p]))!))!;
-    expect(res.profiles[0].requestHeaders.map(h => h.value)).toEqual(['', '', '', 'ann']);
+    expect(res.profiles[0].requestHeaders.map(h => h.value)).toEqual(['', '', '', 'ann', 'true', 'Basic tier']);
   });
 });

@@ -52,6 +52,8 @@ export interface EngineApi {
 export const REFRESH_ALARM = 'refresh-variables';
 /** "On for an hour": wakes the background when the next profile's time is up. */
 export const TIMER_ALARM = 'profile-timer';
+// A rule update the browser failed for a reason of its own: tried again a minute later.
+export const RETRY_ALARM = 'rules-retry';
 const RED = '#c2410c';
 
 export function createEngine(api: EngineApi) {
@@ -129,15 +131,20 @@ export function createEngine(api: EngineApi) {
         const kept: DnrRule[] = [];
         const refusedIds: string[] = [];
         const refused: string[] = [];
+        let transient = false;
         for (const [id, group] of byProfile) {
           try {
             await replace([...kept, ...group]);
             kept.push(...group);
           } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
             refusedIds.push(id);
-            refused.push(`"${converted.titles[group[0].priority] ?? '?'}" (${err instanceof Error ? err.message : String(err)})`);
+            refused.push(`"${converted.titles[group[0].priority] ?? '?'}" (${message})`);
+            // "Rule with id 3 …" is about that rule; anything else (an internal error) may pass.
+            if (!/rule with id/i.test(message)) transient = true;
           }
         }
+        if (transient) await api.alarms.at(RETRY_ALARM, api.now() + 60_000);
         if (kept.length === 0) await replace([]).catch(() => {});
         rejected = refused.length > 0 || !!known;
         const warning = tn('w_refused', refused.length, { profiles: refused.join(', ') });
@@ -147,7 +154,9 @@ export function createEngine(api: EngineApi) {
           structureKey,
           ruleInfo: converted.info,
           rulesUpdatedAt: api.now(),
-          refused: refused.length ? { structureKey, profiles: [...(known?.profiles ?? []), ...refusedIds], warning } : null,
+          // Remembered only when the browser named the rule: otherwise the next sync tries them all again.
+          refused: refused.length && !transient ? { structureKey, profiles: [...(known?.profiles ?? []), ...refusedIds], warning } : null,
+          ...(transient ? { rulesKey: '' } : {}),
         });
       }
     } else if (stored.structureKey !== structureKey) {

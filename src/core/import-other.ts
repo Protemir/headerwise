@@ -148,9 +148,11 @@ function requestlyRedirects(rule: Json, type: 'Redirect' | 'Replace', title: str
   let narrowed = false;
   let skipped = 0;
   const scope: Scope = { filters: [], initiatorDomains: [], resourceTypes: [], requestMethods: [], narrowingLost: [] };
+  const limits = new Set<string>(); // each pair's own, to see whether they differ
   for (const pair of objs(rule.pairs)) {
     const source = obj(pair.source) ? pair.source : {};
     const s = requestlyScope({ ...source, value: '' }, title, warnings); // only its filters: the URL part goes into the pattern
+    limits.add(JSON.stringify([[...s.initiatorDomains].sort(), [...s.resourceTypes].sort(), [...s.requestMethods].sort()]));
     scope.initiatorDomains.push(...s.initiatorDomains);
     scope.resourceTypes.push(...s.resourceTypes);
     scope.requestMethods.push(...s.requestMethods);
@@ -182,11 +184,14 @@ function requestlyRedirects(rule: Json, type: 'Redirect' | 'Replace', title: str
   }
   if (skipped) warnings.push(tn(type === 'Redirect' ? 'imp_fileRedirectsSkipped' : 'imp_replacementsSkipped', skipped, { profile: title }));
   if (narrowed) warnings.push(t('imp_requestlyNarrowed', { profile: title }));
+  // One profile has one set of limits: pairs with different ones would each apply more widely.
+  const mixed = limits.size > 1;
+  if (mixed) warnings.push(t('imp_requestlyMixedLimits', { profile: title }));
   if (!redirects.length) return undefined;
   return {
     id: newId(),
     title,
-    enabled: active && !narrowed && scope.narrowingLost.length === 0,
+    enabled: active && !narrowed && !mixed && scope.narrowingLost.length === 0,
     requestHeaders: [],
     responseHeaders: [],
     filters: [],

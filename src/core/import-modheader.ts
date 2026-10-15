@@ -85,7 +85,7 @@ const cap = (v: unknown): string => { const t = asText(v); return t ? t[0].toUpp
 function redirectsOf(list: MhHeader[] | undefined): Redirect[] {
   return objs<MhHeader>(list)
     .filter(r => typeof r?.name === 'string' && r.name.trim() !== '')
-    .map(r => ({ id: newId(), enabled: r.enabled !== false, from: r.name!.trim(), to: r.value ?? '', isRegex: true }));
+    .map(r => ({ id: newId(), enabled: r.enabled !== false, from: r.name!.trim(), to: asText(r.value), isRegex: true }));
 }
 
 /**

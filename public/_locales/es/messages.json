@@ -761,5 +761,6 @@
   "syncFull": { "message": "el almacenamiento de sincronización del navegador para Headerwise está lleno (100 KB): borra o acorta algunos perfiles" },
   "syncBusy": { "message": "demasiados cambios a la vez para la sincronización del navegador; se reintentará en unos minutos" },
   "footerLocalSynced": { "message": "Funciona en local. Sin cuenta, sin analítica. Los perfiles se sincronizan con la cuenta del propio navegador; nada más se envía a ningún sitio." },
-  "imp_limitsLost": { "message": "«{profile}»: algunos de sus límites (sitios, tipos de solicitud o métodos) no se pudieron leer, así que llega desactivado: revisa sus filtros antes de activarlo." }
+  "imp_limitsLost": { "message": "«{profile}»: algunos de sus límites (sitios, tipos de solicitud o métodos) no se pudieron leer, así que llega desactivado: revisa sus filtros antes de activarlo." },
+  "imp_requestlyMixedLimits": { "message": "«{profile}»: sus reglas tenían límites distintos (sitios, tipos de solicitud o métodos) y un perfil tiene unos solos para todas sus redirecciones, así que llega desactivado. Revísalo antes de activarlo." }
 }

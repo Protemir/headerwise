@@ -16,8 +16,11 @@ export const EXPORT_FORMAT = 'headerwise';
 export function exportProfiles(profiles: Profile[], { includeSecrets = false, now = new Date() } = {}): string {
   const clean = profiles.map(p => {
     const { tab: _tab, offAt: _offAt, ...rest } = p;
-    const strip = (h: HeaderMod): HeaderMod => (includeSecrets || !isSecret(h) ? h : { ...h, value: '', secret: true });
-    return { ...rest, requestHeaders: p.requestHeaders.map(strip), responseHeaders: p.responseHeaders.map(strip) };
+    // Empty on purpose (a "logged out" profile with an empty Cookie) stays empty, not "left out".
+    const strip = (h: HeaderMod): HeaderMod => (includeSecrets || h.value === '' || !isSecret(h) ? h : { ...h, value: '', secret: true });
+    // On only in one tab, or only for a while, here: elsewhere it would be on everywhere, for good.
+    const enabled = p.enabled && !p.tab && !p.offAt;
+    return { ...rest, enabled, requestHeaders: p.requestHeaders.map(strip), responseHeaders: p.responseHeaders.map(strip) };
   });
   return JSON.stringify({ format: EXPORT_FORMAT, version: 1, exported: now.toISOString(), profiles: clean }, null, 2);
 }

@@ -1,5 +1,5 @@
 import { FIREFOX_UNSUPPORTED_TYPES } from './core/dnr.ts';
-import { createEngine, REFRESH_ALARM, TIMER_ALARM } from './core/engine.ts';
+import { createEngine, REFRESH_ALARM, RETRY_ALARM, TIMER_ALARM } from './core/engine.ts';
 import { systemSource } from './core/variables.ts';
 import { isShareLink, MAX_LINK } from './core/share.ts';
 import { createSync, emptyBase, type SyncBase, type SyncStatus } from './core/sync.ts';
@@ -80,6 +80,10 @@ if (!isFirefox) chrome.runtime.onMessageExternal.addListener((message, _sender, 
   return true;
 });
 chrome.runtime.onStartup.addListener(() => { engine.release(); });
+// Every start of the service worker (after an update, or the extension switched off
+// and on): the warnings and badge live in session storage, which may be gone.
+// Cheap when nothing changed: the rules are only rewritten if they differ.
+engine.queueSync();
 chrome.tabs.onRemoved.addListener(tabId => { engine.release(tabId); });
 // Sync through the browser's account, when switched on (src/core/sync.ts). Edits
 // go out a moment after the last one, so typing doesn't spend the browser's
@@ -129,6 +133,6 @@ soon('sync', 2000, () => sync.run());
 chrome.permissions.onAdded.addListener(() => { engine.queueSync(); });
 chrome.permissions.onRemoved.addListener(() => { engine.queueSync(); });
 chrome.alarms.onAlarm.addListener(a => {
-  if (a.name === REFRESH_ALARM || a.name === TIMER_ALARM) engine.queueSync();
+  if (a.name === REFRESH_ALARM || a.name === TIMER_ALARM || a.name === RETRY_ALARM) engine.queueSync();
   if (a.name === SYNC_RETRY) sync.run().catch(() => {});
 });

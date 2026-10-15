@@ -154,7 +154,7 @@ function fromFetch(text: string): PasteResult {
     if (h) headers.push(h);
   }
   if (options?.referrer && !headers.some(h => h.name.toLowerCase() === 'referer')) {
-    const h = header('Referer', options.referrer);
+    const h = header('Referer', String(options.referrer));
     if (h) headers.push(h);
   }
   return { url: urlLiteral ? jsString(urlLiteral) : undefined, headers };

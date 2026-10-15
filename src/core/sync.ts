@@ -59,7 +59,7 @@ const bytes = (s: string) => new TextEncoder().encode(s).length;
 /** A profile as it is synced. */
 export function syncedProfile(p: Profile): SyncedProfile {
   const { enabled: _enabled, tab: _tab, offAt: _offAt, ...rest } = p;
-  const strip = (h: HeaderMod): HeaderMod => (isSecret(h) ? { ...h, value: '', secret: true } : h);
+  const strip = (h: HeaderMod): HeaderMod => (h.value !== '' && isSecret(h) ? { ...h, value: '', secret: true } : h);
   return { ...rest, requestHeaders: p.requestHeaders.map(strip), responseHeaders: p.responseHeaders.map(strip) };
 }
 
