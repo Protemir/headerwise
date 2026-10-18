@@ -1,6 +1,7 @@
 // A test written for ModHeader, as its README shows it: chrome-modheader's URL
-// helpers, a .crx through Selenium's addExtensions, waiting for the title "Done".
-// Only the extension is swapped for headerwise-automation.crx.
+// helpers and waiting for the title "Done". Only how the extension gets in
+// changes: Chrome 155+ no longer takes a .crx through addExtensions, so the
+// unpacked automation build goes in over WebDriver BiDi.
 import { resolve } from 'node:path';
 import { Builder, until } from 'selenium-webdriver';
 import chrome from 'selenium-webdriver/chrome.js';
@@ -8,9 +9,11 @@ import modheader from 'chrome-modheader';
 import { smoke } from './server.mjs';
 
 const { getAddHeaderUrl, getAddHeadersUrl, getClearHeadersUrl, getLoadProfileUrl } = modheader;
-const options = new chrome.Options().addExtensions(resolve('headerwise-automation.crx')).addArguments('--headless=new');
-options.setBrowserVersion('stable'); // Chrome for Testing: branded Chrome 137+ ignores extensions from ChromeDriver
+const options = new chrome.Options().addArguments('--enable-unsafe-extension-debugging', '--remote-debugging-pipe', '--headless=new');
+options.setBrowserVersion('stable');
+options.enableBidi();
 const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
+await (await driver.getBidi()).send({ method: 'webExtension.install', params: { extensionData: { type: 'path', path: resolve('dist-automation') } } });
 
 const open = async url => {
   await driver.get(url);

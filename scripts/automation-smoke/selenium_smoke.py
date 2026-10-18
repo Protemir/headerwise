@@ -7,11 +7,15 @@ ID = 'ogjbgamdhnjnagcdgboifgmhlgddcdce'
 ext = os.path.abspath('dist-automation')
 base = 'http://127.0.0.1:8788'
 
+# Chrome (and Chrome for Testing from 155 on) no longer loads --load-extension:
+# the extension goes in over WebDriver BiDi. The installed Chrome here; the
+# JavaScript run uses Chrome for Testing.
 options = webdriver.ChromeOptions()
-options.browser_version = 'stable'  # Chrome for Testing: branded Chrome ignores --load-extension
-options.add_argument(f'--load-extension={ext}')
+options.enable_bidi = True
+options.enable_webextensions = True
 options.add_argument('--headless=new')
 driver = webdriver.Chrome(options=options)
+driver.webextension.install(path=ext)
 
 
 def set_headers(query):
