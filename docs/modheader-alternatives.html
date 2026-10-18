@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ModHeader alternatives in 2026: what to switch to</title>
+  <meta name="description" content="ModHeader was removed from the Chrome Web Store and Edge Add-ons in July 2026. What to check in a replacement, and the header editors people move to: Requestly, Modify Header Value, Simple Modify Headers, Modify Header and Headerwise." />
+  <link rel="canonical" href="https://protemir.github.io/headerwise/modheader-alternatives.html" />
+  <meta property="og:title" content="ModHeader alternatives in 2026: what to switch to" />
+  <meta property="og:description" content="What to check in a replacement for ModHeader, and the header editors people move to." />
+  <meta property="og:image" content="https://protemir.github.io/headerwise/img/og.png" />
+  <meta property="og:type" content="article" />
+  <link rel="icon" href="icon-128.png" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "ModHeader alternatives in 2026: what to switch to",
+    "datePublished": "2026-10-18",
+    "dateModified": "2026-10-18",
+    "author": { "@type": "Organization", "name": "Headerwise", "url": "https://protemir.github.io/headerwise/" },
+    "about": "Replacements for the ModHeader browser extension"
+  }
+  </script>
+  <style>
+    :root { color-scheme: light dark; --bg: #fbfbfc; --fg: #17181c; --muted: #5a6170; --line: #e3e6ec; --accent: #2557d6; --tint: #eef2fb; --warn-bg: #fff4e5; --warn-line: #f0b35a; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #131417; --fg: #ececef; --muted: #a2a8b3; --line: #2b2e35; --accent: #7aa7ff; --tint: #1c2233; --warn-bg: #2a2114; --warn-line: #8a6a2e; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.65 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 28px 16px 64px; }
+    header { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+    header img { width: 30px; height: 30px; }
+    header a { color: inherit; text-decoration: none; font-weight: 600; }
+    h1 { font-size: clamp(28px, 4vw, 38px); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 12px; }
+    h2 { font-size: 23px; margin: 40px 0 10px; letter-spacing: -0.01em; }
+    h3 { font-size: 19px; margin: 24px 0 6px; }
+    .lead { color: var(--muted); font-size: 19px; }
+    a { color: var(--accent); }
+    code { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 14.5px; background: #8881; padding: 1px 5px; border-radius: 5px; }
+    .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-line); padding: 12px 16px; border-radius: 8px; margin: 20px 0; }
+    .note { color: var(--muted); font-size: 15px; }
+    li { margin: 4px 0; }
+    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px; }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <header><img src="icon-128.png" alt="" /><a href="./">Headerwise</a></header>
+
+    <h1>ModHeader alternatives in 2026: what to switch to</h1>
+    <p class="lead">ModHeader was removed from the Chrome Web Store and Edge Add-ons in July 2026, after a dormant collector for visited domains was found in version 7.0.18. If you used it every day, here is what to look for in a replacement, and the extensions people are moving to.</p>
+
+    <div class="warn"><b>Before you switch, save your profiles.</b> If Chrome turned ModHeader off, its Export button is gone, but the profiles are still on your disk until you click "Remove". <a href="modheader-export.html">Where they are and how to get them out</a>.</div>
+
+    <p class="note">Disclosure: I make Headerwise, one of the extensions below. I've tried to describe the others only by what their own pages and store listings say; corrections are welcome on <a href="https://github.com/Protemir/headerwise/issues">GitHub</a>.</p>
+
+    <h2>What to check in any header extension</h2>
+    <p>A header editor sees, or can change, every request your browser makes, often with your tokens in it. That's exactly why ModHeader's removal hurt. A few things are worth a look before you install the next one:</p>
+    <ul>
+      <li><b>Can it send data anywhere?</b> An extension's manifest can forbid network requests for its own pages (<code>connect-src 'none'</code> in <code>content_security_policy</code>). Then the browser blocks any request it tries to make, whatever the code says. It's worth checking whether yours does.</li>
+      <li><b>Does it read your pages?</b> Extensions built on Chrome's <code>declarativeNetRequest</code> hand the header rules to the browser and never see page content or request bodies. Older designs read every request.</li>
+      <li><b>Is the code open, and does the store build match it?</b> Open source helps only if you or someone else can compare the build with the source.</li>
+      <li><b>What does the free version leave out?</b> ModHeader limited its free tier; check what your replacement keeps for paying users.</li>
+      <li><b>Does it read your old ModHeader profiles?</b> Re-typing a dozen profiles with filters is the part nobody enjoys.</li>
+      <li><b>Response headers, filters, tests.</b> If you change CORS or CSP response headers, limit headers to some sites, or set headers in Selenium or Playwright, make sure the replacement does those too.</li>
+    </ul>
+
+    <h2>The options</h2>
+
+    <h3>Requestly</h3>
+    <p>The largest of the alternatives, and more than a header editor: redirects, mock responses, an API client and team workspaces. Its pages say header rules are free, and it has its own page for moving from ModHeader. Team features are paid. A good fit if you want one tool for headers, mocks and API testing; more than you need if you only switch a few headers. <a href="https://requestly.com/">requestly.com</a></p>
+
+    <h3>Modify Header Value</h3>
+    <p>A small, long-standing extension for adding, changing or removing request headers per site, with an on/off switch in the toolbar. Its store description covers request headers only. <a href="https://chromewebstore.google.com/detail/cbdibdfhahmknbkkojljfncpnhmacdek">Chrome Web Store</a></p>
+
+    <h3>Simple Modify Headers</h3>
+    <p>A simple request and response header editor, popular in Firefox. It hasn't been updated since mid-2024. <a href="https://addons.mozilla.org/firefox/addon/simple-modify-header/">Firefox Add-ons</a></p>
+
+    <h3>Modify Header (SelectorsHub)</h3>
+    <p>An open source header editor from the makers of SelectorsHub, presented as a privacy-first replacement for ModHeader. <a href="https://selectorshub.com/modify-header/">selectorshub.com</a></p>
+
+    <h3>Headerwise</h3>
+    <p>The one I wrote, free and MIT licensed. Built for the checks above:</p>
+    <ul>
+      <li>its manifest sets <code>connect-src 'none'</code>, so it can't send anything anywhere, and the rules are applied by Chrome through <code>declarativeNetRequest</code>;</li>
+      <li>reads ModHeader's folder from your disk in the page itself, even after Chrome turned ModHeader off, and imports ModHeader, Requestly and Simple Modify Headers exports;</li>
+      <li>request and response headers, redirects, "only on" / "never on" filters, sites, request types and methods, one tab only, a timer that switches a profile off;</li>
+      <li>"On this tab" shows which profile changed how many requests, which DevTools may not show;</li>
+      <li>share a profile by link, and sync between your computers through the browser's own account, without a server of its own;</li>
+      <li>an automation build for Selenium, Playwright and Puppeteer that keeps ModHeader's test URLs working.</li>
+    </ul>
+    <p>Chrome and Edge (from the Chrome Web Store); no Firefox version yet. <a href="https://chromewebstore.google.com/detail/jedoaeaapdofoldmkacjbpojbnpapkna">Chrome Web Store</a> · <a href="https://github.com/Protemir/headerwise">source</a> · <a href="./">more</a></p>
+
+    <h2>Which one to pick</h2>
+    <ul>
+      <li><b>You switched a few request headers by hand:</b> any of them will do. Pick by what you trust.</li>
+      <li><b>You had many profiles, filters and response headers in ModHeader:</b> one that imports them and handles response headers (Requestly, Headerwise).</li>
+      <li><b>You also want mocks, an API client and a team workspace:</b> Requestly.</li>
+      <li><b>You care most that the extension can't phone home:</b> look for <code>connect-src 'none'</code> in its manifest, or read its code.</li>
+      <li><b>Firefox:</b> Simple Modify Headers or Modify Header Value.</li>
+      <li><b>Browser tests that used <code>chrome-modheader</code>:</b> <a href="automation.html">here's what works now</a>.</li>
+    </ul>
+
+    <footer>
+      Written by the author of Headerwise, October 2026. Corrections welcome on <a href="https://github.com/Protemir/headerwise/issues">GitHub</a>.
+      <a href="./">Headerwise</a> &nbsp; <a href="modheader-export.html">Get your ModHeader profiles back</a> &nbsp; <a href="privacy.html">Privacy</a>
+    </footer>
+  </main>
+</body>
+</html>
