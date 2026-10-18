@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fix CORS errors in local development (without breaking anything else)</title>
+  <meta name="description" content="Why your local frontend gets "blocked by CORS policy", the proper fixes (server headers, a dev-server proxy), and adding Access-Control-Allow-Origin in the browser for testing, including the credentials and preflight cases where that doesn't help." />
+  <link rel="canonical" href="https://protemir.github.io/headerwise/cors-local-development.html" />
+  <meta property="og:title" content="Fix CORS errors in local development (without breaking anything else)" />
+  <meta property="og:description" content="Why your local frontend gets "blocked by CORS policy", the proper fixes (server headers, a dev-server proxy), and adding Access-Control-Allow-Origin in the browser for testing, including the credentials and preflight cases where that doesn't help." />
+  <meta property="og:image" content="https://protemir.github.io/headerwise/img/og.png" />
+  <meta property="og:type" content="article" />
+  <link rel="icon" href="icon-128.png" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Fix CORS errors in local development (without breaking anything else)",
+    "datePublished": "2026-10-18",
+    "dateModified": "2026-10-18",
+    "author": { "@type": "Organization", "name": "Headerwise", "url": "https://protemir.github.io/headerwise/" }
+  }
+  </script>
+  <style>
+    :root { color-scheme: light dark; --bg: #fbfbfc; --fg: #17181c; --muted: #5a6170; --line: #e3e6ec; --accent: #2557d6; --tint: #eef2fb; --warn-bg: #fff4e5; --warn-line: #f0b35a; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #131417; --fg: #ececef; --muted: #a2a8b3; --line: #2b2e35; --accent: #7aa7ff; --tint: #1c2233; --warn-bg: #2a2114; --warn-line: #8a6a2e; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.65 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 28px 16px 64px; }
+    header { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+    header img { width: 30px; height: 30px; }
+    header a { color: inherit; text-decoration: none; font-weight: 600; }
+    h1 { font-size: clamp(28px, 4vw, 38px); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 12px; }
+    h2 { font-size: 23px; margin: 40px 0 10px; letter-spacing: -0.01em; }
+    .lead { color: var(--muted); font-size: 19px; }
+    a { color: var(--accent); }
+    code, pre { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 14.5px; }
+    code { background: #8881; padding: 1px 5px; border-radius: 5px; }
+    pre { background: var(--tint); padding: 14px 16px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0 16px; }
+    pre code { background: none; padding: 0; }
+    .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-line); padding: 12px 16px; border-radius: 8px; margin: 20px 0; }
+    .note { color: var(--muted); font-size: 15px; }
+    li { margin: 4px 0; }
+    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px; }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <header><img src="icon-128.png" alt="" /><a href="./">Headerwise</a></header>
+    <h1>Fix CORS errors in local development</h1>
+    <p class="lead">Your frontend on <code>http://localhost:3000</code> calls an API on another origin, and the console says <i>"has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present"</i>. The browser is doing its job: the API didn't say your origin may read its answers. Here are the fixes, best first.</p>
+
+    <h2>1. Let the API allow your origin</h2>
+    <p>If you control the API, have it answer with <code>Access-Control-Allow-Origin: http://localhost:3000</code> (and the methods and headers you use) in development. Most frameworks have a CORS setting for this. It's the only fix that also works for everyone else on your team.</p>
+
+    <h2>2. Proxy the API through your dev server</h2>
+    <p>Make the browser think the API is on your own origin. In Vite:</p>
+    <pre><code>// vite.config.js
+export default { server: { proxy: { '/api': 'https://api.example.com' } } };</code></pre>
+    <p>webpack's <code>devServer.proxy</code>, Next.js <code>rewrites</code> and Angular's <code>proxy.conf.json</code> do the same. Requests to <code>/api</code> are same-origin, so CORS never comes up.</p>
+
+    <h2>3. Add the headers in the browser, for testing</h2>
+    <p>When you can't change the API or the build (someone else's staging API, a quick check), a header extension can add the response headers the browser looks for. In <a href="./">Headerwise</a>, the <b>CORS: allow any origin</b> preset adds:</p>
+    <pre><code>Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: *</code></pre>
+    <p>Add an <b>only on</b> filter for the API (for example <code>||api.example.com^</code>), so you don't change the rules for every site you visit.</p>
+
+    <div class="warn"><b>When adding headers isn't enough:</b>
+      <ul>
+        <li><b>Cookies or Authorization with credentials.</b> With <code>credentials: 'include'</code> the browser rejects <code>*</code>. Set <code>Access-Control-Allow-Origin</code> to your exact origin (<code>http://localhost:3000</code>) and add <code>Access-Control-Allow-Credentials: true</code>.</li>
+        <li><b>The preflight fails.</b> For a JSON <code>POST</code> or a custom header, the browser first sends <code>OPTIONS</code>. If the API answers that with 404 or 405, headers alone won't fix it: use the proxy or fix the API.</li>
+        <li><b>Your own test setup adds a header.</b> A header added by the page or by Playwright's <code>extraHTTPHeaders</code> makes requests "non-simple" and triggers a preflight; a header added by the extension doesn't.</li>
+      </ul>
+    </div>
+
+    <h2>What not to do</h2>
+    <p>Starting Chrome with <code>--disable-web-security</code> turns off the same-origin protection for everything in that browser profile. If you must, use a throwaway profile (<code>--user-data-dir</code>) and never browse with it.</p>
+
+    <footer>
+      Written by the author of Headerwise, a free, open source header editor for Chrome and Edge. Corrections welcome on <a href="https://github.com/Protemir/headerwise/issues">GitHub</a>.<br />
+      <a href="set-request-header-chrome.html">Set a request header</a> &nbsp; <a href="cors-local-development.html">CORS in local development</a> &nbsp; <a href="allow-iframe-testing.html">Allow a site in an iframe</a> &nbsp; <a href="modheader-alternatives.html">ModHeader alternatives</a>
+    </footer>
+  </main>
+</body>
+</html>
