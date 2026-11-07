@@ -1,13 +1,13 @@
 {
   "extName": {
-    "message": "Headerwise: изменение HTTP-заголовков",
+    "message": "Headerwise: изменение HTTP-заголовков и CORS",
     "description": "Extension name in the store and browser"
   },
   "extShortName": {
     "message": "Headerwise"
   },
   "extDescription": {
-    "message": "Меняйте заголовки запросов и ответов в профилях. Импорт профилей из ModHeader. Работает локально и ничего никуда не отправляет.",
+    "message": "Меняйте заголовки запросов и ответов, чините CORS, задавайте Authorization. Импорт из ModHeader. Бесплатно, ничего не отправляет.",
     "description": "Store summary, at most 132 characters"
   },
   "openInTab": {

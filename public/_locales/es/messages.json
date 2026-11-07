@@ -1,13 +1,13 @@
 {
   "extName": {
-    "message": "Headerwise: modificar encabezados HTTP",
+    "message": "Headerwise: encabezados HTTP y CORS",
     "description": "Extension name in the store and browser"
   },
   "extShortName": {
     "message": "Headerwise"
   },
   "extDescription": {
-    "message": "Modifica encabezados de solicitud y respuesta por perfiles. Importa tus perfiles de ModHeader. Funciona en local, no envía nada.",
+    "message": "Modifica encabezados de solicitud y respuesta, arregla CORS, envía Authorization. Importa de ModHeader. Gratis, no envía nada.",
     "description": "Store summary, at most 132 characters"
   },
   "openInTab": {

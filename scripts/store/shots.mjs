@@ -176,6 +176,10 @@ const shots = {
   filters: await capture(`${popupUrl}?tab=${siteTab}`, 'popup-filters-dark', { prepare: qaJs, dark: true, from: 'nav.tabs', to: 'details.more' }),
   migrate: await captureMigrate('migrate', false),
 };
+// Last, since it switches sync on: the share link and the sync line, as the export panel shows them.
+await ctl.evaluate("chrome.storage.local.get('meta').then(m => chrome.storage.local.set({ meta: { ...m.meta, sync: true } }))");
+await sleep(3000);
+shots.share = await capture(`${popupUrl}?tab=${siteTab}`, 'popup-share', { prepare: click('Share…'), from: '.tools', to: '.sync' });
 
 // The landing page (docs/) shows the same UI, in the visitor's theme: every shot in light and dark.
 const siteImg = join(resolve('docs'), 'img');
@@ -212,11 +216,11 @@ const poster = (title, text, file) => page(1280, 800, `
   <div class="shot"><img src="${img(file)}"></div>`);
 
 const screens = [
-  ['1-headers', 'Change HTTP headers. Nothing leaves your browser.', 'Set, append or remove request and response headers per profile. No account, no analytics, and the browser itself blocks the extension from sending anything.', shots.main],
-  ['2-this-tab', 'See what changed on this tab, and why not.', 'Open the popup to see which profile changed how many requests here, or which filter kept it off. In light or dark.', shots.thisTab],
-  ['3-modheader', 'Coming from ModHeader? Bring your profiles.', 'ModHeader was turned off, and its Export button with it. Headerwise reads its folder on your disk, right in the page.', shots.migrate],
-  ['4-paste', 'Paste a request from DevTools.', 'Copy as cURL, fetch or PowerShell, paste, and the headers are in. Tokens and cookies stay hidden while you share your screen.', shots.paste],
-  ['5-filters', 'Only where you need it.', 'Limit a profile to some sites, request types or methods, keep it off others, or bind it to a single tab.', shots.filters],
+  ['1-headers', 'Modify HTTP headers. Nothing leaves your browser.', 'Request and response headers per profile: CORS, Authorization, staging headers, redirects. No account, no analytics, and the browser itself blocks the extension from sending anything.', shots.main],
+  ['2-modheader', 'Coming from ModHeader? Bring your profiles.', 'ModHeader was turned off, and its Export button with it. Headerwise reads its folder on your disk, right in the page.', shots.migrate],
+  ['3-this-tab', 'See what changed on this tab, and why not.', 'Open the popup to see which profile changed how many requests here, or which filter kept it off. In light or dark.', shots.thisTab],
+  ['4-share', 'Share a profile by link. Sync your computers.', 'The link carries the profile itself, never through a server, and leaves secret values out. Sync goes through your browser’s own account.', shots.share],
+  ['5-paste', 'Paste a request from DevTools.', 'Copy as cURL, fetch or PowerShell, paste, and the headers are in. Tokens and cookies stay hidden while you share your screen.', shots.paste],
 ];
 
 const render = async (html, w, h, file) => {

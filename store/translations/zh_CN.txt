@@ -1,4 +1,6 @@
-Headerwise 可以在 Chrome 和 Edge 中修改 HTTP 请求头和响应头。设置、追加或删除请求头，把它们分组到配置文件中，只在需要的地方启用。
+在 Chrome 和 Edge 中修改 HTTP 请求头和响应头：添加、更改或删除任意请求头，解决本地开发中的 CORS 错误，只向你自己的网站发送 Authorization 令牌或测试环境专用的请求头，还能重定向 API 调用。把请求头分组到配置文件中，只在需要的地方启用。
+
+从 ModHeader 迁移？即使 Chrome 已停用 ModHeader，Headerwise 也能导入你的 ModHeader 配置文件。
 
 一切都在你的浏览器内完成。无需账号，没有统计分析，扩展也无法向任何地方发送任何数据：它的清单文件禁止网络连接，浏览器本身会拦截这些请求。请求头的修改由浏览器通过 declarativeNetRequest 执行，因此 Headerwise 从不读取你访问的页面。
 

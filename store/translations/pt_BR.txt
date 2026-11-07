@@ -1,4 +1,6 @@
-O Headerwise altera cabeçalhos HTTP de requisição e de resposta no Chrome e no Edge. Defina, acrescente ou remova cabeçalhos, agrupe-os em perfis e ative-os só onde precisar.
+Modifique cabeçalhos HTTP de requisição e de resposta no Chrome e no Edge: adicione, altere ou remova qualquer cabeçalho, corrija erros de CORS no desenvolvimento local, envie um token Authorization ou um cabeçalho de staging só para os seus próprios sites e redirecione chamadas de API. Agrupe cabeçalhos em perfis e ative-os só onde precisar.
+
+Veio do ModHeader? O Headerwise importa seus perfis do ModHeader, mesmo depois que o Chrome desativou o ModHeader.
 
 Tudo roda dentro do seu navegador. Não há conta nem analytics, e a extensão não consegue enviar nada para lugar nenhum: o manifesto dela proíbe conexões de rede, então o próprio navegador as bloqueia. As alterações de cabeçalhos são aplicadas pelo navegador via declarativeNetRequest, por isso o Headerwise nunca lê as páginas que você visita.
 

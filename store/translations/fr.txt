@@ -1,4 +1,6 @@
-Headerwise modifie les en-têtes HTTP de requête et de réponse dans Chrome et Edge. Définissez, ajoutez ou supprimez des en-têtes, regroupez-les en profils et activez-les uniquement là où vous en avez besoin.
+Modifiez les en-têtes HTTP de requête et de réponse dans Chrome et Edge : ajoutez, changez ou supprimez n'importe quel en-tête, corrigez les erreurs CORS en développement local, envoyez un jeton Authorization ou un en-tête de préproduction uniquement à vos propres sites, et redirigez les appels d'API. Regroupez les en-têtes en profils et activez-les uniquement là où vous en avez besoin.
+
+Vous venez de ModHeader ? Headerwise importe vos profils ModHeader, même après que Chrome a désactivé ModHeader.
 
 Tout se passe dans votre navigateur. Pas de compte, pas de statistiques, et l'extension ne peut rien envoyer nulle part : son manifeste interdit les connexions réseau, donc le navigateur lui-même les bloque. Les modifications d'en-têtes sont appliquées par le navigateur via declarativeNetRequest, si bien que Headerwise ne lit jamais les pages que vous visitez.
 

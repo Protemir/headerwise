@@ -1,7 +1,7 @@
 {
-  "extName": { "message": "Headerwise: Modify HTTP Headers", "description": "Extension name in the store and browser" },
+  "extName": { "message": "Headerwise: Modify HTTP Headers & CORS", "description": "Extension name in the store and browser" },
   "extShortName": { "message": "Headerwise" },
-  "extDescription": { "message": "Modify request and response headers per profile. Import your ModHeader profiles. Runs locally, sends nothing anywhere.", "description": "Store summary, at most 132 characters" },
+  "extDescription": { "message": "Modify HTTP request & response headers, fix CORS, set Authorization. Imports ModHeader profiles. Free, open source, sends nothing.", "description": "Store summary, at most 132 characters" },
 
   "openInTab": { "message": "Open in a tab" },
   "openInTabTitle": { "message": "The same editor in a browser tab, with more room" },

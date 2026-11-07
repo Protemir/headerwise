@@ -5,9 +5,9 @@ Everything to paste into the two developer dashboards. Images are in this folder
 
 ## Basics
 
-- **Name** (from the manifest): Headerwise: Modify HTTP Headers
-- **Short description** (from the manifest, 118 of 132 chars):
-  Modify request and response headers per profile. Import your ModHeader profiles. Runs locally, sends nothing anywhere.
+- **Name** (from the manifest): Headerwise: Modify HTTP Headers & CORS
+- **Short description** (from the manifest, 130 of 132 chars):
+  Modify HTTP request & response headers, fix CORS, set Authorization. Imports ModHeader profiles. Free, open source, sends nothing.
 - **Category:** Developer Tools
 - **Language:** English
 - **Price:** free
@@ -18,7 +18,9 @@ Everything to paste into the two developer dashboards. Images are in this folder
 ## Detailed description
 
 ```
-Headerwise changes HTTP request and response headers in Chrome and Edge. Set, append or remove headers, group them in profiles, and turn them on only where you need them.
+Modify HTTP request and response headers in Chrome and Edge: add, change or remove any header, fix CORS errors in local development, send an Authorization token or a staging header only to your own sites, and redirect API calls. Group headers in profiles and switch them on only where you need them.
+
+Moving from ModHeader? Headerwise imports your ModHeader profiles, even after Chrome turned ModHeader off.
 
 It runs entirely in your browser. There is no account and no analytics, and the extension cannot send anything anywhere: its manifest forbids network requests, so the browser itself blocks them. Header changes are applied by the browser through declarativeNetRequest, so Headerwise never reads the pages you visit.
 
@@ -83,7 +85,7 @@ Modify HTTP request and response headers in the browser, organized in profiles t
 
 | File | Use |
 |---|---|
-| `screenshots/1-headers.png` … `5-filters.png` | Screenshots, 1280×800, in this order |
+| `screenshots/1-headers.png` … `5-paste.png` | Screenshots, 1280×800, in this order |
 | `promo-small-440x280.png` | Chrome small promo tile (required) |
 | `promo-marquee-1400x560.png` | Chrome marquee (optional, used if featured) |
 | `logo-300.png` | Edge store logo |

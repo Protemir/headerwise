@@ -1,4 +1,6 @@
-Headerwise ändert HTTP-Request- und Response-Header in Chrome und Edge. Header setzen, anhängen oder entfernen, in Profilen bündeln und nur dort einschalten, wo du sie brauchst.
+Ändere HTTP-Request- und Response-Header in Chrome und Edge: Füge beliebige Header hinzu, bearbeite oder entferne sie, behebe CORS-Fehler in der lokalen Entwicklung, sende ein Authorization-Token oder einen Staging-Header nur an deine eigenen Seiten und leite API-Aufrufe um. Bündle Header in Profilen und schalte sie nur dort ein, wo du sie brauchst.
+
+Du kommst von ModHeader? Headerwise importiert deine ModHeader-Profile, auch nachdem Chrome ModHeader deaktiviert hat.
 
 Alles läuft in deinem Browser. Kein Konto, keine Analyse, und die Erweiterung kann nichts irgendwohin senden: Ihr Manifest verbietet Netzwerkverbindungen, also blockiert der Browser sie selbst. Header-Änderungen wendet der Browser über declarativeNetRequest an, deshalb liest Headerwise die besuchten Seiten nie.
 
