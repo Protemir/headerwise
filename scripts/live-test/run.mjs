@@ -37,6 +37,7 @@ const dist = resolve('dist');
 // HW_ECHO_PORT when 8787 is taken by something else on this machine.
 const ECHO_PORT = Number(process.env.HW_ECHO_PORT ?? 8787);
 const CDP_PORT = 9334;
+const AUTOMATION_ID = 'ogjbgamdhnjnagcdgboifgmhlgddcdce'; // scripts/automation.mjs
 // Only the automation run reads no translated UI: HW_LANG=ru npm run test:live -- --only automation
 const LANG = process.env.HW_LANG ?? 'en-US';
 const urls = { base: `http://localhost:${ECHO_PORT}`, ip: `http://127.0.0.1:${ECHO_PORT}` };
@@ -140,8 +141,10 @@ async function launchWithFlag(dir, ext) {
   let extId;
   for (let i = 0; i < 50 && !extId; i++) {
     const list = await (await fetch(`http://127.0.0.1:${CDP_PORT}/json/list`)).json();
-    // (the automation build opens no welcome page: its service worker gives the id)
-    extId = list.map(t => /^chrome-extension:\/\/([a-p]{32})\/(src\/migrate\/index\.html\?welcome=1|background\.js)/.exec(t.url)?.[1]).find(Boolean);
+    // (the automation build opens no welcome page: its fixed id is known. Not any
+    // background.js: Edge 157 has a built-in extension with one too.)
+    extId = list.map(t => /^chrome-extension:\/\/([a-p]{32})\/src\/migrate\/index\.html\?welcome=1/.exec(t.url)?.[1]).find(Boolean)
+      ?? (list.some(t => t.url.startsWith(`chrome-extension://${AUTOMATION_ID}/`)) ? AUTOMATION_ID : undefined);
     if (!extId) await sleep(200);
   }
   if (!extId) throw new Error(`${browser}: extension did not load`);
